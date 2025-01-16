@@ -1,100 +1,37 @@
-# Welcome to React Router!
+# Bead Clash Game
 
-A modern, production-ready template for building full-stack React applications using React Router.
+Bead Clash is a turn-based strategy game built with React. Players take turns placing beads on a 5x5 grid, with each bead affecting the surrounding cells by spreading in four directions (up, down, left, right). The goal is to control the grid by strategically placing and spreading beads of different colors.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
 
-## Features
+![image](https://github.com/user-attachments/assets/a2f2025b-30ca-4fc2-8b76-fba355bf66e9)
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
-
-## Getting Started
-
-### Installation
-
-Install the dependencies:
-
-```bash
-npm install
-```
-
-### Development
-
-Start the development server with HMR:
-
-```bash
-npm run dev
-```
-
-Your application will be available at `http://localhost:5173`.
-
-## Building for Production
-
-Create a production build:
-
-```bash
-npm run build
-```
-
-## Deployment
-
-### Docker Deployment
-
-This template includes three Dockerfiles optimized for different package managers:
-
-- `Dockerfile` - for npm
-- `Dockerfile.pnpm` - for pnpm
-- `Dockerfile.bun` - for bun
-
-To build and run using Docker:
-
-```bash
-# For npm
-docker build -t my-app .
-
-# For pnpm
-docker build -f Dockerfile.pnpm -t my-app .
-
-# For bun
-docker build -f Dockerfile.bun -t my-app .
-
-# Run the container
-docker run -p 3000:3000 my-app
-```
-
-The containerized application can be deployed to any platform that supports Docker, including:
-
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
-
-### DIY Deployment
-
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
-
-Make sure to deploy the output of `npm run build`
-
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
 
 ---
 
-Built with ❤️ using React Router.
+## Features
+
+- **Turn-based gameplay**: Players take turns placing beads on the grid.
+- **Dynamic grid**: A 5x5 grid where beads spread to adjacent cells when placed.
+- **Color control**: Beads have colors (Red and Blue), and players aim to control the board by strategically placing them.
+- **Interactive**: Click on a cell to place a bead and watch it spread to neighboring cells.
+
+---
+
+## How to Play
+
+1. **Player 1 (Red)** places a bead on an empty cell.
+2. The bead spreads to adjacent cells (up, down, left, and right).
+3. **Player 2 (Blue)** takes their turn and places a bead in another cell.
+4. The game continues with players alternating turns.
+5. The player who can control the most cells with their colored beads wins!
+
+---
+
+## Contributing
+
+If you'd like to contribute to the development of Bead Clash, feel free to submit a pull request. Here are some guidelines:
+
+- Fork the repository and create a new branch.
+- Write clear and descriptive commit messages.
+- Ensure your code follows the existing style and practices.
+- Test the game thoroughly to ensure no bugs are introduced.
