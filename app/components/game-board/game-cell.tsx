@@ -1,7 +1,7 @@
 import { cn } from "~/lib/utils";
 import type { Cell } from "~/hooks/useGame";
 import type { Player } from "~/store/gameStore";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 
 interface GameCellProps {
     cell: Cell;
@@ -14,10 +14,24 @@ export function GameCell({ cell, currentPlayer, players, onClick }: GameCellProp
 
     const cellColor = cell.playerId ? players[cell.playerId].color : null;
 
+    const handleClick = () => {
+        onClick();
+        if (cell.beads === 4) {
+            // Trigger bead animations
+            // e.g., set a state to start animations
+        }
+    };
+
+    const beadVariants = {
+        bead1: { x: -20, y: -20, opacity: 0, transition: { duration: 0.5 } },
+        bead2: { x: 20, y: -20, opacity: 0, transition: { duration: 0.5 } },
+        bead3: { x: -20, y: 20, opacity: 0, transition: { duration: 0.5 } },
+        bead4: { x: 20, y: 20, opacity: 0, transition: { duration: 0.5 } },
+    };
+
     return (
         <motion.button
-            
-            onClick={onClick}
+            onClick={handleClick}
             className={cn(
                 `w-full h-full`,
                 "rounded-md relative transition-all duration-300 ease-in-out transform hover:scale-105",
@@ -54,6 +68,34 @@ export function GameCell({ cell, currentPlayer, players, onClick }: GameCellProp
                             />
                         ))}
                     </div>
+                </div>
+            )}
+            {cell.beads === 4 && (
+                <div className="hidden-beads rounded-full">
+                    <motion.div
+                        className="bead bead-1"
+                        variants={beadVariants}
+                        initial={{ x: 0, y: 0, opacity: 1 }}
+                        animate="bead1"
+                    />
+                    <motion.div
+                        className="bead bead-2"
+                        variants={beadVariants}
+                        initial={{ x: 0, y: 0, opacity: 1 }}
+                        animate="bead2"
+                    />
+                    <motion.div
+                        className="bead bead-3"
+                        variants={beadVariants}
+                        initial={{ x: 0, y: 0, opacity: 1 }}
+                        animate="bead3"
+                    />
+                    <motion.div
+                        className="bead bead-4"
+                        variants={beadVariants}
+                        initial={{ x: 0, y: 0, opacity: 1 }}
+                        animate="bead4"
+                    />
                 </div>
             )}
         </motion.button>

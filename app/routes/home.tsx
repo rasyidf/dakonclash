@@ -1,5 +1,9 @@
 import type { Route } from "./+types/home";
 import { GameBoard } from "../components/game-board/game-board";
+import { Header } from "~/components/header";
+import { SidebarProvider, SidebarTrigger } from "~/components/ui/sidebar";
+import { AppSidebar } from "~/components/app-sidebar";
+import { cx } from "class-variance-authority";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -8,15 +12,16 @@ export function meta({ }: Route.MetaArgs) {
   ];
 }
 
-export function clientLoader({ }: Route.ClientLoaderArgs) {
-  return {
-    size: 8,
-    currentPlayer: "red",
-    score: { red: 0, blue: 0 },
-  };
-}
 
-export default function Home({ loaderData } : Route.ComponentProps) {
-  const load = loaderData
-  return <GameBoard />;
+export default function Home() {
+  return <>
+    <SidebarProvider>
+      <AppSidebar />
+      <main className={cx("flex flex-col w-full h-full")}>
+        <SidebarTrigger />
+        <GameBoard />
+      </main>
+    </SidebarProvider>
+    ;
+  </>
 }

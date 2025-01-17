@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { useGameStore, type Player } from "~/store/gameStore";
+import { useGameStore, type GameStats, type Player } from "~/store/gameStore";
 
 export interface Cell {
     beads: number;
@@ -44,7 +44,13 @@ export function useGame() {
             (row === size - 1 && col === 0);
     };
 
-    const spreadBeads = (row: number, col: number, newBoard: Cell[][]) => {
+    const spreadBeads = async (
+        row: number,
+        col: number,
+        newBoard: Cell[][],
+        chainLength: number,
+        updateStats: (stats: Partial<GameStats>) => void
+    ): Promise<number> => {
         const directions = [
             [-1, 0], // up
             [1, 0], // down
@@ -53,8 +59,9 @@ export function useGame() {
         ];
 
         newBoard[row][col].beads = 0;
+        let currentChainLength = chainLength;
 
-        directions.forEach(([dx, dy]) => {
+        for (const [dx, dy] of directions) {
             const newRow = row + dx;
             const newCol = col + dy;
 
@@ -62,16 +69,16 @@ export function useGame() {
                 newBoard[newRow][newCol].beads += 1;
                 newBoard[newRow][newCol].playerId = currentPlayerId;
 
-                // Check for chain reaction
                 if (newBoard[newRow][newCol].beads === 4) {
-                    spreadBeads(newRow, newCol, newBoard);
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    const subChainLength = await spreadBeads(newRow, newCol, newBoard, currentChainLength + 1, updateStats);
+                    currentChainLength = Math.max(currentChainLength, subChainLength);
                 }
             }
-        });
+        }
 
-        return newBoard;
+        return currentChainLength;
     };
-
 
     const handleSizeChange = (value: string) => {
         const newSize = parseInt(value) || 16;
@@ -80,57 +87,49 @@ export function useGame() {
         }
     };
 
-
-    const handleCellClick = (row: number, col: number) => {
-        if (board[row][col].beads === 4 ||
-            (board[row][col].playerId &&
-                board[row][col].playerId !== currentPlayerId)
-        ) {
-            return;
-        }
+    const handleCellClick = async (row: number, col: number) => {
 
         if (moves > 1 && board[row][col].beads === 0 && board[row][col].playerId === null) {
             return;
         }
 
-        const newBoard = [...board.map((row) => [...row])];
+        if (board[row][col].beads === 4 || (board[row][col].playerId && board[row][col].playerId !== currentPlayerId)) {
+            return;
+        }
 
-        // first move
+        const newBoard = [...board.map(row => [...row])];
         const beadsToAdd = moves < 2 ? 3 : 1;
-
         newBoard[row][col].beads += beadsToAdd;
         newBoard[row][col].playerId = currentPlayerId;
 
+        let chainLength = 0;
         if (newBoard[row][col].beads === 4) {
-            spreadBeads(row, col, newBoard);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            chainLength = await spreadBeads(row, col, newBoard, 1, updateStats);
         }
 
         setBoard(newBoard);
         setMoves(moves + 1);
 
         const scores = { p1: 0, p2: 0 };
-        let totalOccupied = 0;
-
-        newBoard.forEach((row) =>
-            row.forEach((cell) => {
+        newBoard.forEach(row =>
+            row.forEach(cell => {
                 if (cell.playerId) {
                     scores[cell.playerId]++;
-                    totalOccupied++;
                 }
             })
         );
 
         setScore(scores);
-        
+
+        updateStats({
+            flipCombos: stats.flipCombos + 1,
+            longestFlipChain: Math.max(stats.longestFlipChain, chainLength)
+        });
+
         setCurrentPlayerId(currentPlayerId === "p1" ? "p2" : "p1");
-        
-        if (moves > 1 && (scores.p1 === 0 || scores.p2 === 0)) {
-            setTimeout(
-                () => toast(`Game Over! ${scores.p1 > scores.p2 ? "Red" : "Blue"} wins!`),
-                1000
-            )
-            return;
-        }
+
+        addMove({ row, col });
 
     };
 

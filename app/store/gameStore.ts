@@ -15,6 +15,7 @@ export interface GameMove {
   board: Cell[][]
   score: Record<Player["id"], number>
   position: { row: number; col: number }
+  stats: GameStats
 }
 
 export interface GameStats {
@@ -103,13 +104,14 @@ export const useGameStore = create<GameState>()(
       stats: initialStats,
 
       addMove: (position) => set((state) => {
-        const newHistory = state.history.slice(0, state.currentStep + 1)
+        const newHistory = state.history.slice(0, state.currentStep + 1);
         const move: GameMove = {
           playerId: state.currentPlayerId,
           board: JSON.parse(JSON.stringify(state.board)),
           score: { ...state.score },
-          position
-        }
+          position,
+          stats: { ...state.stats }
+        };
         return {
           history: [...newHistory, move],
           currentStep: state.currentStep + 1,
@@ -120,31 +122,32 @@ export const useGameStore = create<GameState>()(
               [state.currentPlayerId]: state.stats.movesByPlayer[state.currentPlayerId] + 1
             }
           }
-        }
+        };
       }),
       setCurrentPlayerId: (id) => set({ currentPlayerId: id }),
-      undo: () => set((state) => {
-        if (state.currentStep <= 0) return state
-        const previousMove = state.history[state.currentStep - 1]
-        return {
-          board: JSON.parse(JSON.stringify(previousMove.board)),
-          score: { ...previousMove.score },
-          currentPlayerId: previousMove.playerId === 'p1' ? 'p2' : 'p1',
-          currentStep: state.currentStep - 1
-        }
-      }),
-
       replay: (step) => set((state) => {
-        if (step < 0 || step >= state.history.length) return state
-        const move = state.history[step]
+        if (step < 0 || step >= state.history.length) return state;
+        const move = state.history[step];
         return {
           board: JSON.parse(JSON.stringify(move.board)),
           score: { ...move.score },
           currentPlayerId: move.playerId === 'p1' ? 'p2' : 'p1',
-          currentStep: step
-        }
+          currentStep: step,
+          stats: { ...move.stats }
+        };
       }),
 
+      undo: () => set((state) => {
+        if (state.currentStep <= 0) return state;
+        const previousMove = state.history[state.currentStep - 1];
+        return {
+          board: JSON.parse(JSON.stringify(previousMove.board)),
+          score: { ...previousMove.score },
+          currentPlayerId: previousMove.playerId === 'p1' ? 'p2' : 'p1',
+          currentStep: state.currentStep - 1,
+          stats: { ...previousMove.stats }
+        };
+      }),
       updateStats: (newStats) => set((state) => ({
         stats: { ...state.stats, ...newStats }
       })),
