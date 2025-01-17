@@ -22,6 +22,9 @@ export default {
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
+      dropShadow: {
+        board: '0 0 10px 2px hsl(var(--tw-ring-color))'
+      },
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',

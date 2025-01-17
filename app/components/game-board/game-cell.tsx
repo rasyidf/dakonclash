@@ -2,6 +2,7 @@ import { cn } from "~/lib/utils";
 import type { Cell } from "~/hooks/useGame";
 import type { Player } from "~/store/gameStore";
 import { motion } from "framer-motion";
+import { useState } from "react";
 
 interface GameCellProps {
     cell: Cell;
@@ -11,22 +12,22 @@ interface GameCellProps {
 }
 
 export function GameCell({ cell, currentPlayer, players, onClick }: GameCellProps) {
+    const [animateBeads, setAnimateBeads] = useState(false);
 
     const cellColor = cell.playerId ? players[cell.playerId].color : null;
 
     const handleClick = () => {
         onClick();
         if (cell.beads === 4) {
-            // Trigger bead animations
-            // e.g., set a state to start animations
+            setAnimateBeads(true);
         }
     };
 
     const beadVariants = {
-        bead1: { x: -20, y: -20, opacity: 0, transition: { duration: 0.5 } },
-        bead2: { x: 20, y: -20, opacity: 0, transition: { duration: 0.5 } },
-        bead3: { x: -20, y: 20, opacity: 0, transition: { duration: 0.5 } },
-        bead4: { x: 20, y: 20, opacity: 0, transition: { duration: 0.5 } },
+        bead1: { x: -20, y: -20, opacity: 0, transition: { duration: 0.2 } },
+        bead2: { x: 20, y: -20, opacity: 0, transition: { duration: 0.2 } },
+        bead3: { x: -20, y: 20, opacity: 0, transition: { duration: 0.2 } },
+        bead4: { x: 20, y: 20, opacity: 0, transition: { duration: 0.2 } },
     };
 
     return (
@@ -40,7 +41,7 @@ export function GameCell({ cell, currentPlayer, players, onClick }: GameCellProp
                 currentPlayer.color === "blue" && cellColor === "blue" && cell.beads > 0 && "bg-blue-100 hover:bg-blue-200",
                 cell.beads === 4 && "animate-pulse"
             )}
-            disabled={cell.beads === 4}
+            disabled={cell.beads === 4 && animateBeads}
         >
             {cell.beads > 0 && (
                 <div className={cn("absolute m-2 inset-0 flex items-center justify-center rounded-full",
@@ -53,7 +54,7 @@ export function GameCell({ cell, currentPlayer, players, onClick }: GameCellProp
                             cell.beads === 1 && "grid-cols-1",
                             cell.beads === 2 && "grid-cols-2",
                             cell.beads > 2 && "grid-cols-2 grid-rows-2",
-                            "animate-in fade-in duration-300"
+                            "animate-in fade-in duration-100"
                         )}
                     >
                         {[...Array(cell.beads)].map((_, i) => (
@@ -70,28 +71,28 @@ export function GameCell({ cell, currentPlayer, players, onClick }: GameCellProp
                     </div>
                 </div>
             )}
-            {cell.beads === 4 && (
+            {cell.beads === 4 && animateBeads && (
                 <div className="hidden-beads rounded-full">
                     <motion.div
-                        className="bead bead-1"
+                        className="bead bead-1 size-full"
                         variants={beadVariants}
                         initial={{ x: 0, y: 0, opacity: 1 }}
                         animate="bead1"
                     />
                     <motion.div
-                        className="bead bead-2"
+                        className="bead bead-2 size-full"
                         variants={beadVariants}
                         initial={{ x: 0, y: 0, opacity: 1 }}
                         animate="bead2"
                     />
                     <motion.div
-                        className="bead bead-3"
+                        className="bead bead-3 size-full"
                         variants={beadVariants}
                         initial={{ x: 0, y: 0, opacity: 1 }}
                         animate="bead3"
                     />
                     <motion.div
-                        className="bead bead-4"
+                        className="bead bead-4 size-full"
                         variants={beadVariants}
                         initial={{ x: 0, y: 0, opacity: 1 }}
                         animate="bead4"

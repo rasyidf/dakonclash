@@ -4,6 +4,8 @@ import { Header } from "~/components/header";
 import { SidebarProvider, SidebarTrigger } from "~/components/ui/sidebar";
 import { AppSidebar } from "~/components/app-sidebar";
 import { cx } from "class-variance-authority";
+import { WinnerModal } from "~/components/game-board/winner-modal";
+import { useGameStore } from "~/store/gameStore";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -14,6 +16,7 @@ export function meta({ }: Route.MetaArgs) {
 
 
 export default function Home() {
+  const { showWinnerModal, setShowWinnerModal, winner, players, resetGame, size } = useGameStore();
   return <>
     <SidebarProvider>
       <AppSidebar />
@@ -21,7 +24,14 @@ export default function Home() {
         <SidebarTrigger />
         <GameBoard />
       </main>
+      <WinnerModal
+        isOpen={showWinnerModal}
+        onClose={() => setShowWinnerModal(false)}
+        winner={winner}
+        players={players}
+        onPlayAgain={() => resetGame(size)}
+      />
     </SidebarProvider>
     ;
-  </>
+  </>;
 }
