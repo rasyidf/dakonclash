@@ -1,40 +1,47 @@
-import { useState } from "react";
 import { toast } from "sonner";
+import { useGameStore, type Player } from "~/store/gameStore";
 
 export interface Cell {
     beads: number;
-    color: "red" | "blue" | null;
+    playerId: Player["id"] | null;
 }
 
-export function useGame(initialSize: number = 6) {
-    const [size, setSize] = useState(initialSize);
-    const [moves, setMoves] = useState(0);
-    const [currentPlayer, setCurrentPlayer] = useState<"red" | "blue">("red");
-    const [score, setScore] = useState({ red: 0, blue: 0 });
-    const [board, setBoard] = useState<Cell[][]>(
-        Array(size)
-            .fill(null)
-            .map(() =>
-                Array(size)
-                    .fill(null)
-                    .map(() => ({ beads: 0, color: null }))
-            )
-    );
+export function useGame() {
+    const {
+        size,
+        moves,
+        currentPlayerId,
+        score,
+        board,
+        setMoves,
+        setCurrentPlayerId,
+        setScore,
+        setBoard,
+        resetGame,
+        addMove,
+        undo,
+        replay,
+        updateStats,
+        history,
+        currentStep,
+        stats,
+        players
+    } = useGameStore();
 
-    const resetGame = (newSize: number) => {
-        setSize(newSize);
-        setCurrentPlayer("red");
-        setScore({ red: 0, blue: 0 });
-        setMoves(0);
-        setBoard(
-            Array(newSize)
-                .fill(null)
-                .map(() =>
-                    Array(newSize)
-                        .fill(null)
-                        .map(() => ({ beads: 0, color: null }))
-                )
-        );
+    const currentPlayer = players[currentPlayerId];
+
+    const updateFlipStats = (chainLength: number) => {
+        updateStats({
+            flipCombos: stats.flipCombos + 1,
+            longestFlipChain: Math.max(stats.longestFlipChain, chainLength)
+        });
+    };
+
+    const isCornerPosition = (row: number, col: number) => {
+        return (row === 0 && col === 0) ||
+            (row === 0 && col === size - 1) ||
+            (row === size - 1 && col === size - 1) ||
+            (row === size - 1 && col === 0);
     };
 
     const spreadBeads = (row: number, col: number, newBoard: Cell[][]) => {
@@ -53,7 +60,7 @@ export function useGame(initialSize: number = 6) {
 
             if (newRow >= 0 && newRow < size && newCol >= 0 && newCol < size) {
                 newBoard[newRow][newCol].beads += 1;
-                newBoard[newRow][newCol].color = currentPlayer;
+                newBoard[newRow][newCol].playerId = currentPlayerId;
 
                 // Check for chain reaction
                 if (newBoard[newRow][newCol].beads === 4) {
@@ -65,53 +72,6 @@ export function useGame(initialSize: number = 6) {
         return newBoard;
     };
 
-    const handleCellClick = (row: number, col: number) => {
-        if (board[row][col].beads === 4 ||
-            (board[row][col].color && board[row][col].color !== currentPlayer)
-        ) {
-            return;
-        }
-
-        if (moves > 1 && board[row][col].beads === 0 && board[row][col].color === null) {
-            return;
-        }
-
-        const newBoard = [...board.map((row) => [...row])];
-
-        const beadsToAdd = moves < 2 ? 3 : 1;
-        newBoard[row][col].beads += beadsToAdd;
-        newBoard[row][col].color = currentPlayer;
-
-        if (newBoard[row][col].beads === 4) {
-            spreadBeads(row, col, newBoard);
-        }
-
-        setBoard(newBoard);
-        setMoves(moves + 1);
-
-        const scores = { red: 0, blue: 0 };
-        let totalOccupied = 0;
-
-        newBoard.forEach((row) =>
-            row.forEach((cell) => {
-                if (cell.color) {
-                    scores[cell.color]++;
-                    totalOccupied++;
-                }
-            })
-        );
-
-        setScore(scores);
-        if (moves > 1 && (scores.red === 0 || scores.blue === 0)) {
-            setTimeout(
-                () => toast(`Game Over! ${scores.red > scores.blue ? "Red" : "Blue"} wins!`),
-                1000
-            )
-            return;
-        }
-
-        setCurrentPlayer(currentPlayer === "red" ? "blue" : "red");
-    };
 
     const handleSizeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const newSize = parseInt(event.target.value) || 16;
@@ -120,12 +80,75 @@ export function useGame(initialSize: number = 6) {
         }
     };
 
+
+    const handleCellClick = (row: number, col: number) => {
+        if (board[row][col].beads === 4 ||
+            (board[row][col].playerId &&
+                board[row][col].playerId !== currentPlayerId)
+        ) {
+            return;
+        }
+
+        if (moves > 1 && board[row][col].beads === 0 && board[row][col].playerId === null) {
+            return;
+        }
+
+        const newBoard = [...board.map((row) => [...row])];
+
+        // first move
+        const beadsToAdd = moves < 2 ? 3 : 1;
+
+        newBoard[row][col].beads += beadsToAdd;
+        newBoard[row][col].playerId = currentPlayerId;
+
+        if (newBoard[row][col].beads === 4) {
+            spreadBeads(row, col, newBoard);
+        }
+        
+        setBoard(newBoard);
+        setMoves(moves + 1);
+
+        const scores = { p1: 0, p2: 0 };
+        let totalOccupied = 0;
+
+        newBoard.forEach((row) =>
+            row.forEach((cell) => {
+                if (cell.playerId) {
+                    scores[cell.playerId]++;
+                    totalOccupied++;
+                }
+            })
+        );
+
+        setScore(scores);
+        if (moves > 1 && (scores.p1 === 0 || scores.p2 === 0)) {
+            setTimeout(
+                () => toast(`Game Over! ${scores.p1 > scores.p2 ? "Red" : "Blue"} wins!`),
+                1000
+            )
+            return;
+        }
+
+        setCurrentPlayerId(currentPlayerId === "p1" ? "p2" : "p1");
+    };
+
     return {
         size,
         board,
         score,
+        players,
         currentPlayer,
         handleCellClick,
+        handleSizeChange,
         resetGame,
+        history,
+        currentStep,
+        addMove,
+        undo,
+        replay,
+        stats,
+        updateFlipStats,
+        isCornerPosition
+
     };
 }
