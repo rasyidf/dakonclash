@@ -73,8 +73,8 @@ export function useGame() {
     };
 
 
-    const handleSizeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const newSize = parseInt(event.target.value) || 16;
+    const handleSizeChange = (value: string) => {
+        const newSize = parseInt(value) || 16;
         if (newSize > 0 && newSize <= 20) {
             resetGame(newSize);
         }
@@ -104,7 +104,7 @@ export function useGame() {
         if (newBoard[row][col].beads === 4) {
             spreadBeads(row, col, newBoard);
         }
-        
+
         setBoard(newBoard);
         setMoves(moves + 1);
 
@@ -121,6 +121,9 @@ export function useGame() {
         );
 
         setScore(scores);
+        
+        setCurrentPlayerId(currentPlayerId === "p1" ? "p2" : "p1");
+        
         if (moves > 1 && (scores.p1 === 0 || scores.p2 === 0)) {
             setTimeout(
                 () => toast(`Game Over! ${scores.p1 > scores.p2 ? "Red" : "Blue"} wins!`),
@@ -129,7 +132,6 @@ export function useGame() {
             return;
         }
 
-        setCurrentPlayerId(currentPlayerId === "p1" ? "p2" : "p1");
     };
 
     return {

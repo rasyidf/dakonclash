@@ -1,6 +1,7 @@
 import { cn } from "~/lib/utils";
 import type { Cell } from "~/hooks/useGame";
 import type { Player } from "~/store/gameStore";
+import { motion } from "motion/react";
 
 interface GameCellProps {
     cell: Cell;
@@ -14,7 +15,8 @@ export function GameCell({ cell, currentPlayer, players, onClick }: GameCellProp
     const cellColor = cell.playerId ? players[cell.playerId].color : null;
 
     return (
-        <button
+        <motion.button
+            
             onClick={onClick}
             className={cn(
                 `w-full h-full`,
@@ -54,6 +56,6 @@ export function GameCell({ cell, currentPlayer, players, onClick }: GameCellProp
                     </div>
                 </div>
             )}
-        </button>
+        </motion.button>
     );
 }
