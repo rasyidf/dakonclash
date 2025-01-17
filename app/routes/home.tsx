@@ -9,7 +9,7 @@ import { useGameStore } from "~/store/gameStore";
 
 export function meta({ }: Route.MetaArgs) {
   return [
-    { title: "Beads Clash" },
+    { title: "Dakon Clash" },
     { name: "description", content: "A game about beads." },
   ];
 }

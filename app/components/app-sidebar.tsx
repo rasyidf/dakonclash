@@ -39,7 +39,7 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <h1 className="text-2xl font-bold text-slate-700">Beads Clash</h1>
+        <h1 className="text-2xl font-bold text-slate-700">Dakon Clash</h1>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
