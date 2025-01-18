@@ -1,9 +1,9 @@
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
-import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
-import Confetti from 'react-confetti';
-import type { Player } from "~/store/types";
 import { useEffect, useState } from "react";
+import Confetti from 'react-confetti';
+import { Button } from "~/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
+import { cn } from "~/lib/utils";
+import type { Player } from "~/store/types";
 
 interface WinnerModalProps {
   isOpen: boolean;

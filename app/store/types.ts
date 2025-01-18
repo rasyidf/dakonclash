@@ -1,10 +1,19 @@
-import type { Cell } from '~/hooks/use-game';
 
 export type TailwindColor = "red" | "blue" | "green" | "yellow" | "purple" | "pink" | "orange" | "teal";
 export type GameMode = 'online' | 'local' | 'vs-bot';
 
+export interface Cell {
+  owner: number;
+  value: number;
+}
+
+export interface BoardState {
+  board: Cell[][];
+  timestamp: Date;
+}
+
 export interface Player {
-  id: "p1" | "p2";
+  id: number;
   name: string;
   color: TailwindColor;
 }
@@ -20,7 +29,7 @@ export interface GameMove {
 export interface GameStats {
   startTime: number;
   elapsedTime: number;
-  movesByPlayer: { p1: number; p2: number; };
+  movesByPlayer: Record<Player["id"], number>;
   flipCombos: number;
   longestFlipChain: number;
   cornerThrows: number;
@@ -86,18 +95,18 @@ export interface GameState {
 export const initialStats: GameStats = {
   startTime: Date.now(),
   elapsedTime: 0,
-  movesByPlayer: { p1: 0, p2: 0 },
+  movesByPlayer: { 1: 0, 2: 0 },
   flipCombos: 0,
   longestFlipChain: 0,
   cornerThrows: 0,
 };
 
 export const initialPlayers: Record<Player["id"], Player> = {
-  p1: { id: "p1", name: "Player 1", color: "red" },
-  p2: { id: "p2", name: "Player 2", color: "blue" }
+  1: { id: 1, name: "Player 1", color: "red" },
+  2: { id: 2, name: "Player 2", color: "blue" }
 };
 
 export const initialPlayerStats: Record<Player["id"], PlayerStats> = {
-  p1: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 },
-  p2: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 }
+  1: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 },
+  2: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 }
 };

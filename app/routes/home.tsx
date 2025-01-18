@@ -1,13 +1,13 @@
 import type { Route } from "./+types/home";
-import { GameBoard } from "../components/game-board/game-board";
+import { GameBoard } from "../components/game-board";
 import { Header } from "~/components/header";
 import { SidebarProvider, SidebarTrigger } from "~/components/ui/sidebar";
 import { AppSidebar } from "~/components/app-sidebar";
 import { cx } from "class-variance-authority";
-import { WinnerModal } from "~/components/game-board/winner-modal";
+import { WinnerModal } from "~/components/winner-modal";
 import { useGameStore } from "~/store/gameStore";
 import { useEffect } from "react";
-import { GameStartModal } from "~/components/game-board/game-start-modal";
+import { GameStartModal } from "~/components/game-start-modal";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -42,7 +42,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <SidebarTrigger />
         <GameBoard />
       </main>
-      
+
       <GameStartModal />
       <WinnerModal
         isOpen={showWinnerModal}

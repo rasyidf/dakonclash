@@ -1,12 +1,10 @@
 import { useGame } from "~/hooks/use-game";
 import { cn } from "~/lib/utils";
-import { useGameStore } from "~/store/gameStore";
+import BoardEngine from "~/store/BoardEngine";
 import { GameCell } from "./game-cell";
 
 export function GameBoard() {
-  const { boardSize, board, moves, players, currentPlayer, handleCellClick } = useGame();
-  const gameMode = useGameStore(state => state.gameMode);
-  const isPlayer2Joined = useGameStore(state => state.isPlayer2Joined);
+  const { boardSize, board, moves, isPlayer2Joined, gameMode, players, currentPlayer, handleCellClick } = useGame();
 
   if (gameMode === 'online' && !isPlayer2Joined) {
     return (
@@ -40,10 +38,9 @@ export function GameBoard() {
                 cell={cell}
                 players={players}
                 disabled={
-                  moves < 2 && (rowIndex < 2 || rowIndex > boardSize - 3 || colIndex < 2 || colIndex > boardSize - 3)
+                  moves < 2 && BoardEngine.getDisabledArea(boardSize, rowIndex, colIndex)
                 }
                 currentPlayer={currentPlayer}
-                moves={history.length}
                 onClick={() => handleCellClick(rowIndex, colIndex)}
               />
             ))
@@ -59,4 +56,5 @@ export function GameBoard() {
     </>
   );
 }
+
 

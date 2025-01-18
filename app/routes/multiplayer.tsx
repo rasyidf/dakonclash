@@ -338,7 +338,7 @@ const GameConnection = () => {
               <h2 className="text-xl font-semibold mb-4">Share this QR Code to invite player:</h2>
               <div className="inline-block p-4 bg-white rounded-lg shadow-md">
                 <QRCodeSVG value={gameId} size={256} />
-            </div>
+              </div>
             </div>
 
             <div className="space-y-2">

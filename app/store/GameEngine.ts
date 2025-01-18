@@ -1,13 +1,13 @@
 import { produce } from 'immer';
-import type { Cell } from '~/hooks/use-game';
 import supabase from '~/supabase';
-import type { GameMode, GameMove, GameState, GameStats, Player } from './types';
+import type { Cell, GameMode, GameMove, GameState, GameStats, Player } from './types';
 import { toast } from 'sonner';
+import BoardEngine from './BoardEngine';
 
 const initialStats: GameStats = {
   startTime: Date.now(),
   elapsedTime: 0,
-  movesByPlayer: { p1: 0, p2: 0 },
+  movesByPlayer: { 1: 0, 2: 0 },
   flipCombos: 0,
   longestFlipChain: 0,
   cornerThrows: 0,
@@ -17,12 +17,10 @@ export class GameEngine {
 
   static initGameMode(state: GameState, mode: 'local' | 'vs-bot' | 'online') {
     state.gameMode = mode;
-    state.board = Array(state.boardSize).fill(null).map(() =>
-      Array(state.boardSize).fill(null).map(() => ({ beads: 0, playerId: null }))
-    );
-    state.currentPlayerId = 'p1';
+    state.board = BoardEngine.generate(state.boardSize);
+    state.currentPlayerId = 1;
     state.moves = 0;
-    state.score = { p1: 0, p2: 0 };
+    state.score = { 1: 0, 2: 0 };
     state.stats = initialStats;
     state.isGameOver = false;
     state.winner = null;
@@ -31,21 +29,19 @@ export class GameEngine {
   static resetGame(state: GameState, newSize: number) {
     state.boardSize = newSize;
     state.moves = 0;
-    state.currentPlayerId = "p1";
-    state.score = { p1: 0, p2: 0 };
+    state.currentPlayerId = 1;
+    state.score = { 1: 0, 2: 0 };
     state.players = {
-      p1: { id: "p1", name: "Player 1", color: "red" },
-      p2: { id: "p2", name: "Player 2", color: "blue" }
+      1: { id: 1, name: "Player 1", color: "red" },
+      2: { id: 2, name: "Player 2", color: "blue" }
     };
-    state.board = Array(newSize).fill(null).map(() =>
-      Array(newSize).fill(null).map(() => ({ beads: 0, playerId: null }))
-    );
+    state.board = BoardEngine.generate(newSize);
     state.history = [];
     state.currentStep = -1;
     state.stats = {
       startTime: Date.now(),
       elapsedTime: 0,
-      movesByPlayer: { p1: 0, p2: 0 },
+      movesByPlayer: { 1: 0, 2: 0 },
       flipCombos: 0,
       longestFlipChain: 0,
       cornerThrows: 0,
@@ -53,8 +49,8 @@ export class GameEngine {
     state.future = [];
     state.replayIndex = null;
     state.playerStats = {
-      p1: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 },
-      p2: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 }
+      1: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 },
+      2: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 }
     };
     state.isGameOver = false;
     state.winner = null;
@@ -78,8 +74,8 @@ export class GameEngine {
     state.future = [];
     state.playerStats[state.currentPlayerId].turnCount += 1;
     state.playerStats[state.currentPlayerId].chainCount += 1;
-    state.playerStats[state.currentPlayerId].boardControl = state.board.flat().filter(cell => cell.playerId === state.currentPlayerId).length;
-    state.playerStats[state.currentPlayerId].tokenTotal = state.board.flat().reduce((sum, cell) => sum + (cell.playerId === state.currentPlayerId ? cell.beads : 0), 0);
+    state.playerStats[state.currentPlayerId].boardControl = state.board.flat().filter(cell => cell.owner === state.currentPlayerId).length;
+    state.playerStats[state.currentPlayerId].tokenTotal = state.board.flat().reduce((sum, cell) => sum + (cell.owner === state.currentPlayerId ? cell.value : 0), 0);
   }
 
   static replay(state: GameState, step: number) {
@@ -87,26 +83,26 @@ export class GameEngine {
     const move = state.history[step];
     state.board = JSON.parse(JSON.stringify(move.board));
     state.score = { ...move.score };
-    state.currentPlayerId = move.playerId === 'p1' ? 'p2' : 'p1';
+    state.currentPlayerId = move.playerId === 1 ? 2 : 1;
     state.currentStep = step;
     state.stats = { ...move.stats };
-    state.playerStats[state.currentPlayerId].boardControl = state.board.flat().filter(cell => cell.playerId === state.currentPlayerId).length;
-    state.playerStats[state.currentPlayerId].tokenTotal = state.board.flat().reduce((sum, cell) => sum + (cell.playerId === state.currentPlayerId ? cell.beads : 0), 0);
+    state.playerStats[state.currentPlayerId].boardControl = state.board.flat().filter(cell => cell.owner === state.currentPlayerId).length;
+    state.playerStats[state.currentPlayerId].tokenTotal = state.board.flat().reduce((sum, cell) => sum + (cell.owner === state.currentPlayerId ? cell.value : 0), 0);
   }
 
   static undo(state: GameState) {
     if (state.currentStep < 2) return;
-    const previousMove = state.history[state.currentStep - 1];
+    const previousMove = state.history[state.currentStep - 1] as GameMove;
     state.board = JSON.parse(JSON.stringify(previousMove.board));
     state.score = { ...previousMove.score };
-    state.currentPlayerId = previousMove.playerId === 'p1' ? 'p2' : 'p1';
+    state.currentPlayerId = previousMove.playerId === 1 ? 2 : 1;
     state.currentStep -= 1;
     state.stats = { ...previousMove.stats };
     state.future.push(state.history[state.currentStep + 1]);
     state.playerStats[state.currentPlayerId].turnCount -= 1;
     state.playerStats[state.currentPlayerId].chainCount -= 1;
-    state.playerStats[state.currentPlayerId].boardControl = state.board.flat().filter(cell => cell.playerId === state.currentPlayerId).length;
-    state.playerStats[state.currentPlayerId].tokenTotal = state.board.flat().reduce((sum, cell) => sum + (cell.playerId === state.currentPlayerId ? cell.beads : 0), 0);
+    state.playerStats[state.currentPlayerId].boardControl = state.board.flat().filter(cell => cell.owner === state.currentPlayerId).length;
+    state.playerStats[state.currentPlayerId].tokenTotal = state.board.flat().reduce((sum, cell) => sum + (cell.owner === state.currentPlayerId ? cell.value : 0), 0);
   }
 
   static redoMove(state: GameState) {
@@ -116,33 +112,33 @@ export class GameEngine {
     state.board = nextMove.board;
     state.playerStats[state.currentPlayerId].turnCount += 1;
     state.playerStats[state.currentPlayerId].chainCount += 1;
-    state.playerStats[state.currentPlayerId].boardControl = state.board.flat().filter(cell => cell.playerId === state.currentPlayerId).length;
-    state.playerStats[state.currentPlayerId].tokenTotal = state.board.flat().reduce((sum, cell) => sum + (cell.playerId === state.currentPlayerId ? cell.beads : 0), 0);
-    state.currentPlayerId = state.currentPlayerId === "p1" ? "p2" : "p1";
+    state.playerStats[state.currentPlayerId].boardControl = state.board.flat().filter(cell => cell.owner === state.currentPlayerId).length;
+    state.playerStats[state.currentPlayerId].tokenTotal = state.board.flat().reduce((sum, cell) => sum + (cell.owner === state.currentPlayerId ? cell.value : 0), 0);
+    state.currentPlayerId = state.currentPlayerId === 1 ? 2 : 1;
   }
 
   static checkWinner(state: GameState) {
-    const hasNoBeads = (playerId: Player["id"]) =>
-      state.board.flat().every(cell =>
-        cell.playerId !== playerId || cell.beads === 0
-      );
+    const hasNoBeads = (playerId: number) => state.board.every(
+      row => row.every(cell => cell.owner !== playerId || cell.value === 0)
+    );
 
-    const p1NoBeads = hasNoBeads("p1");
-    const p2NoBeads = hasNoBeads("p2");
+    const p1NoBeads = hasNoBeads(1);
+    const p2NoBeads = hasNoBeads(2);
+
     console.log("Invalid move: cell has 4 beads or opponent's cell");
     if (p1NoBeads || p2NoBeads) {
       state.isGameOver = true;
       state.showWinnerModal = true;
 
       const p1Total = state.board.flat()
-        .reduce((sum, cell) => sum + (cell.playerId === "p1" ? cell.beads : 0), 0);
+        .reduce((sum, cell) => sum + (cell.owner === 1 ? cell.value : 0), 0);
       const p2Total = state.board.flat()
-        .reduce((sum, cell) => sum + (cell.playerId === "p2" ? cell.beads : 0), 0);
+        .reduce((sum, cell) => sum + (cell.owner === 2 ? cell.value : 0), 0);
 
       if (p1Total > p2Total) {
-        state.winner = "p1";
+        state.winner = 1;
       } else if (p2Total > p1Total) {
-        state.winner = "p2";
+        state.winner = 2;
       } else {
         state.winner = 'draw';
       }
@@ -159,7 +155,7 @@ export class GameEngine {
       const center = Math.floor(state.boardSize / 2);
       for (let i = center - 1; i <= center + 1; i++) {
         for (let j = center - 1; j <= center + 1; j++) {
-          if (!state.board[i][j].playerId) {
+          if (!(state.board[i][j].owner > 0)) {
             centerCells.push({ row: i, col: j });
           }
         }
@@ -173,7 +169,7 @@ export class GameEngine {
       const center = Math.floor(state.boardSize / 2);
       for (let i = center - 2; i <= center + 2; i++) {
         for (let j = center - 2; j <= center + 2; j++) {
-          if (!state.board[i][j].playerId) {
+          if (!(state.board[i][j].owner > 0)) {
             centerCells.push({ row: i, col: j });
           }
         }
@@ -187,7 +183,7 @@ export class GameEngine {
 
       state.board.forEach((row, rowIndex) => {
         row.forEach((cell, colIndex) => {
-          if (!cell.playerId) {
+          if (!cell.owner) {
             emptyCells.push({ row: rowIndex, col: colIndex });
           }
         });
@@ -206,11 +202,11 @@ export class GameEngine {
       size,
       board: initialBoard,
       current_player_id: 'p1',
-      score: { p1: 0, p2: 0 },
+      score: { 1: 0, 2: 0 },
       stats: {
         startTime: Date.now(),
         elapsedTime: 0,
-        movesByPlayer: { p1: 0, p2: 0 },
+        movesByPlayer: { 1: 0, 2: 0 },
         flipCombos: 0,
         longestFlipChain: 0,
         cornerThrows: 0,
@@ -267,15 +263,15 @@ export class GameEngine {
 
   static async makeMove(state: GameState, position: { row: number; col: number; }) {
     const newBoard = produce(state.board, (draft) => {
-      draft[position.row][position.col].beads += 1;
-      draft[position.row][position.col].playerId = state.currentPlayerId;
+      draft[position.row][position.col].value += 1;
+      draft[position.row][position.col].owner = state.currentPlayerId;
     });
 
     const updatedStats = produce(state.stats, (draft) => {
       draft.movesByPlayer[state.currentPlayerId] += 1;
     });
 
-    const nextPlayer = state.currentPlayerId === 'p1' ? 'p2' : 'p1';
+    const nextPlayer = state.currentPlayerId === 1 ? 2 : 1;
 
     const { error } = await supabase.from('games').update({
       board: newBoard,
@@ -295,17 +291,15 @@ export class GameEngine {
 
   static startReplay(state: GameState) {
     state.replayIndex = 0;
-    state.board = Array(state.boardSize).fill([]).map(() =>
-      Array(state.boardSize).fill(null).map(() => ({ beads: 0, playerId: null }))
-    );
+    state.board = BoardEngine.generate(state.boardSize);
   }
 
   static nextReplayStep(state: GameState) {
     if (state.replayIndex === null || state.replayIndex >= state.history.length) return;
     state.replayIndex += 1;
     state.board = state.history[state.replayIndex]?.board as Cell[][];
-    state.playerStats[state.currentPlayerId].boardControl = state.board.flat().filter(cell => cell.playerId === state.currentPlayerId).length;
-    state.playerStats[state.currentPlayerId].tokenTotal = state.board.flat().reduce((sum, cell) => sum + (cell.playerId === state.currentPlayerId ? cell.beads : 0), 0);
+    state.playerStats[state.currentPlayerId].boardControl = state.board.flat().filter(cell => cell.owner === state.currentPlayerId).length;
+    state.playerStats[state.currentPlayerId].tokenTotal = state.board.flat().reduce((sum, cell) => sum + (cell.owner === state.currentPlayerId ? cell.value : 0), 0);
   }
 
   static setTimer(state: GameState, set: any, time: number | null) {
@@ -331,6 +325,7 @@ export class GameEngine {
       state.stats.elapsedTime -= 1;
       if (state.stats.elapsedTime <= 0) {
         state.stats.elapsedTime = 0;
+        console.log;
         state.checkWinner();
       }
     }
@@ -372,7 +367,7 @@ export class GameEngine {
       [0, 1], // right
     ];
 
-    newBoard[row][col].beads = 0;
+    newBoard[row][col].value = 0;
     let currentChainLength = chainLength;
 
     for (const [dx, dy] of directions) {
@@ -380,9 +375,9 @@ export class GameEngine {
       const newCol = col + dy;
 
       if (newRow >= 0 && newRow < state.boardSize && newCol >= 0 && newCol < state.boardSize) {
-        newBoard[newRow][newCol].beads += 1;
-        newBoard[newRow][newCol].playerId = state.currentPlayerId;
-        if (newBoard[newRow][newCol].beads === 4) {
+        newBoard[newRow][newCol].value += 1;
+        newBoard[newRow][newCol].owner = state.currentPlayerId;
+        if (newBoard[newRow][newCol].value === 4) {
           await new Promise(resolve => setTimeout(resolve, 100));
           const subChainLength = await this.spreadBeads(state, newRow, newCol, newBoard, currentChainLength + 1, updateStats);
           currentChainLength = Math.max(currentChainLength, subChainLength);
@@ -394,39 +389,37 @@ export class GameEngine {
   }
 
   static hasValidMoves(board: Cell[][], playerId: Player["id"]) {
+    console.log(playerId);
     return board.some(row =>
       row.some(cell =>
-        (cell.playerId === playerId && cell.beads > 0) ||
-        (cell.beads === 0 && cell.playerId === null)
+        (cell.owner === playerId && cell.value > 0) ||
+        (cell.value === 0 && cell.owner === null)
       )
     );
   }
 
-  static handleSizeChange(state: GameState, value: string) {
-    const newSize = parseInt(value) || 16;
-    if (newSize > 0 && newSize <= 20) {
+  static handleSizeChange(state: GameState, value: number) {
+    const newSize = value || 6;
+    if (newSize > 0 && newSize <= 12) {
       state.resetGame(newSize);
     }
   }
 
   static async handleCellClick(state: GameState, row: number, col: number) {
-    if (!this.hasValidMoves(state.board, state.currentPlayerId)) {
-      state.checkWinner();
-      return;
-    }
 
-    if (state.board[row][col].playerId && state.board[row][col].playerId !== state.currentPlayerId) {
+
+    if (state.board[row][col].owner && state.board[row][col].owner !== state.currentPlayerId) {
       toast.error("This is probably not your turn");
       console.log("Invalid move: opponent's cell");
       return;
     }
     // Allow placing beads on an empty cell after the first move
-    if (state.board[row][col].beads === 0 && state.moves > 1) {
+    if (state.board[row][col].value === 0 && state.moves > 1) {
       console.log("Invalid move: empty cell after first move");
       return;
     }
 
-    if (state.board[row][col].beads >= 4 || (state.board[row][col].playerId && state.board[row][col].playerId !== state.currentPlayerId)) {
+    if (state.board[row][col].value >= 4 || (state.board[row][col].owner && state.board[row][col].owner !== state.currentPlayerId)) {
       console.log("Invalid move: cell has 4 beads or opponent's cell");
       return;
     }
@@ -438,11 +431,11 @@ export class GameEngine {
 
     const newBoard = JSON.parse(JSON.stringify(state.board));
     const beadsToAdd = state.moves < 2 ? 3 : 1;
-    newBoard[row][col].beads += beadsToAdd;
-    newBoard[row][col].playerId = state.currentPlayerId;
+    newBoard[row][col].value += beadsToAdd;
+    newBoard[row][col].owner = state.currentPlayerId;
 
     let chainLength = 0;
-    if (newBoard[row][col].beads === 4) {
+    if (newBoard[row][col].value === 4) {
       await new Promise(resolve => setTimeout(resolve, 10));
       chainLength = await this.spreadBeads(state, row, col, newBoard, 1, state.updateStats);
     }
@@ -451,13 +444,13 @@ export class GameEngine {
     state.setMoves(state.moves + 1);
 
     // Check for valid moves before switching turns
-    const nextPlayer = state.currentPlayerId === "p1" ? "p2" : "p1";
+    const nextPlayer = state.currentPlayerId === 1 ? 2 : 1;
 
-    const scores = { p1: 0, p2: 0 };
+    const scores: Record<Player["id"], number> = { 1: 0, 2: 0 };
     newBoard.forEach((row: any[]) =>
-      row.forEach((cell: { playerId: string; }) => {
-        if (cell.playerId) {
-          scores[cell.playerId as Player["id"]]++;
+      row.forEach((cell: { owner: number; }) => {
+        if (cell.owner) {
+          scores[cell.owner]++;
         }
       })
     );
@@ -469,15 +462,16 @@ export class GameEngine {
       longestFlipChain: Math.max(state.stats.longestFlipChain, chainLength)
     });
 
-    state.setCurrentPlayerId(state.currentPlayerId === "p1" ? "p2" : "p1");
+    state.setCurrentPlayerId(state.currentPlayerId === 1 ? 2 : 1);
 
     state.addMove({ row, col });
     if (state.moves > 1) {
+      // Check for valid moves before switching turns
       state.checkWinner();
       return;
     }
 
-    if (state.gameMode === 'vs-bot' && state.currentPlayerId === 'p2') {
+    if (state.gameMode === 'vs-bot' && state.currentPlayerId === 2) {
       const botMove = state.generateBotMove();
       await this.handleCellClick(state, botMove.row, botMove.col);
     }

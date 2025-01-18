@@ -1,21 +1,23 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "~/components/ui/dialog";
+import { DialogDescription } from '@radix-ui/react-dialog';
+import { QRCodeSVG } from 'qrcode.react';
+import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Slider } from "~/components/ui/slider";
 import { useGame } from "~/hooks/use-game";
-import { useGameStore } from "~/store/gameStore";
-import { QRCodeSVG } from 'qrcode.react';
 
 export function GameStartModal() {
-  const { startGame } = useGame();
-  const showGameStartModal = useGameStore(state => state.showGameStartModal);
-  const setShowGameStartModal = useGameStore(state => state.setShowGameStartModal);
-  const isPlayer2Joined = useGameStore(state => state.isPlayer2Joined);
-  const gameId = useGameStore(state => state.gameId);
-  const setGameId = useGameStore(state => state.setGameId);
-  const [boardSize, setBoardSize] = useState(8);
+  const { startGame,
+    showGameStartModal,
+    setShowGameStartModal,
+    gameId,
+    setGameId,
+    isPlayer2Joined,
+    boardSize,
+    handleSizeChange
+  } = useGame();
   const [selectedMode, setSelectedMode] = useState<'local' | 'vs-bot' | 'online' | null>(null);
   const [showQR, setShowQR] = useState(false);
 
@@ -23,19 +25,14 @@ export function GameStartModal() {
     setSelectedMode(mode);
     if (mode === 'online') {
       if (gameId) {
-        // Joining existing game
         startGame(mode, boardSize, gameId);
         setShowQR(false);
-        // Don't close modal yet - wait for player 2 to join
       } else {
-        // Creating new game
-        await startGame(mode, boardSize);
+        startGame(mode, boardSize);
         setShowQR(true);
-        // Keep modal open to show QR code
       }
     } else {
-      // For local and vs-bot modes
-      await startGame(mode, boardSize);
+      startGame(mode, boardSize);
       setShowGameStartModal(false);
     }
   };
@@ -60,16 +57,22 @@ export function GameStartModal() {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Welcome to Dakon Clash</DialogTitle>
+          <DialogDescription>
+            Select game mode and board size to start the game
+          </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Label>Board Size</Label>
             <Slider
-              value={[boardSize]}
-              onValueChange={(value) => setBoardSize(value[0])}
-              min={5}
+              onValueChange={(value) => {
+                if (value[0] < 5) return handleSizeChange(5);
+                return handleSizeChange(value[0]);
+              }}
+              defaultValue={[boardSize]}
+              min={4}
               max={10}
-              step={1}
+              step={2}
             />
             <span className="text-sm text-muted-foreground text-center">
               {boardSize}x{boardSize}

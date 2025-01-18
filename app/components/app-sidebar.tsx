@@ -15,8 +15,8 @@ import {
 import { useGame } from "~/hooks/use-game";
 import { useGameStore } from "~/store/gameStore";
 import type { Player } from "~/store/types";
-import { GameControls } from "./game-board/game-controls";
-import { ScoreBoard } from "./game-board/score-board";
+import { GameControls } from "./game-controls";
+import { ScoreBoard } from "./score-board";
 
 export function AppSidebar() {
   const {

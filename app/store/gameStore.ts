@@ -10,32 +10,33 @@ import BoardEngine from './BoardEngine';
 const initialStats: GameStats = {
   startTime: Date.now(),
   elapsedTime: 0,
-  movesByPlayer: { p1: 0, p2: 0 },
+  movesByPlayer: { 1: 0, 2: 0 },
   flipCombos: 0,
   longestFlipChain: 0,
   cornerThrows: 0,
 };
 
 const initialPlayers: Record<Player["id"], Player> = {
-  p1: { id: "p1", name: "Player 1", color: "red" },
-  p2: { id: "p2", name: "Player 2", color: "blue" }
+  1: { id: 1, name: "Player 1", color: "red" },
+  2: { id: 2, name: "Player 2", color: "blue" }
 };
 
 const initialPlayerStats: Record<Player["id"], PlayerStats> = {
-  p1: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 },
-  p2: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 }
+  1: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 },
+  2: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 }
 };
 
 export const useGameStore = create<GameState>()(
   persist(
     immer(
       (set, get) => ({
+        // #region Game State
         gameId: null,
         gameMode: 'local',
         boardSize: 6,
         moves: 0,
         players: initialPlayers,
-        currentPlayerId: "p1" as Player["id"],
+        currentPlayerId: 1,
         score: { p1: 0, p2: 0 },
         board: BoardEngine.generate(6),
         history: [],
@@ -50,9 +51,29 @@ export const useGameStore = create<GameState>()(
 
         showWinnerModal: false,
         showGameStartModal: true,
+        // #endregion Game State
+
+        // #region Local Mode
         startGame: (mode, size, gameId) => set(produce((state: GameState) => {
           GameEngine.startGame(state, mode, size, gameId);
         })),
+        resetGame: (newSize) => set(produce((state: GameState) => {
+          GameEngine.resetGame(state, newSize);
+        })),
+        addMove: (position) => set(produce((state: GameState) => {
+          GameEngine.addMove(state, position);
+        })),
+        replay: (step) => set(produce((state: GameState) => {
+          GameEngine.replay(state, step);
+        })),
+        undo: () => set(produce((state: GameState) => {
+          GameEngine.undo(state);
+        })),
+        redoMove: () => set(produce((state: GameState) => {
+          GameEngine.redoMove(state);
+        })),
+        // #endregion Local Mode
+
         setSize: (size) => set(produce((state: GameState) => {
           state.boardSize = size;
         })),
@@ -71,9 +92,16 @@ export const useGameStore = create<GameState>()(
         setCurrentPlayerId: (id) => set(produce((state: GameState) => {
           state.currentPlayerId = id;
         })),
+
+        // #region Timed Mode
         setTimer: (time) => set(produce((state: GameState) => {
           GameEngine.setTimer(state, set, time);
         })),
+        updateTimer: () => set(produce((state: GameState) => {
+          GameEngine.updateTimer(state);
+        })),
+        // #endregion Timed Mode
+
         setGameId: (id: string) => set(produce((state: GameState) => {
           state.gameId = id;
         })),
@@ -99,37 +127,7 @@ export const useGameStore = create<GameState>()(
           state.showWinnerModal = show;
         })),
 
-        resetGame: (newSize) => set(produce((state: GameState) => {
-          GameEngine.resetGame(state, newSize);
-        })),
-
-        addMove: (position) => set(produce((state: GameState) => {
-          GameEngine.addMove(state, position);
-        })),
-
-        replay: (step) => set(produce((state: GameState) => {
-          GameEngine.replay(state, step);
-        })),
-        undo: () => set(produce((state: GameState) => {
-          GameEngine.undo(state);
-        })),
-        redoMove: () => set(produce((state: GameState) => {
-          GameEngine.redoMove(state);
-        })),
-        startReplay: () => set(produce((state: GameState) => {
-          GameEngine.startReplay(state);
-        })),
-        nextReplayStep: () => set(produce((state: GameState) => {
-          GameEngine.nextReplayStep(state);
-        })),
-        checkWinner: () => set(produce((state: GameState) => {
-          GameEngine.checkWinner(state);
-        })),
-
-        updateTimer: () => set(produce((state: GameState) => {
-          GameEngine.updateTimer(state);
-        })),
-
+        // #region Multiplayer Mode
         createOnlineGame: async (size) => {
           set(produce(async (state: GameState) => {
             await GameEngine.createOnlineGame(state, size);
@@ -141,15 +139,28 @@ export const useGameStore = create<GameState>()(
             await GameEngine.joinOnlineGame(state, gameId);
           }));
         },
+        // #endregion Multiplayer Mode
+
+        // #region Bot Mode
+        generateBotMove: () => {
+          return GameEngine.generateBotMove(get());
+        },
+        // #endregion Bot Mode
+
+        startReplay: () => set(produce((state: GameState) => {
+          GameEngine.startReplay(state);
+        })),
+        nextReplayStep: () => set(produce((state: GameState) => {
+          GameEngine.nextReplayStep(state);
+        })),
+        checkWinner: () => set(produce((state: GameState) => {
+          GameEngine.checkWinner(state);
+        })),
 
         makeMove: async (position: { row: number; col: number; }) => {
           set(produce(async (state: GameState) => {
             await GameEngine.makeMove(state, position);
           }));
-        },
-
-        generateBotMove: () => {
-          return GameEngine.generateBotMove(get());
         },
 
       })

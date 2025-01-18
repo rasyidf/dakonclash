@@ -1,22 +1,13 @@
-
-interface Cell {
-  owner: number;
-  value: number;
-}
-
-interface BoardState {
-  board: Cell[][];
-  timestamp: Date;
-}
+import type { BoardState, Cell } from "./types";
 
 class BoardEngine {
 
   static generate(size: number) {
     return Array(size).fill([]).map(() =>
-      Array(size).fill(null).map(() => ({ beads: 0, playerId: null }))
+      Array(size).fill(null).map(() => ({ value: 0, owner: 0 }))
     );
   }
-  
+
   private board: Cell[][];
   private history: BoardState[];
 
@@ -75,6 +66,13 @@ class BoardEngine {
     };
     this.saveState();
   }
+  static getDisabledArea(boardSize: number, rowIndex: number, colIndex: number) {
+    if (boardSize < 6) return false;
+    if (boardSize < 8) return (rowIndex < 1 || rowIndex > boardSize - 2 || colIndex < 1 || colIndex > boardSize - 2);
+    if (boardSize < 10) return (rowIndex < 2 || rowIndex > boardSize - 3 || colIndex < 2 || colIndex > boardSize - 3);
+
+    return (rowIndex < 2 || rowIndex > boardSize - 3 || colIndex < 2 || colIndex > boardSize - 3);
+  };
 }
 
 export default BoardEngine;

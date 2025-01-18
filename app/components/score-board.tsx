@@ -1,12 +1,12 @@
+import { useMemo, useState } from "react";
 import { cn } from "~/lib/utils";
 import type { Player, PlayerStats } from "~/store/types";
-import { Progress } from "../ui/progress";
-import { useMemo, useState } from "react";
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Progress } from "./ui/progress";
 
 interface ScoreBoardProps {
-  score: { [key: string]: number; };
+  score: Record<Player["id"], number>;
   players: Record<Player["id"], Player>;
   playerStats: Record<Player["id"], PlayerStats>;
   currentPlayerId: Player["id"];
@@ -41,14 +41,14 @@ export function ScoreBoard({ score, players, playerStats, currentPlayerId, winne
       <div className="text-base sm:text-lg md:text-xl font-bold text-slate-900 mb-2">
         {winner ? (
           <div className="text-center">
-            {winner === 'draw' ? 'Game Draw!' : `${players[winner].name} Wins!`}
+            {winner === 'draw' ? 'Game Draw!' : `${players[winner]?.name} Wins!`}
           </div>
         ) : (
           <div className={cn("text-base sm:text-lg md:text-xl font-bold w-full",
-            players[currentPlayerId].color === "red" && `text-red-500`,
-            players[currentPlayerId].color === "blue" && `text-blue-500`,
+            players?.[currentPlayerId]?.color === "red" && `text-red-500`,
+            players?.[currentPlayerId]?.color === "blue" && `text-blue-500`,
           )}>
-            {players[currentPlayerId].name.charAt(0).toUpperCase() + players[currentPlayerId].name.slice(1)}&apos;s Turn
+            {players?.[currentPlayerId]?.name.charAt(0).toUpperCase() + players?.[currentPlayerId]?.name.slice(1)}&apos;s Turn
           </div>
 
         )}
@@ -57,8 +57,8 @@ export function ScoreBoard({ score, players, playerStats, currentPlayerId, winne
         {Object.entries(score).map(([playerId, playerScore]) => (
           <div key={playerId} className="space-y-1 p-2 rounded-sm bg-slate-300">
             <div className="flex justify-between items-center">
-              {editingPlayerId === playerId ? (
-                <form onSubmit={(e) => handleSubmit(e, playerId as Player["id"])} className="flex-1 flex items-center gap-2">
+              {editingPlayerId === parseInt(playerId) ? (
+                <form onSubmit={(e) => handleSubmit(e, parseInt(playerId))} className="flex-1 flex items-center gap-2">
                   <Input
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
@@ -69,16 +69,16 @@ export function ScoreBoard({ score, players, playerStats, currentPlayerId, winne
                   </Button>
                 </form>
               ) : (
-                <div className="flex items-center gap-2" key={players[playerId as Player["id"]].name}>
+                <div className="flex items-center gap-2" key={players[parseInt(playerId)]?.name}>
 
                   <Input
-                    value={players[playerId as Player["id"]].name}
+                    value={players[parseInt(playerId)]?.name}
                     readOnly
                     className="bg-slate-300 border-none"
                     autoFocus
                   />
                   <Button
-                    onClick={() => handleEditClick(playerId as Player["id"], players[playerId as Player["id"]].name)}
+                    onClick={() => handleEditClick(parseInt(playerId), players[parseInt(playerId)]?.name)}
                     variant="ghost"
                   >
                     ✏️
@@ -89,11 +89,11 @@ export function ScoreBoard({ score, players, playerStats, currentPlayerId, winne
             <div className="text-xs text-slate-600">
               <div className="flex items-center space-x-2 justify-between">
                 <div>Moves: </div>
-                <div>{playerStats[playerId as Player["id"]].turnCount}</div>
+                <div>{playerStats[parseInt(playerId)]?.turnCount}</div>
               </div>
               <div className="flex items-center space-x-2 justify-between">
                 <div>Chains: </div>
-                <div>{playerStats[playerId as Player["id"]].chainCount}</div>
+                <div>{playerStats[parseInt(playerId)]?.chainCount}</div>
               </div>
 
             </div>
