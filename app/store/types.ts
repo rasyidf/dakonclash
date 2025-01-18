@@ -1,4 +1,4 @@
-import type { Cell } from '~/hooks/useGame';
+import type { Cell } from '~/hooks/use-game';
 
 export type TailwindColor = "red" | "blue" | "green" | "yellow" | "purple" | "pink" | "orange" | "teal";
 export type GameMode = 'online' | 'local' | 'vs-bot';
@@ -80,6 +80,7 @@ export interface GameState {
   setPlayer2Joined: (joined: boolean) => void;
   startReplay: () => void;
   nextReplayStep: () => void;
+  startGame: (mode: GameMode, size: number, gameId?: string) => void;
 }
 
 export const initialStats: GameStats = {

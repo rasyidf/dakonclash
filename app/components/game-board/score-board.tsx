@@ -1,5 +1,5 @@
 import { cn } from "~/lib/utils";
-import type { Player, PlayerStats } from "~/store/gameStore";
+import type { Player, PlayerStats } from "~/store/types";
 import { Progress } from "../ui/progress";
 import { useMemo, useState } from "react";
 import { Input } from "../ui/input";

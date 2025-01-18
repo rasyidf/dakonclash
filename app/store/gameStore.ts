@@ -50,7 +50,9 @@ export const useGameStore = create<GameState>()(
 
         showWinnerModal: false,
         showGameStartModal: true,
-
+        startGame: (mode, size, gameId) => set(produce((state: GameState) => {
+          GameEngine.startGame(state, mode, size, gameId);
+        })),
         setSize: (size) => set(produce((state: GameState) => {
           state.boardSize = size;
         })),

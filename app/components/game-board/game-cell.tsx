@@ -1,5 +1,5 @@
 import { cn } from "~/lib/utils";
-import type { Cell } from "~/hooks/useGame";
+import type { Cell } from "~/hooks/use-game";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import type { Player } from "~/store/types";

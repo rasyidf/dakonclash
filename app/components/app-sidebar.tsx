@@ -12,21 +12,19 @@ import {
   SidebarGroup,
   SidebarHeader,
 } from "~/components/ui/sidebar";
-import { useGame } from "~/hooks/useGame";
+import { useGame } from "~/hooks/use-game";
 import { useGameStore } from "~/store/gameStore";
+import type { Player } from "~/store/types";
 import { GameControls } from "./game-board/game-controls";
 import { ScoreBoard } from "./game-board/score-board";
 
 export function AppSidebar() {
   const {
-    size,
+    boardSize,
     score,
     players,
-    replay,
     undo,
     redoMove,
-    currentStep,
-    resetGame,
     handleSizeChange,
     stats,
     playerStats,
@@ -35,7 +33,6 @@ export function AppSidebar() {
   } = useGame();
 
   const setTimer = useGameStore(state => state.setTimer);
-  const setShowGameStartModal = useGameStore(state => state.setShowGameStartModal);
 
   return (
     <Sidebar>
@@ -48,8 +45,8 @@ export function AppSidebar() {
           <div className="flex flex-col items-center gap-2 sm:gap-4 p-2 sm:p-4 w-full">
             <div className="flex flex-col justify-between text-center w-full max-w-2xl mb-2 sm:mb-4">
               <GameControls
-                size={size}
-                onSizeChange={handleSizeChange} 
+                size={boardSize}
+                onSizeChange={handleSizeChange}
                 elapsedTime={stats.elapsedTime}
                 onSetTimer={setTimer}
               />
@@ -60,7 +57,7 @@ export function AppSidebar() {
                 currentPlayerId={currentPlayer.id}
                 winner={winner}
                 onUpdatePlayerName={(playerId, newName) => {
-                  players[playerId].name = newName;
+                  players[playerId as Player["id"]].name = newName;
                 }}
               />
             </div>

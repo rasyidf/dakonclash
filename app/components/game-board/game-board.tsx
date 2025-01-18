@@ -1,21 +1,19 @@
-import { useGame } from "~/hooks/useGame";
+import { useGame } from "~/hooks/use-game";
 import { cn } from "~/lib/utils";
-import { GameCell } from "./game-cell";
-import { GameStartModal } from "./game-start-modal";
 import { useGameStore } from "~/store/gameStore";
-import { useEffect } from "react";
+import { GameCell } from "./game-cell";
 
 export function GameBoard() {
-  const { boardSize, board, moves, players, currentPlayer, handleCellClick, } = useGame();
+  const { boardSize, board, moves, players, currentPlayer, handleCellClick } = useGame();
   const gameMode = useGameStore(state => state.gameMode);
   const isPlayer2Joined = useGameStore(state => state.isPlayer2Joined);
 
   if (gameMode === 'online' && !isPlayer2Joined) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <div className="text-xl font-bold">Waiting for Player 2 to join...</div>
-
-        {/* TODO: create qrcode */}
+        <div className="text-lg font-bold text-center">
+          Waiting for Player 2 to join...
+        </div>
       </div>
     );
   }

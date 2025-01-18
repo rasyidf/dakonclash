@@ -1,13 +1,13 @@
-import { Input } from "~/components/ui/input"
-import { Label } from "~/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
-import type { Player, TailwindColor } from "~/store/gameStore"
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import type { Player, TailwindColor } from "~/store/types";
 
-const COLORS: TailwindColor[] = ["red", "blue", "green", "yellow", "purple", "pink", "orange", "teal"]
+const COLORS: TailwindColor[] = ["red", "blue", "green", "yellow", "purple", "pink", "orange", "teal"];
 
 interface PlayerSettingsProps {
-  player: Player
-  onUpdate: (info: Partial<Player>) => void
+  player: Player;
+  onUpdate: (info: Partial<Player>) => void;
 }
 
 export function PlayerSettings({ player, onUpdate }: PlayerSettingsProps) {
@@ -23,7 +23,7 @@ export function PlayerSettings({ player, onUpdate }: PlayerSettingsProps) {
       </div>
       <div className="w-32">
         <Label htmlFor={`player-${player.id}-color`}>Color</Label>
-        <Select 
+        <Select
           value={player.color}
           onValueChange={(color) => onUpdate({ color: color as TailwindColor })}
         >
@@ -43,5 +43,5 @@ export function PlayerSettings({ player, onUpdate }: PlayerSettingsProps) {
         </Select>
       </div>
     </div>
-  )
+  );
 }

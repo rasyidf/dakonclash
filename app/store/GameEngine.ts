@@ -1,7 +1,8 @@
 import { produce } from 'immer';
-import type { Cell } from '~/hooks/useGame';
+import type { Cell } from '~/hooks/use-game';
 import supabase from '~/supabase';
-import type { GameMove, GameState, GameStats, Player } from './types';
+import type { GameMode, GameMove, GameState, GameStats, Player } from './types';
+import { toast } from 'sonner';
 
 const initialStats: GameStats = {
   startTime: Date.now(),
@@ -332,6 +333,165 @@ export class GameEngine {
         state.stats.elapsedTime = 0;
         state.checkWinner();
       }
+    }
+  }
+
+
+  static updateFlipStats(
+    stats: GameStats,
+    chainLength: number,
+    updateStats: (stats: Partial<GameStats>) => void
+  ) {
+    updateStats({
+      flipCombos: stats.flipCombos + 1,
+      longestFlipChain: Math.max(stats.longestFlipChain, chainLength)
+    });
+  };
+
+  static isCornerPosition(
+    state: GameState,
+    row: number, col: number) {
+    return (row === 0 && col === 0)
+      || (row === 0 && col === state.boardSize - 1)
+      || (row === state.boardSize - 1 && col === state.boardSize - 1)
+      || (row === state.boardSize - 1 && col === 0);
+  };
+
+  static async spreadBeads(
+    state: GameState,
+    row: number,
+    col: number,
+    newBoard: Cell[][],
+    chainLength: number,
+    updateStats: (stats: Partial<GameStats>) => void
+  ): Promise<number> {
+    const directions = [
+      [-1, 0], // up
+      [1, 0], // down
+      [0, -1], // left
+      [0, 1], // right
+    ];
+
+    newBoard[row][col].beads = 0;
+    let currentChainLength = chainLength;
+
+    for (const [dx, dy] of directions) {
+      const newRow = row + dx;
+      const newCol = col + dy;
+
+      if (newRow >= 0 && newRow < state.boardSize && newCol >= 0 && newCol < state.boardSize) {
+        newBoard[newRow][newCol].beads += 1;
+        newBoard[newRow][newCol].playerId = state.currentPlayerId;
+        if (newBoard[newRow][newCol].beads === 4) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          const subChainLength = await this.spreadBeads(state, newRow, newCol, newBoard, currentChainLength + 1, updateStats);
+          currentChainLength = Math.max(currentChainLength, subChainLength);
+        }
+      }
+    }
+
+    return currentChainLength;
+  }
+
+  static hasValidMoves(board: Cell[][], playerId: Player["id"]) {
+    return board.some(row =>
+      row.some(cell =>
+        (cell.playerId === playerId && cell.beads > 0) ||
+        (cell.beads === 0 && cell.playerId === null)
+      )
+    );
+  }
+
+  static handleSizeChange(state: GameState, value: string) {
+    const newSize = parseInt(value) || 16;
+    if (newSize > 0 && newSize <= 20) {
+      state.resetGame(newSize);
+    }
+  }
+
+  static async handleCellClick(state: GameState, row: number, col: number) {
+    if (!this.hasValidMoves(state.board, state.currentPlayerId)) {
+      state.checkWinner();
+      return;
+    }
+
+    if (state.board[row][col].playerId && state.board[row][col].playerId !== state.currentPlayerId) {
+      toast.error("This is probably not your turn");
+      console.log("Invalid move: opponent's cell");
+      return;
+    }
+    // Allow placing beads on an empty cell after the first move
+    if (state.board[row][col].beads === 0 && state.moves > 1) {
+      console.log("Invalid move: empty cell after first move");
+      return;
+    }
+
+    if (state.board[row][col].beads >= 4 || (state.board[row][col].playerId && state.board[row][col].playerId !== state.currentPlayerId)) {
+      console.log("Invalid move: cell has 4 beads or opponent's cell");
+      return;
+    }
+
+    if (state.gameMode === 'online' && state.gameId) {
+      await state.makeMove({ row, col });
+      return;
+    }
+
+    const newBoard = JSON.parse(JSON.stringify(state.board));
+    const beadsToAdd = state.moves < 2 ? 3 : 1;
+    newBoard[row][col].beads += beadsToAdd;
+    newBoard[row][col].playerId = state.currentPlayerId;
+
+    let chainLength = 0;
+    if (newBoard[row][col].beads === 4) {
+      await new Promise(resolve => setTimeout(resolve, 10));
+      chainLength = await this.spreadBeads(state, row, col, newBoard, 1, state.updateStats);
+    }
+
+    state.setBoard(newBoard);
+    state.setMoves(state.moves + 1);
+
+    // Check for valid moves before switching turns
+    const nextPlayer = state.currentPlayerId === "p1" ? "p2" : "p1";
+
+    const scores = { p1: 0, p2: 0 };
+    newBoard.forEach((row: any[]) =>
+      row.forEach((cell: { playerId: string; }) => {
+        if (cell.playerId) {
+          scores[cell.playerId as Player["id"]]++;
+        }
+      })
+    );
+
+    state.setScore(scores);
+
+    state.updateStats({
+      flipCombos: state.stats.flipCombos + 1,
+      longestFlipChain: Math.max(state.stats.longestFlipChain, chainLength)
+    });
+
+    state.setCurrentPlayerId(state.currentPlayerId === "p1" ? "p2" : "p1");
+
+    state.addMove({ row, col });
+    if (state.moves > 1) {
+      state.checkWinner();
+      return;
+    }
+
+    if (state.gameMode === 'vs-bot' && state.currentPlayerId === 'p2') {
+      const botMove = state.generateBotMove();
+      await this.handleCellClick(state, botMove.row, botMove.col);
+    }
+  }
+
+  static async startGame(state: GameState, mode: GameMode, size: number = 8, gameId?: string) {
+    if (mode === 'online') {
+      if (gameId) {
+        await state.joinOnlineGame(gameId);
+      } else {
+        await state.createOnlineGame(size);
+      }
+    } else {
+      state.setGameMode(mode);
     }
   }
 

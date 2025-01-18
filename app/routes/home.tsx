@@ -17,13 +17,10 @@ export function meta({ }: Route.MetaArgs) {
 }
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
-
-
   return {
     gameId: params.id,
   };
 }
-
 
 export default function Home({ loaderData }: Route.ComponentProps) {
   const { gameId } = loaderData;

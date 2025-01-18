@@ -4,7 +4,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Slider } from "~/components/ui/slider";
-import { useGame } from "~/hooks/useGame";
+import { useGame } from "~/hooks/use-game";
 import { useGameStore } from "~/store/gameStore";
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -24,7 +24,7 @@ export function GameStartModal() {
     if (mode === 'online') {
       if (gameId) {
         // Joining existing game
-        await startGame(mode, boardSize, gameId);
+        startGame(mode, boardSize, gameId);
         setShowQR(false);
         // Don't close modal yet - wait for player 2 to join
       } else {

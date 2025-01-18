@@ -6,7 +6,7 @@ import { useGameStore } from "~/store/gameStore";
 
 interface GameControlsProps {
   size: number;
-  onSizeChange: (value: string) => void;
+  onSizeChange: (value: number) => void;
   elapsedTime: number;
   onSetTimer: (time: number) => void;
 }
@@ -17,7 +17,7 @@ export function GameControls({ size, onSizeChange, elapsedTime, onSetTimer }: Ga
     <div className="flex flex-col items-center gap-4 mb-4">
       <div className="flex items-center gap-2">
         <Label htmlFor="size">Size:</Label>
-        <Select value={size.toString()} onValueChange={onSizeChange}>
+        <Select value={size.toString()} onValueChange={(value) => onSizeChange(parseInt(value))}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Size" />
           </SelectTrigger>

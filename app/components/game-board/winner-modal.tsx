@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 import Confetti from 'react-confetti';
-import type { Player } from "~/store/gameStore";
+import type { Player } from "~/store/types";
 import { useEffect, useState } from "react";
 
 interface WinnerModalProps {
