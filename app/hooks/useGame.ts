@@ -111,10 +111,6 @@ export function useGame() {
       return;
     }
 
-    if (gameMode === 'online' && gameId) {
-      await makeMove({ row, col });
-      return;
-    }
 
     if (board[row][col].playerId && board[row][col].playerId !== currentPlayerId) {
       toast.error("This is probably not your turn");
@@ -122,13 +118,18 @@ export function useGame() {
       return;
     }
     // Allow placing beads on an empty cell after the first move
-    if (board[row][col].beads === 0 && board[row][col].playerId === null && moves > 1) {
+    if (board[row][col].beads === 0 && !board[row][col].playerId && moves > 1) {
       console.log("Invalid move: empty cell after first move");
       return;
     }
 
-    if (board[row][col].beads === 4 || (board[row][col].playerId && board[row][col].playerId !== currentPlayerId)) {
+    if (board[row][col].beads >= 4 || (board[row][col].playerId)) {
       console.log("Invalid move: cell has 4 beads or opponent's cell");
+      return;
+    }
+
+    if (gameMode === 'online' && gameId) {
+      await makeMove({ row, col });
       return;
     }
 
