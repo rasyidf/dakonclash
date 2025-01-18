@@ -23,6 +23,7 @@ type StatusColorKey = keyof typeof statusColors;
 interface ConnectionData {
   sdp: string;
   type: 'offer' | 'answer';
+  iceCandidates: RTCIceCandidateInit[];
 }
 
 // Improved compression for shorter URLs
@@ -36,7 +37,7 @@ const compressData = (data: any): string => {
       .filter((line: string) => !line.startsWith('a=msid-semantic:'))
       .join('\n');
   }
-  
+
   const jsonStr = JSON.stringify(data);
   const compressed = btoa(jsonStr)
     .replace(/\+/g, '-')
@@ -71,11 +72,13 @@ const GameConnection = () => {
   const iceCandidatesQueue = useRef<RTCIceCandidate[]>([]);
 
   const initializePeerConnection = () => {
-    console.debug('[PeerConnection] Initializing with local network only configuration');
+    console.debug('[PeerConnection] Initializing with STUN server configuration');
     const config: RTCConfiguration = {
-      iceServers: [], // Empty array for LAN-only connections
-      iceTransportPolicy: 'relay', // Forces local network connections
-      iceCandidatePoolSize: 0 // No need for candidate pool in LAN
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+      ],
+      iceTransportPolicy: 'all',
+      iceCandidatePoolSize: 0
     };
 
     const pc = new RTCPeerConnection(config);
@@ -83,18 +86,14 @@ const GameConnection = () => {
     pc.onicecandidate = (event) => {
       console.debug('[ICE] New candidate:', event.candidate?.candidate);
       if (event.candidate) {
-        // Only use local network candidates
-        if (event.candidate.candidate.includes('host')) {
-          console.debug('[ICE] Adding local network candidate to queue');
-          iceCandidatesQueue.current.push(event.candidate);
-          
-          // For host: update gameId with the latest offer
-          if (isHost && pc.localDescription) {
-            updateGameUrl();
-          }
-        } else {
-          console.debug('[ICE] Ignoring non-local candidate');
+        console.debug('[ICE] Adding candidate to queue');
+        iceCandidatesQueue.current.push(event.candidate);
+
+        if (isHost && pc.localDescription) {
+          updateGameUrl();
         }
+      } else {
+        console.debug('[ICE] All candidates generated');
       }
     };
 
@@ -123,7 +122,9 @@ const GameConnection = () => {
 
     const connectionData: ConnectionData = {
       sdp: peerConnection.current.localDescription.sdp,
+      iceCandidates: iceCandidatesQueue.current.map(c => c.toJSON()),
       type: peerConnection.current.localDescription.type as 'offer' | 'answer'
+
     };
 
     const compressedData = compressData(connectionData);
@@ -134,27 +135,14 @@ const GameConnection = () => {
 
   const setupDataChannel = (channel: RTCDataChannel) => {
     console.debug('[DataChannel] Setting up channel:', channel.label);
-    
+
     channel.onopen = () => {
-      console.debug('[DataChannel] Opened with config:', {
-        ordered: channel.ordered,
-        maxRetransmits: channel.maxRetransmits
-      });
-      console.log('Data channel opened');
+      console.debug('[DataChannel] Opened');
       setConnectionStatus('connected');
-      
-      // Exchange ICE candidates through data channel once connected
-      if (iceCandidatesQueue.current.length > 0) {
-        channel.send(JSON.stringify({
-          type: 'ice-candidates',
-          candidates: iceCandidatesQueue.current.map(c => c.toJSON())
-        }));
-      }
     };
 
     channel.onclose = () => {
-      console.debug('[DataChannel] Closed - Last state:', channel.readyState);
-      console.log('Data channel closed');
+      console.debug('[DataChannel] Closed');
       setConnectionStatus('disconnected');
     };
 
@@ -162,6 +150,7 @@ const GameConnection = () => {
       console.debug('[DataChannel] Received message of size:', event.data.length);
       try {
         const message = JSON.parse(event.data);
+        console.debug('[DataChannel] Parsed message:', message);
         if (message.type === 'ice-candidates' && peerConnection.current) {
           for (const candidate of message.candidates) {
             await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
@@ -207,7 +196,7 @@ const GameConnection = () => {
 
       console.debug('[Host] Created data channel:', dataChannel.current.label);
       console.debug('[Host] Local description set:', pc.localDescription?.type);
-      
+
       // Generate initial game URL with just the offer
       updateGameUrl();
       setConnectionStatus('waiting');
@@ -224,7 +213,7 @@ const GameConnection = () => {
     console.debug('[Join] Starting join process with data length:', compressedData.length);
     try {
       const connectionData: ConnectionData = decompressData(compressedData);
-      
+
       setIsHost(false);
       setConnectionStatus('joining');
       setErrorMessage('');
@@ -242,12 +231,18 @@ const GameConnection = () => {
         type: connectionData.type
       }));
 
+      // Add received ICE candidates immediately
+      for (const candidate of connectionData.iceCandidates) {
+        console.debug('[Join] Adding received ICE candidate');
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
       console.debug('[Join] Remote description set:', connectionData.type);
       console.debug('[Join] Local answer created:', answer.type);
-      
+
       setConnectionStatus('connecting');
 
     } catch (error) {
@@ -282,7 +277,7 @@ const GameConnection = () => {
       dataChannel.current.close();
       dataChannel.current = null;
     }
-    
+
     iceCandidatesQueue.current = [];
     setErrorMessage('');
     setConnectionStatus('disconnected');
@@ -343,7 +338,7 @@ const GameConnection = () => {
               <h2 className="text-xl font-semibold mb-4">Share this QR Code to invite player:</h2>
               <div className="inline-block p-4 bg-white rounded-lg shadow-md">
                 <QRCodeSVG value={gameId} size={256} />
-              </div>
+            </div>
             </div>
 
             <div className="space-y-2">
