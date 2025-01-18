@@ -1,26 +1,64 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { cn } from '~/lib/utils';
+import { Spinner } from '~/components/ui/spinner';
+
+// Debug constants for WebRTC configuration
 const statusColors: Record<Partial<RTCIceConnectionState> | "disconnected" | "creating" | "waiting" | "joining" | "connecting" | "checking" | "connected", string> = {
-  disconnected: 'text-red-500',   // Bright red for clearly broken connection
-  creating: 'text-blue-500',      // Blue for initialization
-  waiting: 'text-amber-500',      // Amber for waiting states
-  joining: 'text-blue-500',       // Blue for initialization
-  connecting: 'text-amber-500',   // Amber for intermediate states
-  checking: 'text-amber-500',     // Amber for verification
-  connected: 'text-emerald-500',  // Emerald for successful connection
-  closed: 'text-red-500',         // Red for terminated connection
-  completed: 'text-emerald-500',  // Emerald for successful ICE completion
-  failed: 'text-red-600',         // Dark red for connection failure
-  new: 'text-blue-500',           // Blue for new connection
+  disconnected: 'text-red-500',
+  creating: 'text-blue-500',
+  waiting: 'text-amber-500',
+  joining: 'text-blue-500',
+  connecting: 'text-amber-500',
+  checking: 'text-amber-500',
+  connected: 'text-emerald-500',
+  closed: 'text-red-500',
+  completed: 'text-emerald-500',
+  failed: 'text-red-600',
+  new: 'text-blue-500',
 };
 
-type StatusColorKey = keyof typeof statusColors; // | RTCIceConnectionState;
+type StatusColorKey = keyof typeof statusColors;
 
 interface ConnectionData {
-  description: RTCSessionDescription;
-  candidates: RTCIceCandidate[];
+  sdp: string;
+  type: 'offer' | 'answer';
 }
+
+// Improved compression for shorter URLs
+const compressData = (data: any): string => {
+  console.debug('[CompressData] Input size:', JSON.stringify(data).length);
+  // Remove unnecessary SDP lines and compress
+  if (data.sdp) {
+    data.sdp = data.sdp
+      .split('\n')
+      .filter((line: string) => !line.startsWith('a=ice-options:'))
+      .filter((line: string) => !line.startsWith('a=msid-semantic:'))
+      .join('\n');
+  }
+  
+  const jsonStr = JSON.stringify(data);
+  const compressed = btoa(jsonStr)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+  console.debug('[CompressData] Compressed size:', compressed.length);
+  return compressed;
+};
+
+const decompressData = (compressed: string): any => {
+  console.debug('[DecompressData] Attempting to decompress data of length:', compressed.length);
+  try {
+    const base64 = compressed.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+    const decompressed = JSON.parse(atob(padded));
+    console.debug('[DecompressData] Successfully decompressed data');
+    return decompressed;
+  } catch (error) {
+    console.error('[DecompressData] Failed to decompress:', error);
+    throw new Error('Invalid connection data');
+  }
+};
 
 const GameConnection = () => {
   const [isHost, setIsHost] = useState(false);
@@ -30,16 +68,202 @@ const GameConnection = () => {
 
   const peerConnection = useRef<RTCPeerConnection | null>(null);
   const dataChannel = useRef<RTCDataChannel | null>(null);
-  const iceCandidates = useRef<RTCIceCandidate[]>([]);
+  const iceCandidatesQueue = useRef<RTCIceCandidate[]>([]);
 
-  // Initialize WebRTC on component mount
+  const initializePeerConnection = () => {
+    console.debug('[PeerConnection] Initializing with local network only configuration');
+    const config: RTCConfiguration = {
+      iceServers: [], // Empty array for LAN-only connections
+      iceTransportPolicy: 'relay', // Forces local network connections
+      iceCandidatePoolSize: 0 // No need for candidate pool in LAN
+    };
+
+    const pc = new RTCPeerConnection(config);
+
+    pc.onicecandidate = (event) => {
+      console.debug('[ICE] New candidate:', event.candidate?.candidate);
+      if (event.candidate) {
+        // Only use local network candidates
+        if (event.candidate.candidate.includes('host')) {
+          console.debug('[ICE] Adding local network candidate to queue');
+          iceCandidatesQueue.current.push(event.candidate);
+          
+          // For host: update gameId with the latest offer
+          if (isHost && pc.localDescription) {
+            updateGameUrl();
+          }
+        } else {
+          console.debug('[ICE] Ignoring non-local candidate');
+        }
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      console.debug('[ICE] State change:', pc.iceConnectionState);
+      console.debug('[ICE] Gathering state:', pc.iceGatheringState);
+      setConnectionStatus(pc.iceConnectionState as StatusColorKey);
+    };
+
+    pc.onconnectionstatechange = () => {
+      console.debug('[Connection] State change:', pc.connectionState);
+      console.debug('[Connection] Signaling state:', pc.signalingState);
+      if (pc.connectionState === 'connected') {
+        setConnectionStatus('connected');
+      } else if (pc.connectionState === 'failed') {
+        setErrorMessage('Connection failed. Please try again.');
+        setConnectionStatus('disconnected');
+      }
+    };
+
+    return pc;
+  };
+
+  const updateGameUrl = () => {
+    if (!peerConnection.current?.localDescription) return;
+
+    const connectionData: ConnectionData = {
+      sdp: peerConnection.current.localDescription.sdp,
+      type: peerConnection.current.localDescription.type as 'offer' | 'answer'
+    };
+
+    const compressedData = compressData(connectionData);
+    const baseUrl = window.location.origin;
+    const gameUrl = `${baseUrl}/multiplayer?g=${compressedData}`;
+    setGameId(gameUrl);
+  };
+
+  const setupDataChannel = (channel: RTCDataChannel) => {
+    console.debug('[DataChannel] Setting up channel:', channel.label);
+    
+    channel.onopen = () => {
+      console.debug('[DataChannel] Opened with config:', {
+        ordered: channel.ordered,
+        maxRetransmits: channel.maxRetransmits
+      });
+      console.log('Data channel opened');
+      setConnectionStatus('connected');
+      
+      // Exchange ICE candidates through data channel once connected
+      if (iceCandidatesQueue.current.length > 0) {
+        channel.send(JSON.stringify({
+          type: 'ice-candidates',
+          candidates: iceCandidatesQueue.current.map(c => c.toJSON())
+        }));
+      }
+    };
+
+    channel.onclose = () => {
+      console.debug('[DataChannel] Closed - Last state:', channel.readyState);
+      console.log('Data channel closed');
+      setConnectionStatus('disconnected');
+    };
+
+    channel.onmessage = async (event) => {
+      console.debug('[DataChannel] Received message of size:', event.data.length);
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === 'ice-candidates' && peerConnection.current) {
+          for (const candidate of message.candidates) {
+            await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+          }
+        }
+      } catch (error) {
+        console.error('[DataChannel] Message parsing failed:', error);
+        console.error('Error handling message:', error);
+      }
+    };
+
+    channel.onerror = (error) => {
+      console.error('[DataChannel] Error details:', {
+        error,
+        channelState: channel.readyState
+      });
+      console.error('Data channel error:', error);
+      setErrorMessage('Data channel error occurred');
+    };
+  };
+
+  const handleHostGame = async () => {
+    console.debug('[Host] Starting host game setup');
+    try {
+      setIsHost(true);
+      setConnectionStatus('creating');
+      setErrorMessage('');
+
+      const pc = initializePeerConnection();
+      peerConnection.current = pc;
+
+      dataChannel.current = pc.createDataChannel('gameChannel', {
+        ordered: true,
+        maxRetransmits: 3
+      });
+      setupDataChannel(dataChannel.current);
+
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: false,
+        offerToReceiveVideo: false
+      });
+      await pc.setLocalDescription(offer);
+
+      console.debug('[Host] Created data channel:', dataChannel.current.label);
+      console.debug('[Host] Local description set:', pc.localDescription?.type);
+      
+      // Generate initial game URL with just the offer
+      updateGameUrl();
+      setConnectionStatus('waiting');
+
+    } catch (error) {
+      console.error('[Host] Setup failed:', error);
+      console.error('Error creating game:', error);
+      setErrorMessage('Failed to create game. Please try again.');
+      setConnectionStatus('disconnected');
+    }
+  };
+
+  const handleJoinGame = async (compressedData: string) => {
+    console.debug('[Join] Starting join process with data length:', compressedData.length);
+    try {
+      const connectionData: ConnectionData = decompressData(compressedData);
+      
+      setIsHost(false);
+      setConnectionStatus('joining');
+      setErrorMessage('');
+
+      const pc = initializePeerConnection();
+      peerConnection.current = pc;
+
+      pc.ondatachannel = (event) => {
+        dataChannel.current = event.channel;
+        setupDataChannel(dataChannel.current);
+      };
+
+      await pc.setRemoteDescription(new RTCSessionDescription({
+        sdp: connectionData.sdp,
+        type: connectionData.type
+      }));
+
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      console.debug('[Join] Remote description set:', connectionData.type);
+      console.debug('[Join] Local answer created:', answer.type);
+      
+      setConnectionStatus('connecting');
+
+    } catch (error) {
+      console.error('[Join] Setup failed:', error);
+      console.error('Error joining game:', error);
+      setErrorMessage('Failed to join game. Please try again.');
+      setConnectionStatus('disconnected');
+    }
+  };
+
   useEffect(() => {
-    // Check URL parameters for game joining
     const params = new URLSearchParams(window.location.search);
-    const offer = params.get('offer');
+    const gameData = params.get('g');
 
-    if (offer) {
-      handleJoinGame(offer);
+    if (gameData) {
+      handleJoinGame(gameData);
     }
 
     return () => {
@@ -48,202 +272,6 @@ const GameConnection = () => {
       }
     };
   }, []);
-
-  const initializePeerConnection = () => {
-    const pc = new RTCPeerConnection({
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-      ]
-    });
-
-    pc.oniceconnectionstatechange = () => {
-      setConnectionStatus(pc.iceConnectionState as StatusColorKey);
-    };
-
-    pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'connected') {
-        setConnectionStatus('connected' as StatusColorKey);
-      } else if (pc.connectionState === 'failed') {
-        setErrorMessage('Connection failed. Please try again.');
-        setConnectionStatus('disconnected' as StatusColorKey);
-      }
-    };
-
-    // Add ICE candidate handling
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        iceCandidates.current.push(event.candidate);
-      }
-    };
-
-    return pc;
-  };
-
-  const handleHostGame = async () => {
-    try {
-      setIsHost(true);
-      setConnectionStatus('creating' as StatusColorKey);
-
-      const pc = initializePeerConnection();
-      peerConnection.current = pc;
-
-      // Create data channel
-      dataChannel.current = pc.createDataChannel('gameChannel');
-      setupDataChannel(dataChannel.current);
-
-      // Create and set local description
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-
-      // Wait for ICE gathering to complete
-      await new Promise<void>(resolve => {
-        if (pc.iceGatheringState === 'complete') {
-          resolve();
-        } else {
-          pc.onicegatheringstatechange = () => {
-            if (pc.iceGatheringState === 'complete') {
-              resolve();
-            }
-          };
-        }
-      });
-
-      // Create connection data with description and candidates
-      const connectionData: ConnectionData = {
-        description: pc.localDescription as RTCSessionDescription,
-        candidates: iceCandidates.current
-      };
-
-      // Create shareable URL with offer
-      const offerString = btoa(JSON.stringify(connectionData));
-      // Use the current host for the game URL
-      const baseUrl = window.location.origin;
-      const gameUrl = `${baseUrl}/multiplayer?offer=${offerString}`;
-      setGameId(gameUrl);
-      setConnectionStatus('waiting' as StatusColorKey);
-
-    } catch (error) {
-      console.error('Error creating game:', error);
-      setErrorMessage('Failed to create game. Please try again.');
-      setConnectionStatus('disconnected' as StatusColorKey);
-    }
-  };
-
-  const handleJoinGame = async (offerString: string) => {
-    try {
-      // Validate the offer string
-      if (!offerString || typeof offerString !== 'string') {
-        throw new Error('Invalid game link');
-      }
-
-      setIsHost(false);
-      setConnectionStatus('joining' as StatusColorKey);
-
-      const pc = initializePeerConnection();
-      peerConnection.current = pc;
-
-      // Set up data channel handler
-      pc.ondatachannel = (event) => {
-        dataChannel.current = event.channel;
-        setupDataChannel(dataChannel.current);
-      };
-
-      // Parse connection data
-      const connectionData: ConnectionData = JSON.parse(atob(offerString));
-      
-      // Set remote description
-      await pc.setRemoteDescription(connectionData.description);
-      
-      // Add received ICE candidates
-      for (const candidate of connectionData.candidates) {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-      }
-
-      // Create and set local answer
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-
-      // Wait for ICE gathering to complete
-      await new Promise<void>(resolve => {
-        if (pc.iceGatheringState === 'complete') {
-          resolve();
-        } else {
-          pc.onicegatheringstatechange = () => {
-            if (pc.iceGatheringState === 'complete') {
-              resolve();
-            }
-          };
-        }
-      });
-
-      // Create answer data with description and candidates
-      const answerData: ConnectionData = {
-        description: pc.localDescription as RTCSessionDescription,
-        candidates: iceCandidates.current
-      };
-
-      const answerString = btoa(JSON.stringify(answerData));
-      // Append answer to URL without navigating
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.set('answer', answerString);
-      window.history.replaceState({}, '', newUrl);
-
-      setConnectionStatus('connecting' as StatusColorKey);
-    } catch (error) {
-      console.error('Error joining game:', error);
-      setErrorMessage('Failed to join game. Please try again.');
-      setConnectionStatus('disconnected' as StatusColorKey);
-    }
-  };
-
-  // Modify the answer handling effect
-  useEffect(() => {
-    if (isHost && peerConnection.current) {
-      const params = new URLSearchParams(window.location.search);
-      const answer = params.get('answer');
-
-      if (answer) {
-        try {
-          const answerData: ConnectionData = JSON.parse(atob(answer));
-          peerConnection.current.setRemoteDescription(answerData.description)
-            .then(async () => {
-              // Add received ICE candidates
-              for (const candidate of answerData.candidates) {
-                await peerConnection.current!.addIceCandidate(
-                  new RTCIceCandidate(candidate)
-                );
-              }
-            })
-            .catch(error => {
-              console.error('Error setting remote description:', error);
-              setErrorMessage('Failed to establish connection. Please try again.');
-              setConnectionStatus('disconnected' as StatusColorKey);
-            });
-        } catch (error) {
-          console.error('Error parsing answer:', error);
-        }
-      }
-    }
-  }, [isHost]);
-
-  const setupDataChannel = (channel: RTCDataChannel) => {
-    channel.onopen = () => {
-      console.log('Data channel opened');
-      setConnectionStatus('connected' as StatusColorKey);
-    };
-
-    channel.onclose = () => {
-      console.log('Data channel closed');
-      setConnectionStatus('disconnected' as StatusColorKey);
-    };
-
-    channel.onmessage = (event: { data: any; }) => {
-      // Handle incoming game messages
-      console.log('Received message:', event.data);
-      // You'll want to implement your game message handling here
-    };
-  };
 
   const resetConnection = () => {
     if (peerConnection.current) {
@@ -254,17 +282,18 @@ const GameConnection = () => {
       dataChannel.current.close();
       dataChannel.current = null;
     }
+    
+    iceCandidatesQueue.current = [];
     setErrorMessage('');
     setConnectionStatus('disconnected');
     setGameId('');
     setIsHost(false);
-    // Clear URL parameters
     window.history.replaceState({}, '', window.location.pathname);
   };
 
   const getStatusDisplay = () => {
     return (
-      <span className={cn(statusColors[connectionStatus] || 'text-gray-600')}>
+      <span className={cn(statusColors[connectionStatus] || 'text-gray-100')}>
         {connectionStatus}
       </span>
     );
@@ -288,11 +317,15 @@ const GameConnection = () => {
         )}
 
         <div className="mb-6">
-          <div className="text-center mb-4">
-            Connection Status: {getStatusDisplay()}
+          <div className="text-center text-lg mb-4 px-4 py-2 bg-slate-200 rounded-md">
+            {getStatusDisplay()}
           </div>
 
-          {connectionStatus.toString() === 'disconnected' && (
+          {['checking', 'creating', 'connecting'].includes(connectionStatus) && (
+            <Spinner size="large" show={true} className="mx-auto" />
+          )}
+
+          {connectionStatus === 'disconnected' && (
             <div className="flex justify-center space-x-4">
               <button
                 onClick={handleHostGame}
@@ -304,7 +337,7 @@ const GameConnection = () => {
           )}
         </div>
 
-        {connectionStatus.toString() === 'waiting' && (
+        {connectionStatus === 'waiting' && (
           <div className="space-y-6">
             <div className="text-center">
               <h2 className="text-xl font-semibold mb-4">Share this QR Code to invite player:</h2>
@@ -326,12 +359,12 @@ const GameConnection = () => {
           </div>
         )}
 
-        {connectionStatus.toString() === 'connected' && (
+        {connectionStatus === 'connected' && (
           <div className="text-center">
             <h2 className="text-2xl font-bold text-green-600">
               Connected! Ready to play!
             </h2>
-            {/* You'll want to transition to your game component here */}
+            {/* Add your game component here */}
           </div>
         )}
       </div>
