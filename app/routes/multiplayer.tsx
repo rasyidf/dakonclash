@@ -201,9 +201,24 @@ const GameConnection = () => {
     };
   };
 
+  const resetConnection = () => {
+    if (peerConnection.current) {
+      peerConnection.current.close();
+      peerConnection.current = null;
+    }
+    if (dataChannel.current) {
+      dataChannel.current.close();
+      dataChannel.current = null;
+    }
+    setErrorMessage('');
+    setConnectionStatus('disconnected');
+    setGameId('');
+    setIsHost(false);
+    // Clear URL parameters
+    window.history.replaceState({}, '', window.location.pathname);
+  };
+
   const getStatusDisplay = () => {
-
-
     return (
       <span className={cn(statusColors[connectionStatus] || 'text-gray-600')}>
         {connectionStatus}
@@ -218,7 +233,13 @@ const GameConnection = () => {
 
         {errorMessage && (
           <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
-            {errorMessage}
+            <p className="mb-2">{errorMessage}</p>
+            <button
+              onClick={resetConnection}
+              className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+              Try Again
+            </button>
           </div>
         )}
 
