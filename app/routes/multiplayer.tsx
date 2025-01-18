@@ -93,7 +93,9 @@ const GameConnection = () => {
 
       // Create shareable URL with offer
       const offerString = btoa(JSON.stringify(pc.localDescription));
-      const gameUrl = `${window.location.origin}${window.location.pathname}?offer=${offerString}`;
+      // Use the current host for the game URL
+      const baseUrl = window.location.origin;
+      const gameUrl = `${baseUrl}/multiplayer?offer=${offerString}`;
       setGameId(gameUrl);
       setConnectionStatus('waiting' as StatusColorKey);
 
@@ -106,6 +108,11 @@ const GameConnection = () => {
 
   const handleJoinGame = async (offerString: string) => {
     try {
+      // Validate the offer string
+      if (!offerString || typeof offerString !== 'string') {
+        throw new Error('Invalid game link');
+      }
+
       setIsHost(false);
       setConnectionStatus('joining' as StatusColorKey);
 
