@@ -1,21 +1,21 @@
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarHeader,
-} from "~/components/ui/sidebar";
-import {
   Pagination,
   PaginationContent,
   PaginationItem,
   PaginationNext,
   PaginationPrevious,
 } from "~/components/ui/pagination";
-import { GameControls } from "./game-board/game-controls";
-import { ScoreBoard } from "./game-board/score-board";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarHeader,
+} from "~/components/ui/sidebar";
 import { useGame } from "~/hooks/useGame";
 import { useGameStore } from "~/store/gameStore";
+import { GameControls } from "./game-board/game-controls";
+import { ScoreBoard } from "./game-board/score-board";
 
 export function AppSidebar() {
   const {
@@ -35,6 +35,7 @@ export function AppSidebar() {
   } = useGame();
 
   const setTimer = useGameStore(state => state.setTimer);
+  const setShowGameStartModal = useGameStore(state => state.setShowGameStartModal);
 
   return (
     <Sidebar>
@@ -48,8 +49,7 @@ export function AppSidebar() {
             <div className="flex flex-col justify-between text-center w-full max-w-2xl mb-2 sm:mb-4">
               <GameControls
                 size={size}
-                onSizeChange={handleSizeChange}
-                onReset={() => resetGame(size)}
+                onSizeChange={handleSizeChange} 
                 elapsedTime={stats.elapsedTime}
                 onSetTimer={setTimer}
               />

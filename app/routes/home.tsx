@@ -6,6 +6,8 @@ import { AppSidebar } from "~/components/app-sidebar";
 import { cx } from "class-variance-authority";
 import { WinnerModal } from "~/components/game-board/winner-modal";
 import { useGameStore } from "~/store/gameStore";
+import { useEffect } from "react";
+import { GameStartModal } from "~/components/game-board/game-start-modal";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -14,9 +16,28 @@ export function meta({ }: Route.MetaArgs) {
   ];
 }
 
+export function clientLoader({ params }: Route.ClientLoaderArgs) {
 
-export default function Home() {
+
+  return {
+    gameId: params.id,
+  };
+}
+
+
+export default function Home({ loaderData }: Route.ComponentProps) {
+  const { gameId } = loaderData;
+
+  const joinOnlineGame = useGameStore((state) => state.joinOnlineGame);
+
   const { showWinnerModal, setShowWinnerModal, winner, players, resetGame, size } = useGameStore();
+
+  useEffect(() => {
+    if (gameId) {
+      joinOnlineGame(gameId);
+    }
+  }, [gameId]);
+
   return <>
     <SidebarProvider>
       <AppSidebar />
@@ -24,6 +45,8 @@ export default function Home() {
         <SidebarTrigger />
         <GameBoard />
       </main>
+      
+      <GameStartModal />
       <WinnerModal
         isOpen={showWinnerModal}
         onClose={() => setShowWinnerModal(false)}

@@ -2,16 +2,17 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { useGameStore } from "~/store/gameStore";
 
 interface GameControlsProps {
   size: number;
   onSizeChange: (value: string) => void;
-  onReset: () => void;
   elapsedTime: number;
   onSetTimer: (time: number) => void;
 }
 
-export function GameControls({ size, onSizeChange, onReset, elapsedTime, onSetTimer }: GameControlsProps) {
+export function GameControls({ size, onSizeChange, elapsedTime, onSetTimer }: GameControlsProps) {
+  const { setShowGameStartModal } = useGameStore();
   return (
     <div className="flex flex-col items-center gap-4 mb-4">
       <div className="flex items-center gap-2">
@@ -34,7 +35,7 @@ export function GameControls({ size, onSizeChange, onReset, elapsedTime, onSetTi
         </div>
       )}
       <div className="flex flex-col gap-2">
-        <Button onClick={onReset}>New Game</Button>
+        <Button onClick={() => setShowGameStartModal(true)}>New Game</Button>
         <Button onClick={() => onSetTimer(300)} variant="outline">
           Set Timer (5min)
         </Button>

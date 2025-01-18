@@ -1,13 +1,24 @@
-import { motion } from "framer-motion";
 import { useGame } from "~/hooks/useGame";
 import { cn } from "~/lib/utils";
 import { GameCell } from "./game-cell";
-import { WinnerModal } from "./winner-modal";
+import { GameStartModal } from "./game-start-modal";
 import { useGameStore } from "~/store/gameStore";
+import { useEffect } from "react";
 
 export function GameBoard() {
-  const { size, board, players, currentPlayer, handleCellClick, winner, resetGame } = useGame();
-  const { showWinnerModal, setShowWinnerModal } = useGameStore();
+  const { size, board, players, currentPlayer, handleCellClick, } = useGame();
+  const gameMode = useGameStore(state => state.gameMode);
+  const isPlayer2Joined = useGameStore(state => state.isPlayer2Joined);
+
+  if (gameMode === 'online' && !isPlayer2Joined) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full">
+        <div className="text-xl font-bold">Waiting for Player 2 to join...</div>
+
+        {/* TODO: create qrcode */}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -43,7 +54,6 @@ export function GameBoard() {
           {currentPlayer.name.charAt(0).toUpperCase() + currentPlayer.name.slice(1)}&apos;s Turn
         </div>
       </div>
-
     </>
   );
 }

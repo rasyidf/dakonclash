@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { useGameStore, type GameStats, type Player } from "~/store/gameStore";
+import { useGameStore, type GameStats, type Player, type GameMode } from "~/store/gameStore";
 
 export interface Cell {
   beads: number;
@@ -28,7 +28,13 @@ export function useGame() {
     stats,
     players,
     winner,
-    playerStats
+    playerStats,
+    gameMode,
+    gameId,
+    setGameMode,
+    createOnlineGame,
+    joinOnlineGame,
+    makeMove,
   } = useGameStore();
 
   const currentPlayer = players[currentPlayerId];
@@ -103,6 +109,12 @@ export function useGame() {
       useGameStore.getState().checkWinner();
       return;
     }
+
+    if (gameMode === 'online' && gameId) {
+      await makeMove({ row, col });
+      return;
+    }
+
     if (board[row][col].playerId && board[row][col].playerId !== currentPlayerId) {
       toast.error("This is probably not your turn");
       console.log("Invalid move: opponent's cell");
@@ -161,6 +173,23 @@ export function useGame() {
       useGameStore.getState().checkWinner();
       return;
     }
+
+    if (gameMode === 'vs-bot' && currentPlayerId === 'p2') {
+      const botMove = useGameStore.getState().generateBotMove();
+      await handleCellClick(botMove.row, botMove.col);
+    }
+  };
+
+  const startGame = async (mode: GameMode, size: number = 8, gameId?: string) => {
+    if (mode === 'online') {
+      if (gameId) {
+        await joinOnlineGame(gameId);
+      } else {
+        await createOnlineGame(size);
+      }
+    } else {
+      setGameMode(mode);
+    }
   };
 
   return {
@@ -182,7 +211,9 @@ export function useGame() {
     updateFlipStats,
     isCornerPosition,
     winner,
-    playerStats
-
+    playerStats,
+    gameMode,
+    gameId,
+    startGame,
   };
 }

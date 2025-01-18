@@ -1,9 +1,11 @@
 import { produce } from 'immer';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import supabase from '~/supabase';
 import type { Cell } from '~/hooks/useGame';
 
 export type TailwindColor = "red" | "blue" | "green" | "yellow" | "purple" | "pink" | "orange" | "teal";
+export type GameMode = 'online' | 'local' | 'vs-bot';
 
 export interface Player {
   id: "p1" | "p2";
@@ -68,6 +70,18 @@ export interface GameState {
   updateTimer: () => void;
   showWinnerModal: boolean;
   setShowWinnerModal: (show: boolean) => void;
+  gameMode: GameMode;
+  gameId: string | null;
+  setGameId: (id: string) => void;
+  setGameMode: (mode: GameMode) => void;
+  createOnlineGame: (size: number) => Promise<void>;
+  joinOnlineGame: (gameId: string) => Promise<void>;
+  makeMove: (position: { row: number; col: number; }) => Promise<void>;
+  generateBotMove: () => { row: number; col: number; };
+  isPlayer2Joined: boolean;
+  showGameStartModal: boolean;
+  setShowGameStartModal: (show: boolean) => void;
+  setPlayer2Joined: (joined: boolean) => void;
 }
 
 const initialStats: GameStats = {
@@ -134,6 +148,8 @@ export const useGameStore = create<GameState>()(
         state.isGameOver = false;
         state.winner = null;
         state.showWinnerModal = false;
+        state.isPlayer2Joined = false;
+        state.showGameStartModal = true; // Ensure modal shows for new games
       })),
       history: [],
       currentStep: -1,
@@ -282,6 +298,152 @@ export const useGameStore = create<GameState>()(
             state.checkWinner();
           }
         }
+      })),
+      gameMode: 'local',
+      gameId: null,
+
+      setGameId: (id: string) => set(produce((state: GameState) => {
+        state.gameId = id;
+      })),
+      setGameMode: (mode) => set(produce((state: GameState) => {
+        state.gameMode = mode;
+        state.board = Array(state.size).fill(null).map(() =>
+          Array(state.size).fill(null).map(() => ({ beads: 0, playerId: null }))
+        );
+        state.currentPlayerId = 'p1';
+        state.moves = 0;
+        state.score = { p1: 0, p2: 0 };
+        state.stats = initialStats;
+        state.isGameOver = false;
+        state.winner = null;
+      })),
+
+      createOnlineGame: async (size) => {
+        const initialBoard = Array(size).fill(null).map(() =>
+          Array(size).fill(null).map(() => ({ beads: 0, playerId: null }))
+        );
+
+        const { data, error } = await supabase.from('games').insert({
+          size,
+          board: initialBoard,
+          current_player_id: 'p1',
+          score: { p1: 0, p2: 0 },
+          stats: initialStats,
+          moves: 0,
+        }).select().single();
+
+        if (error) throw error;
+
+        set(produce((state: GameState) => {
+          state.size = data.size;
+          state.board = data.board;
+          state.currentPlayerId = data.current_player_id;
+          state.score = data.score;
+          state.stats = data.stats;
+          state.moves = data.moves;
+          state.gameMode = 'online';
+          state.gameId = data.id;
+          state.isPlayer2Joined = false;
+        }));
+
+        return data.id;
+      },
+
+      /**
+    * Join an existing multiplayer game.
+    */
+      joinOnlineGame: async (gameId: string) => {
+        const { data, error } = await supabase.from('games').select('*').eq('id', gameId).single();
+        if (error) throw error;
+
+        set(produce((state: GameState) => {
+          state.size = data.size;
+          state.board = data.board;
+          state.currentPlayerId = data.current_player_id;
+          state.score = data.score;
+          state.stats = data.stats;
+          state.moves = data.moves;
+          state.isGameOver = data.is_game_over;
+          state.winner = data.winner;
+          state.gameMode = 'online';
+          state.showGameStartModal = true; // Ensure modal shows for joining games
+        }));
+
+        // Listen for real-time updates
+        supabase.channel(`public:games:id=eq.${gameId}`)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, (payload) => {
+            const updatedGame = payload.new as any;
+            set(produce((state: GameState) => {
+              state.board = updatedGame.board;
+              state.currentPlayerId = updatedGame.current_player_id;
+              state.score = updatedGame.score;
+              state.stats = updatedGame.stats;
+              state.moves = updatedGame.moves;
+              state.isGameOver = updatedGame.is_game_over;
+              state.winner = updatedGame.winner;
+            }));
+          })
+          .on('presence', { event: 'sync' }, () => {
+            set(produce((state: GameState) => {
+              state.isPlayer2Joined = true;
+            }));
+          })
+          .subscribe();
+      },
+
+      makeMove: async (position: { row: number; col: number; }) => {
+        const state = get();
+        const newBoard = produce(state.board, (draft) => {
+          // Add your game logic here
+          draft[position.row][position.col].beads += 1;
+          draft[position.row][position.col].playerId = state.currentPlayerId;
+        });
+
+        const updatedStats = produce(state.stats, (draft) => {
+          draft.movesByPlayer[state.currentPlayerId] += 1;
+        });
+
+        const nextPlayer = state.currentPlayerId === 'p1' ? 'p2' : 'p1';
+
+        const { error } = await supabase.from('games').update({
+          board: newBoard,
+          current_player_id: nextPlayer,
+          stats: updatedStats,
+          moves: state.moves + 1,
+        }).eq('id', state.gameId);
+
+        if (error) throw error;
+
+        set(produce((draft: GameState) => {
+          draft.board = newBoard;
+          draft.currentPlayerId = nextPlayer;
+          draft.stats = updatedStats;
+          draft.moves += 1;
+        }));
+      },
+
+      generateBotMove: () => {
+        const state = get();
+        const emptyCells: Array<{ row: number; col: number; }> = [];
+
+        state.board.forEach((row, rowIndex) => {
+          row.forEach((cell, colIndex) => {
+            if (!cell.playerId) {
+              emptyCells.push({ row: rowIndex, col: colIndex });
+            }
+          });
+        });
+
+        return emptyCells[Math.floor(Math.random() * emptyCells.length)];
+      },
+      isPlayer2Joined: false,
+      showGameStartModal: true,
+      setShowGameStartModal: (show) => set(produce((state: GameState) => {
+        console.log('DEBUG: setShowGameStartModal', show);
+        state.showGameStartModal = show;
+      })),
+      setPlayer2Joined: (joined) => set(produce((state: GameState) => {
+        state.isPlayer2Joined = joined;
       })),
     }),
     {
