@@ -1,4 +1,3 @@
-
 import type { Cell } from '~/hooks/useGame';
 
 export type TailwindColor = "red" | "blue" | "green" | "yellow" | "purple" | "pink" | "orange" | "teal";
@@ -35,7 +34,7 @@ export interface PlayerStats {
 }
 
 export interface GameState {
-  size: number;
+  boardSize: number;
   moves: number;
   players: Record<Player["id"], Player>;
   currentPlayerId: Player["id"];
@@ -79,6 +78,8 @@ export interface GameState {
   showGameStartModal: boolean;
   setShowGameStartModal: (show: boolean) => void;
   setPlayer2Joined: (joined: boolean) => void;
+  startReplay: () => void;
+  nextReplayStep: () => void;
 }
 
 export const initialStats: GameStats = {

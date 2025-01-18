@@ -9,7 +9,7 @@ export interface Cell {
 
 export function useGame() {
   const {
-    size,
+    boardSize,
     moves,
     currentPlayerId,
     score,
@@ -49,9 +49,9 @@ export function useGame() {
 
   const isCornerPosition = (row: number, col: number) => {
     return (row === 0 && col === 0) ||
-      (row === 0 && col === size - 1) ||
-      (row === size - 1 && col === size - 1) ||
-      (row === size - 1 && col === 0);
+      (row === 0 && col === boardSize - 1) ||
+      (row === boardSize - 1 && col === boardSize - 1) ||
+      (row === boardSize - 1 && col === 0);
   };
 
   const spreadBeads = async (
@@ -75,7 +75,7 @@ export function useGame() {
       const newRow = row + dx;
       const newCol = col + dy;
 
-      if (newRow >= 0 && newRow < size && newCol >= 0 && newCol < size) {
+      if (newRow >= 0 && newRow < boardSize && newCol >= 0 && newCol < boardSize) {
         newBoard[newRow][newCol].beads += 1;
         newBoard[newRow][newCol].playerId = currentPlayerId;
         if (newBoard[newRow][newCol].beads === 4) {
@@ -118,12 +118,12 @@ export function useGame() {
       return;
     }
     // Allow placing beads on an empty cell after the first move
-    if (board[row][col].beads === 0 && !board[row][col].playerId && moves > 1) {
+    if (board[row][col].beads === 0 && moves > 1) {
       console.log("Invalid move: empty cell after first move");
       return;
     }
 
-    if (board[row][col].beads >= 4 || (board[row][col].playerId)) {
+    if (board[row][col].beads >= 4 || (board[row][col].playerId && board[row][col].playerId !== currentPlayerId)) {
       console.log("Invalid move: cell has 4 beads or opponent's cell");
       return;
     }
@@ -195,9 +195,10 @@ export function useGame() {
   };
 
   return {
-    size,
+    boardSize,
     board,
     score,
+    moves,
     players,
     currentPlayer,
     handleCellClick,

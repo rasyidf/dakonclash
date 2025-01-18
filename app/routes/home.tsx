@@ -30,7 +30,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
   const joinOnlineGame = useGameStore((state) => state.joinOnlineGame);
 
-  const { showWinnerModal, setShowWinnerModal, winner, players, resetGame, size } = useGameStore();
+  const { showWinnerModal, setShowWinnerModal, winner, players, resetGame, boardSize: size } = useGameStore();
 
   useEffect(() => {
     if (gameId) {

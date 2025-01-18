@@ -6,7 +6,7 @@ import { useGameStore } from "~/store/gameStore";
 import { useEffect } from "react";
 
 export function GameBoard() {
-  const { size, board, players, currentPlayer, handleCellClick, } = useGame();
+  const { boardSize, board, moves, players, currentPlayer, handleCellClick, } = useGame();
   const gameMode = useGameStore(state => state.gameMode);
   const isPlayer2Joined = useGameStore(state => state.isPlayer2Joined);
 
@@ -32,7 +32,7 @@ export function GameBoard() {
             )
           }
           style={{
-            gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
+            gridTemplateColumns: `repeat(${boardSize}, minmax(0, 1fr))`,
           }}
         >
           {board.map((row, rowIndex) =>
@@ -41,7 +41,11 @@ export function GameBoard() {
                 key={`${rowIndex}-${colIndex}`}
                 cell={cell}
                 players={players}
+                disabled={
+                  moves < 2 && (rowIndex < 2 || rowIndex > boardSize - 3 || colIndex < 2 || colIndex > boardSize - 3)
+                }
                 currentPlayer={currentPlayer}
+                moves={history.length}
                 onClick={() => handleCellClick(rowIndex, colIndex)}
               />
             ))
