@@ -1,16 +1,26 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { cn } from '~/lib/utils';
-const statusColors = {
-  disconnected: 'text-red-600',
-  creating: 'text-yellow-600',
-  waiting: 'text-yellow-600',
-  joining: 'text-yellow-600',
-  connecting: 'text-yellow-600',
-  connected: 'text-green-600',
-} as const;
+const statusColors: Record<Partial<RTCIceConnectionState> | "disconnected" | "creating" | "waiting" | "joining" | "connecting" | "checking" | "connected", string> = {
+  disconnected: 'text-red-500',   // Bright red for clearly broken connection
+  creating: 'text-blue-500',      // Blue for initialization
+  waiting: 'text-amber-500',      // Amber for waiting states
+  joining: 'text-blue-500',       // Blue for initialization
+  connecting: 'text-amber-500',   // Amber for intermediate states
+  checking: 'text-amber-500',     // Amber for verification
+  connected: 'text-emerald-500',  // Emerald for successful connection
+  closed: 'text-red-500',         // Red for terminated connection
+  completed: 'text-emerald-500',  // Emerald for successful ICE completion
+  failed: 'text-red-600',         // Dark red for connection failure
+  new: 'text-blue-500',           // Blue for new connection
+};
 
-type StatusColorKey = keyof typeof statusColors;
+type StatusColorKey = keyof typeof statusColors; // | RTCIceConnectionState;
+
+interface ConnectionData {
+  description: RTCSessionDescription;
+  candidates: RTCIceCandidate[];
+}
 
 const GameConnection = () => {
   const [isHost, setIsHost] = useState(false);
@@ -20,6 +30,7 @@ const GameConnection = () => {
 
   const peerConnection = useRef<RTCPeerConnection | null>(null);
   const dataChannel = useRef<RTCDataChannel | null>(null);
+  const iceCandidates = useRef<RTCIceCandidate[]>([]);
 
   // Initialize WebRTC on component mount
   useEffect(() => {
@@ -59,6 +70,13 @@ const GameConnection = () => {
       }
     };
 
+    // Add ICE candidate handling
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        iceCandidates.current.push(event.candidate);
+      }
+    };
+
     return pc;
   };
 
@@ -91,8 +109,14 @@ const GameConnection = () => {
         }
       });
 
+      // Create connection data with description and candidates
+      const connectionData: ConnectionData = {
+        description: pc.localDescription as RTCSessionDescription,
+        candidates: iceCandidates.current
+      };
+
       // Create shareable URL with offer
-      const offerString = btoa(JSON.stringify(pc.localDescription));
+      const offerString = btoa(JSON.stringify(connectionData));
       // Use the current host for the game URL
       const baseUrl = window.location.origin;
       const gameUrl = `${baseUrl}/multiplayer?offer=${offerString}`;
@@ -125,9 +149,16 @@ const GameConnection = () => {
         setupDataChannel(dataChannel.current);
       };
 
-      // Parse and set remote description
-      const offer = JSON.parse(atob(offerString));
-      await pc.setRemoteDescription(offer);
+      // Parse connection data
+      const connectionData: ConnectionData = JSON.parse(atob(offerString));
+      
+      // Set remote description
+      await pc.setRemoteDescription(connectionData.description);
+      
+      // Add received ICE candidates
+      for (const candidate of connectionData.candidates) {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      }
 
       // Create and set local answer
       const answer = await pc.createAnswer();
@@ -146,8 +177,13 @@ const GameConnection = () => {
         }
       });
 
-      // Create answer URL parameter
-      const answerString = btoa(JSON.stringify(pc.localDescription));
+      // Create answer data with description and candidates
+      const answerData: ConnectionData = {
+        description: pc.localDescription as RTCSessionDescription,
+        candidates: iceCandidates.current
+      };
+
+      const answerString = btoa(JSON.stringify(answerData));
       // Append answer to URL without navigating
       const newUrl = new URL(window.location.href);
       newUrl.searchParams.set('answer', answerString);
@@ -161,16 +197,24 @@ const GameConnection = () => {
     }
   };
 
-  // Add this new effect to handle answer in host mode
+  // Modify the answer handling effect
   useEffect(() => {
     if (isHost && peerConnection.current) {
       const params = new URLSearchParams(window.location.search);
       const answer = params.get('answer');
-      
+
       if (answer) {
         try {
-          const answerSDP = JSON.parse(atob(answer));
-          peerConnection.current.setRemoteDescription(answerSDP)
+          const answerData: ConnectionData = JSON.parse(atob(answer));
+          peerConnection.current.setRemoteDescription(answerData.description)
+            .then(async () => {
+              // Add received ICE candidates
+              for (const candidate of answerData.candidates) {
+                await peerConnection.current!.addIceCandidate(
+                  new RTCIceCandidate(candidate)
+                );
+              }
+            })
             .catch(error => {
               console.error('Error setting remote description:', error);
               setErrorMessage('Failed to establish connection. Please try again.');
