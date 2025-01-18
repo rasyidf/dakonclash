@@ -1,5 +1,6 @@
 import { toast } from "sonner";
-import { useGameStore, type GameStats, type Player, type GameMode } from "~/store/gameStore";
+import { useGameStore } from "~/store/gameStore";
+import type { GameMode, GameStats, Player } from "~/store/types";
 
 export interface Cell {
   beads: number;
@@ -152,7 +153,7 @@ export function useGame() {
 
     const scores = { p1: 0, p2: 0 };
     newBoard.forEach((row: any[]) =>
-      row.forEach((cell: { playerId: string | number; }) => {
+      row.forEach((cell: { playerId: string; }) => {
         if (cell.playerId) {
           scores[cell.playerId as Player["id"]]++;
         }
