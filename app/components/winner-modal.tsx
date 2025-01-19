@@ -3,33 +3,28 @@ import Confetti from 'react-confetti';
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { cn } from "~/lib/utils";
+import { useGameStore } from "~/store/gameStore";
 import type { Player } from "~/store/types";
 
-interface WinnerModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  winner: Player["id"] | 'draw' | null;
-  players: Record<Player["id"], Player>;
-  onPlayAgain: () => void;
-}
+export function WinnerModal() {
 
-export function WinnerModal({ isOpen, onClose, winner, players, onPlayAgain }: WinnerModalProps) {
+  const { showWinnerModal, setShowWinnerModal, winner, players, resetGame, boardSize: size } = useGameStore();
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
-    if (isOpen) {
+    if (showWinnerModal) {
       setDimensions({
         width: window.innerWidth,
         height: window.innerHeight,
       });
     }
-  }, [isOpen]);
+  }, [showWinnerModal]);
 
   if (!winner) return null;
 
   return (
     <>
-      {isOpen && winner !== 'draw' && (
+      {showWinnerModal && winner !== 'draw' && (
         <Confetti
           width={dimensions.width}
           height={dimensions.height}
@@ -41,7 +36,12 @@ export function WinnerModal({ isOpen, onClose, winner, players, onPlayAgain }: W
           ]}
         />
       )}
-      <Dialog open={isOpen} onOpenChange={onClose}> 
+      <Dialog open={showWinnerModal} onOpenChange={
+        () => {
+          setShowWinnerModal(false);
+          resetGame(size);
+        }
+      }>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className={cn(
@@ -51,14 +51,21 @@ export function WinnerModal({ isOpen, onClose, winner, players, onPlayAgain }: W
               {winner === 'draw' ? 'Game Draw!' : `${players[winner].name} Wins!`}
             </DialogTitle>
             <DialogDescription className="text-center pt-4">
-              {winner === 'draw' 
-                ? "It's a tie! Both players played well." 
+              {winner === 'draw'
+                ? "It's a tie! Both players played well."
                 : `Congratulations ${players[winner].name}!`}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center gap-4 mt-4">
-            <Button onClick={onPlayAgain}>Play Again</Button>
-            <Button variant="outline" onClick={onClose}>Close</Button>
+            <Button onClick={
+              () => {
+                resetGame(size);
+                setShowWinnerModal(false);
+              }
+            }>Play Again</Button>
+            <Button variant="outline" onClick={
+              () => setShowWinnerModal(false)
+            }>Close</Button>
           </div>
         </DialogContent>
       </Dialog>

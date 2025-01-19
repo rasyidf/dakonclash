@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { GameEngine } from "~/store/GameEngine";
+import { GameEngine } from "~/store/engine/GameEngine";
 import { useGameStore } from "~/store/gameStore";
 
 export function useGame() {
@@ -9,7 +9,7 @@ export function useGame() {
 
   const handleCellClick = (row: number, col: number) => {
    
-    GameEngine.handleCellClick(state, row, col);
+    GameEngine.callMove(state, row, col);
   };
 
   const handleSizeChange = (size: number) => {

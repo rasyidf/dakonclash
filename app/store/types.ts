@@ -43,6 +43,7 @@ export interface PlayerStats {
 }
 
 export interface GameState {
+  gameId: string;
   boardSize: number;
   moves: number;
   players: Record<Player["id"], Player>;
@@ -59,7 +60,6 @@ export interface GameState {
   winner: Player["id"] | 'draw' | null;
   showWinnerModal: boolean;
   gameMode: GameMode;
-  gameId: string | null;
   isPlayer2Joined: boolean;
   showGameStartModal: boolean;
   setCurrentPlayerId: (id: Player["id"]) => void;
@@ -70,8 +70,9 @@ export interface GameState {
   setBoard: (board: Cell[][]) => void;
   resetGame: (newSize: number) => void;
   addMove: (position: { row: number; col: number; }) => void;
+  switchPlayer: () => void;
   undo: () => void;
-  redoMove: () => void;
+  redo: () => void;
   replay: (step: number) => void;
   updateStats: (stats: Partial<GameStats>) => void;
   resetStats: () => void;
@@ -83,7 +84,6 @@ export interface GameState {
   setGameMode: (mode: GameMode) => void;
   createOnlineGame: (size: number) => Promise<void>;
   joinOnlineGame: (gameId: string) => Promise<void>;
-  makeMove: (position: { row: number; col: number; }) => Promise<void>;
   generateBotMove: () => { row: number; col: number; };
   setShowGameStartModal: (show: boolean) => void;
   setPlayer2Joined: (joined: boolean) => void;
@@ -91,15 +91,6 @@ export interface GameState {
   nextReplayStep: () => void;
   startGame: (mode: GameMode, size: number, gameId?: string) => void;
 }
-
-export const initialStats: GameStats = {
-  startTime: Date.now(),
-  elapsedTime: 0,
-  movesByPlayer: { 1: 0, 2: 0 },
-  flipCombos: 0,
-  longestFlipChain: 0,
-  cornerThrows: 0,
-};
 
 export const initialPlayers: Record<Player["id"], Player> = {
   1: { id: 1, name: "Player 1", color: "red" },

@@ -27,7 +27,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
   const joinOnlineGame = useGameStore((state) => state.joinOnlineGame);
 
-  const { showWinnerModal, setShowWinnerModal, winner, players, resetGame, boardSize: size } = useGameStore();
 
   useEffect(() => {
     if (gameId) {
@@ -44,13 +43,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       </main>
 
       <GameStartModal />
-      <WinnerModal
-        isOpen={showWinnerModal}
-        onClose={() => setShowWinnerModal(false)}
-        winner={winner}
-        players={players}
-        onPlayAgain={() => resetGame(size)}
-      />
+      <WinnerModal   />
     </SidebarProvider>
     ;
   </>;

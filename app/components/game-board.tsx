@@ -1,6 +1,6 @@
 import { useGame } from "~/hooks/use-game";
 import { cn } from "~/lib/utils";
-import BoardEngine from "~/store/BoardEngine";
+import { BoardEngine } from "~/store/engine/BoardEngine";
 import { GameCell } from "./game-cell";
 
 export function GameBoard() {

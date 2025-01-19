@@ -2,9 +2,12 @@ import { produce } from 'immer';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import { GameEngine } from './GameEngine';
+import { GameEngine } from './engine/GameEngine';
 import type { GameState, GameStats, Player, PlayerStats } from './types';
-import BoardEngine from './BoardEngine';
+import { BoardEngine } from './engine/BoardEngine';
+import { MultiplayerEngine } from './engine/MultiplayerEngine';
+import { GameMasterEngine } from './engine/GameMasterEngine';
+import { PlaybackEngine } from './engine/PlaybackEngine';
 
 
 const initialStats: GameStats = {
@@ -31,13 +34,13 @@ export const useGameStore = create<GameState>()(
     immer(
       (set, get) => ({
         // #region Game State
-        gameId: null,
-        gameMode: 'local',
+        gameId: '',
+        gameMode: 'local' as 'local' | 'online' | 'vs-bot',
         boardSize: 6,
         moves: 0,
         players: initialPlayers,
         currentPlayerId: 1,
-        score: { p1: 0, p2: 0 },
+        score: { 1: 0, 2: 0 }, // Fix: Changed from { p1: 0, p2: 0 } to match type definition
         board: BoardEngine.generate(6),
         history: [],
         currentStep: -1,
@@ -45,32 +48,33 @@ export const useGameStore = create<GameState>()(
         future: [],
         replayIndex: null,
         playerStats: initialPlayerStats,
+
         isGameOver: false,
         winner: null,
-        isPlayer2Joined: false,
 
+        isPlayer2Joined: false,
         showWinnerModal: false,
         showGameStartModal: true,
         // #endregion Game State
 
         // #region Local Mode
         startGame: (mode, size, gameId) => set(produce((state: GameState) => {
-          GameEngine.startGame(state, mode, size, gameId);
+          GameMasterEngine.startGame(state, mode, size, gameId);
         })),
         resetGame: (newSize) => set(produce((state: GameState) => {
-          GameEngine.resetGame(state, newSize);
+          GameMasterEngine.resetGame(state, newSize);
         })),
-        addMove: (position) => set(produce((state: GameState) => {
-          GameEngine.addMove(state, position);
-        })),
+        addMove: (position) => set((state) =>
+          GameEngine.addMove(state, position)
+        ),
         replay: (step) => set(produce((state: GameState) => {
-          GameEngine.replay(state, step);
+          PlaybackEngine.replay(state, step);
         })),
         undo: () => set(produce((state: GameState) => {
-          GameEngine.undo(state);
+          PlaybackEngine.undo(state);
         })),
-        redoMove: () => set(produce((state: GameState) => {
-          GameEngine.redoMove(state);
+        redo: () => set(produce((state: GameState) => {
+          PlaybackEngine.redo(state);
         })),
         // #endregion Local Mode
 
@@ -93,12 +97,20 @@ export const useGameStore = create<GameState>()(
           state.currentPlayerId = id;
         })),
 
+        setShowWinnerModal: (show) => set(produce((state: GameState) => {
+          state.showWinnerModal = show;
+        })),
+
+        checkWinner: () => set(produce((state: GameState) => {
+          GameMasterEngine.checkWinner(state);
+        })),
+
         // #region Timed Mode
         setTimer: (time) => set(produce((state: GameState) => {
-          GameEngine.setTimer(state, set, time);
+          GameMasterEngine.setTimer(state, set, time);
         })),
         updateTimer: () => set(produce((state: GameState) => {
-          GameEngine.updateTimer(state);
+          GameMasterEngine.updateTimer(state);
         })),
         // #endregion Timed Mode
 
@@ -107,62 +119,57 @@ export const useGameStore = create<GameState>()(
         })),
 
         updateStats: (newStats) => set(produce((state: GameState) => {
-          state.stats = { ...state.stats, ...newStats };
+          set(produce((state: GameState) => {
+            state.stats = { ...state.stats, ...newStats };
+          }));
         })),
         resetStats: () => set(produce((state: GameState) => {
           state.stats = initialStats;
         })),
 
         setGameMode: (mode) => set(produce((state: GameState) => {
-          GameEngine.initGameMode(state, mode);
+          GameMasterEngine.initGameMode(state, mode);
         })),
-        setShowGameStartModal: (show) => set(produce((state: GameState) => {
-          state.showGameStartModal = show;
-        })),
+
+
+        // #region Multiplayer Mode
         setPlayer2Joined: (joined) => set(produce((state: GameState) => {
           state.isPlayer2Joined = joined;
         })),
 
-        setShowWinnerModal: (show) => set(produce((state: GameState) => {
-          state.showWinnerModal = show;
+        setShowGameStartModal: (show) => set(produce((state: GameState) => {
+          state.showGameStartModal = show;
         })),
 
-        // #region Multiplayer Mode
         createOnlineGame: async (size) => {
           set(produce(async (state: GameState) => {
-            await GameEngine.createOnlineGame(state, size);
+            await MultiplayerEngine.createOnlineGame(state, size);
           }));
         },
 
         joinOnlineGame: async (gameId: string) => {
           set(produce(async (state: GameState) => {
-            await GameEngine.joinOnlineGame(state, gameId);
+            await MultiplayerEngine.joinOnlineGame(state, gameId);
           }));
         },
         // #endregion Multiplayer Mode
 
         // #region Bot Mode
         generateBotMove: () => {
-          return GameEngine.generateBotMove(get());
+          return MultiplayerEngine.generateMove(get());
         },
         // #endregion Bot Mode
 
         startReplay: () => set(produce((state: GameState) => {
-          GameEngine.startReplay(state);
+          PlaybackEngine.startReplay(state);
         })),
         nextReplayStep: () => set(produce((state: GameState) => {
-          GameEngine.nextReplayStep(state);
-        })),
-        checkWinner: () => set(produce((state: GameState) => {
-          GameEngine.checkWinner(state);
+          PlaybackEngine.nextReplayStep(state);
         })),
 
-        makeMove: async (position: { row: number; col: number; }) => {
-          set(produce(async (state: GameState) => {
-            await GameEngine.makeMove(state, position);
-          }));
-        },
-
+        switchPlayer: () => set(produce((state: GameState) => {
+          state.currentPlayerId = state.currentPlayerId === 1 ? 2 : 1;
+        })),
       })
     ),
     {

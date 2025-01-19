@@ -24,7 +24,7 @@ export function AppSidebar() {
     score,
     players,
     undo,
-    redoMove,
+    redo,
     handleSizeChange,
     stats,
     playerStats,
@@ -37,51 +37,70 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <h1 className="text-2xl font-bold text-slate-700">Dakon Clash</h1>
+        <img src="/favicon.ico" alt="Dakon Clash" className="w-16 h-16 mx-auto" />
+        <h1 className="text-2xl text-center mt-2 font-bold text-slate-700">Dakon Clash</h1>
+        <GameControls
+          size={boardSize}
+          onSizeChange={handleSizeChange}
+          elapsedTime={stats.elapsedTime}
+          onSetTimer={setTimer}
+        />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <h2 className="text-lg font-bold text-slate-900">Game</h2>
-          <div className="flex flex-col items-center gap-2 sm:gap-4 p-2 sm:p-4 w-full">
-            <div className="flex flex-col justify-between text-center w-full max-w-2xl mb-2 sm:mb-4">
-              <GameControls
-                size={boardSize}
-                onSizeChange={handleSizeChange}
-                elapsedTime={stats.elapsedTime}
-                onSetTimer={setTimer}
-              />
-              <ScoreBoard
-                score={score}
-                players={players}
-                playerStats={playerStats}
-                currentPlayerId={currentPlayer.id}
-                winner={winner}
-                onUpdatePlayerName={(playerId, newName) => {
-                  players[playerId as Player["id"]].name = newName;
-                }}
-              />
-            </div>
-          </div>
+
+          <ScoreBoard
+            score={score}
+            players={players}
+            playerStats={playerStats}
+            currentPlayerId={currentPlayer.id}
+            winner={winner}
+            onUpdatePlayerName={(playerId, newName) => {
+              players[playerId as Player["id"]].name = newName;
+            }}
+          />
+
         </SidebarGroup>
-        <SidebarGroup>
+
+      </SidebarContent>
+      <SidebarFooter>
+        <SidebarGroup>      {/* Undo Redo */}
+          <h2 className="text-md font-bold text-center text-slate-900">History</h2>
           <Pagination>
             <PaginationContent>
-              <PaginationItem>
+              <PaginationItem >
                 <PaginationPrevious
-                  onClick={() => undo()}
+                  onClick={() => undo()} aria-label="undo"
                 />
               </PaginationItem>
-              <PaginationItem>
+              <PaginationItem >
                 <PaginationNext
-                  onClick={() => redoMove()}
-
+                  onClick={() => redo()} aria-label="redo"
                 />
               </PaginationItem>
             </PaginationContent>
           </Pagination>
         </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter />
+        <SidebarGroup>
+          <h2 className="text-md font-bold text-center text-slate-900">About</h2>
+          <p className="text-sm text-center">
+            Dakon Clash is a two-player strategy game where the goal is to capture the most seeds.
+          </p>
+          {/* Github and Copyright */}<a
+            href="https://github.com/rasyidf/dakonclash"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-center bg-slate-50 text-slate-900 font-semibold hover:underline"
+          >
+            Github
+          </a>
+          <div className="flex justify-center mt-4 space-x-4">
+
+            <span className="text-sm text-slate-500">&copy; 2025 Subsidi Tepat Teams</span>
+          </div>
+
+        </SidebarGroup>
+      </SidebarFooter>
     </Sidebar>
   );
 }

@@ -13,8 +13,8 @@ interface GameControlsProps {
 export function GameControls({ size, onSizeChange, elapsedTime, onSetTimer }: GameControlsProps) {
   const { setShowGameStartModal } = useGameStore();
   return (
-    <div className="flex flex-col items-center gap-4 mb-4">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-col items-center gap-4 my-8">
+      {/* <div className="flex items-center gap-2">
         <Label htmlFor="size">Size:</Label>
         <Select value={size.toString()} onValueChange={(value) => onSizeChange(parseInt(value))}>
           <SelectTrigger className="w-[180px]">
@@ -26,7 +26,7 @@ export function GameControls({ size, onSizeChange, elapsedTime, onSetTimer }: Ga
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </div> */}
 
       {elapsedTime > 0 && (
         <div className="text-lg font-bold p-3 rounded-md bg-slate-300">
