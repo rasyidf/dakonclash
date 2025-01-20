@@ -52,7 +52,7 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter>
         <SidebarGroup>      {/* Undo Redo */}
-          <h2 className="text-md font-bold text-center text-slate-900">History</h2>
+          {/* <h2 className="text-md font-bold text-center text-slate-900">History</h2> */}
           {/* <Pagination>
             <PaginationContent>
               <PaginationItem >

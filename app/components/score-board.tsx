@@ -19,8 +19,10 @@ export function ScoreBoard({ score, players, playerStats, currentPlayerId, winne
   const [editName, setEditName] = useState("");
 
   const boardControlScore = useMemo(() => {
-    const total = Object.values(playerStats).reduce((acc, stats) => acc + stats.boardControl, 0);
-    return Object.values(playerStats).map(stats => stats.boardControl / total);
+    return [
+      playerStats[1].boardControl,
+      playerStats[2].boardControl
+    ];
   }, [playerStats]);
 
   const handleEditClick = (playerId: Player["id"], currentName: string) => {
@@ -109,17 +111,27 @@ export function ScoreBoard({ score, players, playerStats, currentPlayerId, winne
                 <div>Chains: </div>
                 <div>{playerStats[parseInt(playerId)]?.chainCount}</div>
               </div>
+              <div className="flex items-center space-x-2 justify-between">
+                <div>Board Control: </div>
+                <div>{Math.round(playerStats[parseInt(playerId)]?.boardControl)}%</div>
+              </div>
+              <div className="flex items-center space-x-2 justify-between">
+                <div>Total Tokens: </div>
+                <div>{playerStats[parseInt(playerId)]?.tokenTotal}</div>
+              </div>
 
             </div>
           </div>
         ))}
       </div>
       {/* Board Control as ProgressBar */}
-      <div className="mt-2 bg-green-300 rounded-md p-2">
-        <div className="text-xs text-green-900 mb-2 text-center">Board Control</div>
-        <div className="flex items-center space-x-2">
-          <Progress className={cn(boardControlScore[0] > 0 ? "bg-blue-600" : 'bg-slate-200')} value={Math.floor(boardControlScore[0] * 100)} />
-        </div>
+      <div className="mt-2 bg-slate-200 rounded-md p-2">
+        <div className="text-xs text-slate-900 mb-2 text-center">Board Control</div>
+        <Progress
+          value={playerStats[1].boardControl}
+          className="h-4 bg-blue-500"
+          indicatorClassName="bg-red-500"
+        />
       </div>
     </div>
   );

@@ -43,6 +43,27 @@ export class GameMasterEngine {
     scores[2] = this.calculatePlayerScore(2);
   }
 
+  private calculateBoardControl(): { [key: number]: number; } {
+    const board = this.boardEngine.getBoard();
+    const totalBoardValue = board.flat().reduce((sum, cell) => sum + cell.value, 0);
+
+    if (totalBoardValue === 0) return { 1: 0, 2: 0 };
+
+    const controlByPlayer: Record<number, number> = { 1: 0, 2: 0 };
+
+    board.flat().forEach(cell => {
+      if (cell.owner && cell.value > 0) {
+        controlByPlayer[cell.owner] += cell.value;
+      }
+    });
+
+    // Convert to percentages
+    return {
+      1: (controlByPlayer[1] / totalBoardValue) * 100,
+      2: (controlByPlayer[2] / totalBoardValue) * 100
+    };
+  }
+
   // Update player stats (board control, token total, etc.)
   public updatePlayerStats(
     playerId: number,
@@ -50,14 +71,20 @@ export class GameMasterEngine {
     chainLength: number = 0
   ): void {
     const board = this.boardEngine.getBoard();
-    const playerCells = board.flat().filter(cell => cell.owner === playerId);
+    const boardControl = this.calculateBoardControl();
 
-    playerStats[playerId] = {
-      turnCount: playerStats[playerId].turnCount + 1,
-      chainCount: playerStats[playerId].chainCount + chainLength,
-      boardControl: playerCells.length,
-      tokenTotal: playerCells.reduce((sum, cell) => sum + cell.value, 0),
-    };
+    // Update stats for both players
+    [1, 2].forEach(pid => {
+      const playerCells = board.flat().filter(cell => cell.owner === pid);
+      const playerTokenTotal = playerCells.reduce((sum, cell) => sum + cell.value, 0);
+
+      playerStats[pid] = {
+        turnCount: pid === playerId ? playerStats[pid].turnCount + 1 : playerStats[pid].turnCount,
+        chainCount: pid === playerId ? playerStats[pid].chainCount + chainLength : playerStats[pid].chainCount,
+        boardControl: boardControl[pid],
+        tokenTotal: playerTokenTotal,
+      };
+    });
   }
 
   // Update game stats (flip combos, longest chain, etc.)
