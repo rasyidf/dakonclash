@@ -39,7 +39,7 @@ export const useGameStore = create<GameState>()(
         boardSize: 6,
         moves: 0,
         players: initialPlayers,
-        currentPlayerId: 1,
+        currentPlayer: initialPlayers[1], // Set initial currentPlayer
         score: { 1: 0, 2: 0 }, // Fix: Changed from { p1: 0, p2: 0 } to match type definition
         board: BoardEngine.generate(6),
         history: [],
@@ -61,8 +61,8 @@ export const useGameStore = create<GameState>()(
         startGame: (mode, size, gameId) => set(produce((state: GameState) => {
           GameMasterEngine.startGame(state, mode, size, gameId);
         })),
-        resetGame: (newSize) => set(produce((state: GameState) => {
-          GameMasterEngine.resetGame(state, newSize);
+        resetGame: (mode, newSize) => set(produce((state: GameState) => {
+          GameMasterEngine.resetGame(state, mode, newSize);
         })),
         addMove: (position) => set((state) =>
           GameEngine.addMove(state, position)
@@ -93,8 +93,8 @@ export const useGameStore = create<GameState>()(
         setBoard: (board) => set(produce((state: GameState) => {
           state.board = board;
         })),
-        setCurrentPlayerId: (id) => set(produce((state: GameState) => {
-          state.currentPlayerId = id;
+        setCurrentPlayer: (player) => set(produce((state: GameState) => {
+          state.currentPlayer = player;
         })),
 
         setShowWinnerModal: (show) => set(produce((state: GameState) => {
@@ -121,7 +121,7 @@ export const useGameStore = create<GameState>()(
         updateStats: (newStats) => set(produce((draft: GameState) => {
           draft.stats = { ...draft.stats, ...newStats };
         })),
-        
+
         updatePlayerStats: (playerId, updatedStats) => set(produce((draft: GameState) => {
           draft.playerStats[playerId] = {
             ...draft.playerStats[playerId],
@@ -160,10 +160,6 @@ export const useGameStore = create<GameState>()(
         },
         // #endregion Multiplayer Mode
 
-        // #region Bot Mode
-        generateBotMove: () => {
-          return MultiplayerEngine.generateMove(get());
-        },
         // #endregion Bot Mode
 
         startReplay: () => set(produce((state: GameState) => {
@@ -174,7 +170,7 @@ export const useGameStore = create<GameState>()(
         })),
 
         switchPlayer: () => set(produce((state: GameState) => {
-          state.currentPlayerId = state.currentPlayerId === 1 ? 2 : 1;
+          state.currentPlayer = state.currentPlayer.id === 1 ? state.players[2] : state.players[1];
         })),
       })
     ),

@@ -45,16 +45,28 @@ export class GameMasterEngine {
     });
   }
 
-  static resetGame(state: GameState, newSize: number) {
+  static resetGame(
+    state: GameState,
+    mode: GameMode,
+    newSize: number,
+    botAsFirst: boolean = false
+  ) {
+    const players = !botAsFirst || mode !== 'vs-bot'
+      ? {
+        1: { id: 1, name: "Player 1", color: "red" },
+        2: { id: 2, name: mode === 'vs-bot' ? "Bot" : "Player 2", color: "blue", isBot: mode === 'vs-bot' },
+      }
+      : {
+        1: { id: 1, name: "Bot", color: "red", isBot: true },
+        2: { id: 2, name: "Player 1", color: "blue" },
+      };
+
     Object.assign(state, {
       boardSize: newSize,
       moves: 0,
-      currentPlayerId: 1,
+      currentPlayer: players[1], // Set currentPlayer to Player 1
       score: { 1: 0, 2: 0 },
-      players: {
-        1: { id: 1, name: "Player 1", color: "red" },
-        2: { id: 2, name: "Player 2", color: "blue" },
-      },
+      players,
       board: BoardEngine.generate(newSize),
       history: [],
       currentStep: -1,
@@ -104,7 +116,7 @@ export class GameMasterEngine {
   }
 
   static trackMove(state: GameState, chainLength: number = 0) {
-    this.updatePlayerStats(state, state.currentPlayerId, {
+    this.updatePlayerStats(state, state.currentPlayer.id, {
       turnCountDelta: 1,
       chainCountDelta: chainLength,
       moveCount: 1,
@@ -121,7 +133,7 @@ export class GameMasterEngine {
     });
 
     state.setScore(scores);
-    this.updatePlayerStats(state, state.currentPlayerId, {
+    this.updatePlayerStats(state, state.currentPlayer.id, {
       turnCountDelta: 1,
       chainCountDelta: chainLength,
       board: newBoard,
@@ -164,7 +176,7 @@ export class GameMasterEngine {
       return;
     }
 
-    this.resetGame(state, size);
+    this.resetGame(state, mode, size);
     this.initGameMode(state, mode);
     state.showGameStartModal = true;
   }

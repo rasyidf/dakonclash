@@ -4,7 +4,6 @@ import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { cn } from "~/lib/utils";
 import { useGameStore } from "~/store/gameStore";
-import type { Player } from "~/store/types";
 
 export function WinnerModal() {
 
@@ -39,7 +38,7 @@ export function WinnerModal() {
       <Dialog open={showWinnerModal} onOpenChange={
         () => {
           setShowWinnerModal(false);
-          resetGame(size);
+          resetGame('local', size);
         }
       }>
         <DialogContent className="sm:max-w-md">
@@ -59,7 +58,7 @@ export function WinnerModal() {
           <div className="flex justify-center gap-4 mt-4">
             <Button onClick={
               () => {
-                resetGame(size);
+                resetGame('local', size);
                 setShowWinnerModal(false);
               }
             }>Play Again</Button>

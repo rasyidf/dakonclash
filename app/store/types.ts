@@ -1,4 +1,3 @@
-
 export type TailwindColor = "red" | "blue" | "green" | "yellow" | "purple" | "pink" | "orange" | "teal";
 export type GameMode = 'online' | 'local' | 'vs-bot';
 
@@ -16,6 +15,7 @@ export interface Player {
   id: number;
   name: string;
   color: TailwindColor;
+  isBot?: boolean;
 }
 
 export interface GameMove {
@@ -47,7 +47,7 @@ export interface GameState {
   boardSize: number;
   moves: number;
   players: Record<Player["id"], Player>;
-  currentPlayerId: Player["id"];
+  currentPlayer: Player; // Changed from currentPlayerId to currentPlayer
   score: Record<Player["id"], number>;
   board: Cell[][];
   history: GameMove[];
@@ -62,13 +62,14 @@ export interface GameState {
   gameMode: GameMode;
   isPlayer2Joined: boolean;
   showGameStartModal: boolean;
-  setCurrentPlayerId: (id: Player["id"]) => void;
+  
+  setCurrentPlayer: (player: Player) => void; // Changed from setCurrentPlayerId to setCurrentPlayer
   setSize: (size: number) => void;
   setMoves: (moves: number) => void;
   setPlayerInfo: (id: Player["id"], info: Partial<Player>) => void;
   setScore: (score: Record<Player["id"], number>) => void;
   setBoard: (board: Cell[][]) => void;
-  resetGame: (newSize: number) => void;
+  resetGame: (mode: GameMode, newSize: number) => void;
   addMove: (position: { row: number; col: number; }) => void;
   switchPlayer: () => void;
   undo: () => void;
@@ -85,12 +86,11 @@ export interface GameState {
   setGameMode: (mode: GameMode) => void;
   createOnlineGame: (size: number) => Promise<void>;
   joinOnlineGame: (gameId: string) => Promise<void>;
-  generateBotMove: () => { row: number; col: number; };
   setShowGameStartModal: (show: boolean) => void;
   setPlayer2Joined: (joined: boolean) => void;
   startReplay: () => void;
   nextReplayStep: () => void;
-  startGame: (mode: GameMode, size: number, gameId?: string) => void;
+  startGame: (mode: GameMode, size: number, gameId?: string, botAsFirst?: boolean) => void;
 }
 
 export const initialPlayers: Record<Player["id"], Player> = {

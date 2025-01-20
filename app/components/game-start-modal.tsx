@@ -20,6 +20,7 @@ export function GameStartModal() {
   } = useGame();
   const [selectedMode, setSelectedMode] = useState<'local' | 'vs-bot' | 'online' | null>(null);
   const [showQR, setShowQR] = useState(false);
+  const [botAsFirst, setBotAsFirst] = useState(false);
 
   const handleGameModeSelection = async (mode: 'local' | 'vs-bot' | 'online') => {
     setSelectedMode(mode);
@@ -31,8 +32,10 @@ export function GameStartModal() {
         startGame(mode, boardSize);
         setShowQR(true);
       }
+    } else if (mode === 'vs-bot') {
+      // Do not start the game immediately, wait for botAsFirst selection
     } else {
-      startGame(mode, boardSize);
+      startGame(mode, boardSize, undefined, botAsFirst);
       setShowGameStartModal(false);
     }
   };
@@ -92,6 +95,26 @@ export function GameStartModal() {
             >
               VS Bot
             </Button>
+
+            {selectedMode === 'vs-bot' && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={botAsFirst}
+                  onChange={() => setBotAsFirst(!botAsFirst)}
+                />
+                <label>Bot plays first</label>
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    startGame('vs-bot', boardSize, undefined, botAsFirst);
+                    setShowGameStartModal(false);
+                  }}
+                >
+                  Start Game
+                </Button>
+              </div>
+            )}
 
             <div className="flex flex-col gap-2">
               <Button

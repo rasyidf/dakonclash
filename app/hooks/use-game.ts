@@ -1,15 +1,15 @@
 import { toast } from "sonner";
+import { BotEngine } from "~/store/engine/BotEngine";
 import { GameEngine } from "~/store/engine/GameEngine";
 import { useGameStore } from "~/store/gameStore";
 
 export function useGame() {
   const state = useGameStore((state) => state);
 
-  const currentPlayer = state.players[state.currentPlayerId];
+  const currentPlayer = state.players[state.currentPlayer.id];
 
   const handleCellClick = (row: number, col: number) => {
-   
-    GameEngine.callMove(state, row, col);
+    GameEngine.callMove(state, row, col, false);
   };
 
   const handleSizeChange = (size: number) => {

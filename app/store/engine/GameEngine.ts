@@ -3,13 +3,14 @@ import { toast } from 'sonner';
 import type { Cell, GameMove, GameState, GameStats } from '../types';
 import { GameMasterEngine } from './GameMasterEngine';
 import { MultiplayerEngine } from './MultiplayerEngine';
+import { BotEngine } from './BotEngine';
 
 export class GameEngine {
   static addMove(state: GameState, position: { row: number; col: number; }) {
     return produce(state, draft => {
       const newHistory = draft.history.slice(0, draft.currentStep + 1);
       const move: GameMove = {
-        playerId: draft.currentPlayerId,
+        playerId: draft.currentPlayer.id,
         board: JSON.parse(JSON.stringify(draft.board)),
         score: { ...draft.score },
         position,
@@ -37,7 +38,7 @@ export class GameEngine {
     if (state.gameMode === 'online' && state.gameId) {
       const nextState = produce(state, draft => {
         draft.board[row][col].value += draft.moves < 2 ? 3 : 1;
-        draft.board[row][col].owner = draft.currentPlayerId;
+        draft.board[row][col].owner = draft.currentPlayer.id;
         draft.moves += 1;
       });
       await MultiplayerEngine.updatePlayerAction(nextState);
@@ -48,7 +49,7 @@ export class GameEngine {
     let chainLength = 0;
     const boardCopy = JSON.parse(JSON.stringify(state.board));
     boardCopy[row][col].value += state.moves < 2 ? 3 : 1;
-    boardCopy[row][col].owner = state.currentPlayerId;
+    boardCopy[row][col].owner = state.currentPlayer.id;
 
     if (boardCopy[row][col].value >= 4) {
       chainLength = await this.spreadBeads(state, row, col, boardCopy, 1, state.updateStats);
@@ -63,7 +64,7 @@ export class GameEngine {
       const moveState = this.addMove(draft, position);
       Object.assign(draft, moveState);
 
-      state.switchPlayer();
+      draft.switchPlayer();
 
       if (draft.moves > 1) {
         GameMasterEngine.checkWinner(draft);
@@ -71,7 +72,7 @@ export class GameEngine {
     });
   }
 
-  static async callMove(state: GameState, row: number, col: number) {
+  static async callMove(state: GameState, row: number, col: number, isBot = false) {
     if (state.isGameOver) {
       return;
     }
@@ -81,47 +82,43 @@ export class GameEngine {
       return;
     }
 
+
     if (state.gameMode === 'online' && state.gameId) {
       await this.makeMove(state, { row, col });
       return;
     }
 
-    // Make move
     const newBoard = JSON.parse(JSON.stringify(state.board));
     const beadsToAdd = state.moves < 2 ? 3 : 1;
     newBoard[row][col].value += beadsToAdd;
-    newBoard[row][col].owner = state.currentPlayerId;
+    newBoard[row][col].owner = state.currentPlayer.id;
 
     let chainLength = 0;
     if (newBoard[row][col].value >= 4) {
       chainLength = await this.spreadBeads(state, row, col, newBoard, 1, state.updateStats);
     }
 
-    // Update game state
-    state.setBoard(newBoard);
-    state.setMoves(state.moves + 1);
+    const updatedState = produce(state, draft => {
+      draft.setBoard(newBoard);
+      draft.setMoves(state.moves + 1);
+      GameMasterEngine.updateScoresAndStats(draft, newBoard, chainLength);
+      draft.addMove({ row, col });
+      draft.switchPlayer();
+    });
 
-    // Update scores and stats
-    GameMasterEngine.updateScoresAndStats(state, newBoard, chainLength);
-
-    // Add move to history before switching player
-    state.addMove({ row, col });
-
-    state.switchPlayer();
-
-    // Check win condition
-    if (state.moves > 1) {
-      state.checkWinner();
-      if (state.isGameOver) return;
+    if (updatedState.moves > 1) {
+      updatedState.checkWinner();
+      if (updatedState.isGameOver) {
+        return;
+      }
     }
 
-    // Handle bot move if applicable
-    if (state.gameMode === 'vs-bot' && state.currentPlayerId === 2) {
-      setTimeout(async () => {
-        const botMove = state.generateBotMove();
-        await this.callMove(state, botMove.row, botMove.col);
-      }, 500); // Add slight delay for bot moves
+    // Automatically perform bot's move if it's the bot's turn
+    if (updatedState.currentPlayer.isBot && updatedState.gameMode === 'vs-bot') {
+      BotEngine.makeBotMove(updatedState);
     }
+
+    return updatedState;
   }
 
   static updateFlipStats(
@@ -158,7 +155,7 @@ export class GameEngine {
       if (newRow >= 0 && newRow < state.boardSize && newCol >= 0 && newCol < state.boardSize) {
         // Add chain bonus to adjacent cells
         newBoard[newRow][newCol].value += 1;
-        newBoard[newRow][newCol].owner = state.currentPlayerId;
+        newBoard[newRow][newCol].owner = state.currentPlayer.id;
 
         if (newBoard[newRow][newCol].value >= 4) {
           await new Promise(resolve => setTimeout(resolve, 50)); // Shorter delay for smoother animation
@@ -174,7 +171,7 @@ export class GameEngine {
   static handleSizeChange(state: GameState, value: number) {
     const newSize = value || 6;
     if (newSize > 0 && newSize <= 12) {
-      state.resetGame(newSize);
+      state.resetGame('local', newSize);
     }
   }
 
@@ -186,7 +183,7 @@ export class GameEngine {
       return cell.value === 0;
     }
     const owner = cell.owner;
-    const isEligible = owner === state.currentPlayerId;
+    const isEligible = owner === state.currentPlayer.id;
     return isEligible && cell.value < 4;
   }
 
