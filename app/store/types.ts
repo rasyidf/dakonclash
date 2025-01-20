@@ -75,6 +75,7 @@ export interface GameState {
   redo: () => void;
   replay: (step: number) => void;
   updateStats: (stats: Partial<GameStats>) => void;
+  updatePlayerStats: (playerId: Player["id"], stats: Partial<PlayerStats>) => void;
   resetStats: () => void;
   checkWinner: () => void;
   setTimer: (time: number | null) => void;

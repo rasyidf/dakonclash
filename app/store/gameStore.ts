@@ -118,11 +118,17 @@ export const useGameStore = create<GameState>()(
           state.gameId = id;
         })),
 
-        updateStats: (newStats) => set(produce((state: GameState) => {
-          set(produce((state: GameState) => {
-            state.stats = { ...state.stats, ...newStats };
-          }));
+        updateStats: (newStats) => set(produce((draft: GameState) => {
+          draft.stats = { ...draft.stats, ...newStats };
         })),
+        
+        updatePlayerStats: (playerId, updatedStats) => set(produce((draft: GameState) => {
+          draft.playerStats[playerId] = {
+            ...draft.playerStats[playerId],
+            ...updatedStats
+          };
+        })),
+
         resetStats: () => set(produce((state: GameState) => {
           state.stats = initialStats;
         })),
