@@ -1,7 +1,5 @@
 import { toast } from "sonner";
-import { BotEngine } from "~/store/engine/BotEngine";
-import { GameEngine } from "~/store/engine/GameEngine";
-import { useGameStore } from "~/store/gameStore";
+import { useGameStore } from "~/store/useGameStore";
 
 export function useGame() {
   const state = useGameStore((state) => state);
@@ -9,22 +7,17 @@ export function useGame() {
   const currentPlayer = state.players[state.currentPlayer.id];
 
   const handleCellClick = (row: number, col: number) => {
-    GameEngine.callMove(state, row, col, false);
+    state.makeMove(row, col);
   };
-
-  const handleSizeChange = (size: number) => {
-    if (state.isGameOver) {
-      toast.info("Game is over. Please start a new game.", { richColors: true });
-      return;
-    }
-
-    GameEngine.handleSizeChange(state, size);
-  };
+  // call the game start menu
+  const handleStartGame = ()=>{
+    state.showGameStartModal(true);
+  }
 
   return {
     ...state,
     currentPlayer,
     handleCellClick,
-    handleSizeChange,
+    handleStartGame 
   };
 }

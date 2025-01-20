@@ -9,14 +9,13 @@ import { Slider } from "~/components/ui/slider";
 import { useGame } from "~/hooks/use-game";
 
 export function GameStartModal() {
-  const { startGame,
+  const {
+    startGame,
+    isGameStartModalOpen,
     showGameStartModal,
-    setShowGameStartModal,
+    changeBoardSize,
     gameId,
-    setGameId,
-    isPlayer2Joined,
     boardSize,
-    handleSizeChange
   } = useGame();
   const [selectedMode, setSelectedMode] = useState<'local' | 'vs-bot' | 'online' | null>(null);
   const [showQR, setShowQR] = useState(false);
@@ -26,8 +25,7 @@ export function GameStartModal() {
     setSelectedMode(mode);
     if (mode === 'online') {
       if (gameId) {
-        startGame(mode, boardSize, gameId);
-        setShowQR(false);
+        startGame(mode, boardSize);
       } else {
         startGame(mode, boardSize);
         setShowQR(true);
@@ -35,17 +33,9 @@ export function GameStartModal() {
     } else if (mode === 'vs-bot') {
       // Do not start the game immediately, wait for botAsFirst selection
     } else {
-      startGame(mode, boardSize, undefined, botAsFirst);
-      setShowGameStartModal(false);
+      startGame(mode, boardSize);
     }
   };
-
-  useEffect(() => {
-    if (selectedMode === 'online' && isPlayer2Joined) {
-      setShowQR(false);
-      setShowGameStartModal(false);
-    }
-  }, [isPlayer2Joined, selectedMode, setShowGameStartModal]);
 
   function getGameUrl(): string | string[] {
     return `${window.location.origin}?id=${gameId}`;
@@ -53,8 +43,8 @@ export function GameStartModal() {
 
   return (
     <Dialog
-      open={showGameStartModal}
-      onOpenChange={setShowGameStartModal}
+      open={isGameStartModalOpen}
+      onOpenChange={showGameStartModal}
       modal={true}
     >
       <DialogContent className="sm:max-w-md">
@@ -69,8 +59,8 @@ export function GameStartModal() {
             <Label>Board Size</Label>
             <Slider
               onValueChange={(value) => {
-                if (value[0] < 5) return handleSizeChange(5);
-                return handleSizeChange(value[0]);
+                if (value[0] < 5) return changeBoardSize(5);
+                changeBoardSize(value[0]);
               }}
               defaultValue={[boardSize]}
               min={4}
@@ -107,8 +97,8 @@ export function GameStartModal() {
                 <Button
                   variant="default"
                   onClick={() => {
-                    startGame('vs-bot', boardSize, undefined, botAsFirst);
-                    setShowGameStartModal(false);
+                    startGame('vs-bot', boardSize);
+                    showGameStartModal(false);
                   }}
                 >
                   Start Game
@@ -125,11 +115,11 @@ export function GameStartModal() {
               </Button>
 
               <div className="flex gap-2">
-                <Input
+                {/* <Input
                   placeholder="Enter Game ID"
                   value={gameId ?? ""}
                   onChange={(e) => setGameId(e.target.value)}
-                />
+                /> */}
                 <Button
                   variant="outline"
                   onClick={() => handleGameModeSelection('online')}

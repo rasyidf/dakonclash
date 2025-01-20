@@ -3,27 +3,27 @@ import Confetti from 'react-confetti';
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { cn } from "~/lib/utils";
-import { useGameStore } from "~/store/gameStore";
+import { useGameStore } from "~/store/useGameStore";
 
 export function WinnerModal() {
 
-  const { showWinnerModal, setShowWinnerModal, winner, players, resetGame, boardSize: size } = useGameStore();
+  const { isWinnerModalOpen, showWinnerModal, winner, players, boardSize, startGame } = useGameStore();
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
-    if (showWinnerModal) {
+    if (isWinnerModalOpen) {
       setDimensions({
         width: window.innerWidth,
         height: window.innerHeight,
       });
     }
-  }, [showWinnerModal]);
+  }, [isWinnerModalOpen]);
 
   if (!winner) return null;
 
   return (
     <>
-      {showWinnerModal && winner !== 'draw' && (
+      {isWinnerModalOpen && winner !== 'draw' && (
         <Confetti
           width={dimensions.width}
           height={dimensions.height}
@@ -35,10 +35,10 @@ export function WinnerModal() {
           ]}
         />
       )}
-      <Dialog open={showWinnerModal} onOpenChange={
+      <Dialog open={isWinnerModalOpen} onOpenChange={
         () => {
-          setShowWinnerModal(false);
-          resetGame('local', size);
+          showWinnerModal(false);
+          startGame('local', boardSize);
         }
       }>
         <DialogContent className="sm:max-w-md">
@@ -58,12 +58,12 @@ export function WinnerModal() {
           <div className="flex justify-center gap-4 mt-4">
             <Button onClick={
               () => {
-                resetGame('local', size);
-                setShowWinnerModal(false);
+                startGame('local', boardSize);
+                showWinnerModal(false);
               }
             }>Play Again</Button>
             <Button variant="outline" onClick={
-              () => setShowWinnerModal(false)
+              () => showWinnerModal(false)
             }>Close</Button>
           </div>
         </DialogContent>

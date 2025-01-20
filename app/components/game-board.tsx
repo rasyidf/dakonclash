@@ -1,20 +1,10 @@
 import { useGame } from "~/hooks/use-game";
 import { cn } from "~/lib/utils";
-import { BoardEngine } from "~/store/engine/BoardEngine";
+import { BoardEngine } from "~/store/engine.v1/BoardEngine";
 import { GameCell } from "./game-cell";
 
 export function GameBoard() {
-  const { boardSize, board, moves, isPlayer2Joined, gameMode, players, currentPlayer, handleCellClick } = useGame();
-
-  if (gameMode === 'online' && !isPlayer2Joined) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full">
-        <div className="text-lg font-bold text-center">
-          Waiting for Player 2 to join...
-        </div>
-      </div>
-    );
-  }
+  const { boardSize, board, moves, players, currentPlayer, handleCellClick } = useGame();
 
   return (
     <>

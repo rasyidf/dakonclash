@@ -5,7 +5,7 @@ import { SidebarProvider, SidebarTrigger } from "~/components/ui/sidebar";
 import { AppSidebar } from "~/components/app-sidebar";
 import { cx } from "class-variance-authority";
 import { WinnerModal } from "~/components/winner-modal";
-import { useGameStore } from "~/store/gameStore";
+import { useGameStore } from "~/store/engine.v1/gameStore";
 import { useEffect } from "react";
 import { GameStartModal } from "~/components/game-start-modal";
 

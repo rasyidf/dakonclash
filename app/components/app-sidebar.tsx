@@ -1,11 +1,4 @@
 import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
-} from "~/components/ui/pagination";
-import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -13,23 +6,19 @@ import {
   SidebarHeader,
 } from "~/components/ui/sidebar";
 import { useGame } from "~/hooks/use-game";
-import { useGameStore } from "~/store/gameStore";
+import { useGameStore } from "~/store/engine.v1/gameStore";
 import type { Player } from "~/store/types";
 import { GameControls } from "./game-controls";
 import { ScoreBoard } from "./score-board";
 
 export function AppSidebar() {
   const {
-    boardSize,
-    score,
     players,
-    undo,
-    redo,
-    handleSizeChange,
     stats,
     playerStats,
     currentPlayer,
     winner,
+    scores,
   } = useGame();
 
   const setTimer = useGameStore(state => state.setTimer);
@@ -40,8 +29,6 @@ export function AppSidebar() {
         <img src="/favicon.ico" alt="Dakon Clash" className="w-16 h-16 mx-auto" />
         <h1 className="text-2xl text-center mt-2 font-bold text-slate-700">Dakon Clash</h1>
         <GameControls
-          size={boardSize}
-          onSizeChange={handleSizeChange}
           elapsedTime={stats.elapsedTime}
           onSetTimer={setTimer}
         />
@@ -50,7 +37,7 @@ export function AppSidebar() {
         <SidebarGroup>
 
           <ScoreBoard
-            score={score}
+            score={scores}
             players={players}
             playerStats={playerStats}
             currentPlayerId={currentPlayer.id}
@@ -66,7 +53,7 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarGroup>      {/* Undo Redo */}
           <h2 className="text-md font-bold text-center text-slate-900">History</h2>
-          <Pagination>
+          {/* <Pagination>
             <PaginationContent>
               <PaginationItem >
                 <PaginationPrevious
@@ -79,7 +66,7 @@ export function AppSidebar() {
                 />
               </PaginationItem>
             </PaginationContent>
-          </Pagination>
+          </Pagination> */}
         </SidebarGroup>
         <SidebarGroup>
           <h2 className="text-md font-bold text-center text-slate-900">About</h2>

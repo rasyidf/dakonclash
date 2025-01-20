@@ -2,12 +2,13 @@ import { produce } from 'immer';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import { GameEngine } from './engine/GameEngine';
-import type { GameState, GameStats, Player, PlayerStats } from './types';
-import { BoardEngine } from './engine/BoardEngine';
-import { MultiplayerEngine } from './engine/MultiplayerEngine';
-import { GameMasterEngine } from './engine/GameMasterEngine';
-import { PlaybackEngine } from './engine/PlaybackEngine';
+import { GameEngine } from './GameEngine';
+import { BoardEngine } from './BoardEngine';
+import { MultiplayerEngine } from './MultiplayerEngine';
+import { GameMasterEngine } from './GameMasterEngine';
+import { PlaybackEngine } from './PlaybackEngine';
+import type { GameState } from './types';
+import type { GameStats, Player, PlayerStats } from '../types';
 
 
 const initialStats: GameStats = {
@@ -39,8 +40,8 @@ export const useGameStore = create<GameState>()(
         boardSize: 6,
         moves: 0,
         players: initialPlayers,
-        currentPlayer: initialPlayers[1], // Set initial currentPlayer
-        score: { 1: 0, 2: 0 }, // Fix: Changed from { p1: 0, p2: 0 } to match type definition
+        currentPlayer: initialPlayers[1],
+        score: { 1: 0, 2: 0 } as const,
         board: BoardEngine.generate(6),
         history: [],
         currentStep: -1,

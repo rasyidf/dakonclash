@@ -1,183 +1,125 @@
-import { produce } from 'immer';
-import { type Cell, type GameMode, type GameState, type GameStats, type Player } from '../types';
+import type { GameStats, Player, PlayerStats } from '../types';
 import { BoardEngine } from './BoardEngine';
-
-const initialStats: GameStats = {
-  startTime: Date.now(),
-  elapsedTime: 0,
-  movesByPlayer: { 1: 0, 2: 0 },
-  flipCombos: 0,
-  longestFlipChain: 0,
-  cornerThrows: 0,
-};
+import type { GameState } from './types';
 
 export class GameMasterEngine {
+  private boardEngine: BoardEngine;
 
-  static checkWinner(state: GameState) {
-    const calculatePlayerTotal = (playerId: number) => state.board.flat().reduce(
-      (sum, cell) => sum + (cell.owner === playerId ? cell.value : 0), 0
-    );
-
-    const p1Total = calculatePlayerTotal(1);
-    const p2Total = calculatePlayerTotal(2);
-
-    if (this.hasNoBeadsForPlayer(state, 1) || this.hasNoBeadsForPlayer(state, 2)) {
-      state.isGameOver = true;
-      state.showWinnerModal = true;
-      state.winner = p1Total > p2Total ? 1 : p2Total > p1Total ? 2 : 'draw';
-    }
+  constructor(boardEngine: BoardEngine) {
+    this.boardEngine = boardEngine;
   }
 
-  static hasNoBeadsForPlayer(state: GameState, playerId: number): boolean {
-    return state.board.every(row => row.every(cell => cell.owner !== playerId || cell.value === 0));
-  }
-
-  static initGameMode(state: GameState, mode: GameMode) {
-    Object.assign(state, {
-      gameMode: mode,
-      board: BoardEngine.generate(state.boardSize),
-      currentPlayerId: 1,
-      moves: 0,
-      score: { 1: 0, 2: 0 },
-      stats: initialStats,
-      isGameOver: false,
-      winner: null,
-    });
-  }
-
-  static resetGame(
-    state: GameState,
-    mode: GameMode,
-    newSize: number,
-    botAsFirst: boolean = false
-  ) {
-    const players = !botAsFirst || mode !== 'vs-bot'
-      ? {
-        1: { id: 1, name: "Player 1", color: "red" },
-        2: { id: 2, name: mode === 'vs-bot' ? "Bot" : "Player 2", color: "blue", isBot: mode === 'vs-bot' },
-      }
-      : {
-        1: { id: 1, name: "Bot", color: "red", isBot: true },
-        2: { id: 2, name: "Player 1", color: "blue" },
-      };
-
-    Object.assign(state, {
-      boardSize: newSize,
-      moves: 0,
-      currentPlayer: players[1], // Set currentPlayer to Player 1
-      score: { 1: 0, 2: 0 },
-      players,
-      board: BoardEngine.generate(newSize),
-      history: [],
-      currentStep: -1,
-      stats: initialStats,
-      future: [],
-      replayIndex: null,
-      playerStats: {
-        1: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 },
-        2: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 },
-      },
-      isGameOver: false,
-      winner: null,
-      showWinnerModal: false,
-      isPlayer2Joined: false,
-      showGameStartModal: true,
-    });
-  }
-
-  static calculatePlayerStats(board: Cell[][], playerId: number) {
-    const playerCells = board.flat().filter(cell => cell.owner === playerId);
+  // Initialize game stats
+  public initializeStats(): GameStats {
     return {
+      startTime: Date.now(),
+      elapsedTime: 0,
+      movesByPlayer: { 1: 0, 2: 0 },
+      flipCombos: 0,
+      longestFlipChain: 0,
+      cornerThrows: 0,
+    };
+  }
+
+  // Initialize player stats
+  public initializePlayerStats(): Record<Player["id"], PlayerStats> {
+    return {
+      1: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 },
+      2: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 },
+    };
+  }
+
+  // Calculate the total score for a player
+  public calculatePlayerScore(playerId: number): number {
+    const board = this.boardEngine.getBoard();
+    return board.flat().reduce((sum, cell) => {
+      return cell.owner === playerId ? sum + cell.value : sum;
+    }, 0);
+  }
+
+  // Update the scores for both players
+  public updateScores(scores: Record<Player["id"], number>): void {
+    scores[1] = this.calculatePlayerScore(1);
+    scores[2] = this.calculatePlayerScore(2);
+  }
+
+  // Update player stats (board control, token total, etc.)
+  public updatePlayerStats(
+    playerId: number,
+    playerStats: Record<Player["id"], PlayerStats>,
+    chainLength: number = 0
+  ): void {
+    const board = this.boardEngine.getBoard();
+    const playerCells = board.flat().filter(cell => cell.owner === playerId);
+
+    playerStats[playerId] = {
+      turnCount: playerStats[playerId].turnCount + 1,
+      chainCount: playerStats[playerId].chainCount + chainLength,
       boardControl: playerCells.length,
       tokenTotal: playerCells.reduce((sum, cell) => sum + cell.value, 0),
     };
   }
 
-  static updatePlayerStats(state: GameState, playerId: number, updates: {
-    turnCountDelta?: number;
-    chainCountDelta?: number;
-    board?: Cell[][];
-    moveCount?: number;
-  }) {
-    const board = updates.board || state.board;
-    const { boardControl, tokenTotal } = this.calculatePlayerStats(board, playerId);
+  // Update game stats (flip combos, longest chain, etc.)
+  public updateGameStats(
+    stats: GameStats,
+    chainLength: number
+  ): void {
+    stats.flipCombos += 1;
+    stats.longestFlipChain = Math.max(stats.longestFlipChain, chainLength);
+  }
 
-    if (updates.moveCount) {
-      state.stats.movesByPlayer[playerId] += updates.moveCount;
+  // Check if the game is over and determine the winner
+  public checkWinner(
+    scores: Record<Player["id"], number>,
+    playerStats: Record<Player["id"], PlayerStats>
+  ): number | 'draw' | null {
+    const board = this.boardEngine.getBoard();
+
+    // Check if a player has no beads left
+    const hasNoBeads = (playerId: number) =>
+      board.every(row => row.every(cell => cell.owner !== playerId || cell.value === 0));
+
+    const p1NoBeads = hasNoBeads(1);
+    const p2NoBeads = hasNoBeads(2);
+
+    if (p1NoBeads || p2NoBeads) {
+      return scores[1] > scores[2] ? 1 : scores[2] > scores[1] ? 2 : 'draw';
     }
 
-    const playerStats = state.playerStats[playerId];
-    state.updatePlayerStats(playerId, {
-      turnCount: playerStats.turnCount + (updates.turnCountDelta || 0),
-      chainCount: playerStats.chainCount + (updates.chainCountDelta || 0),
-      boardControl,
-      tokenTotal,
-    });
+    return null;
   }
 
-  static trackMove(state: GameState, chainLength: number = 0) {
-    this.updatePlayerStats(state, state.currentPlayer.id, {
-      turnCountDelta: 1,
-      chainCountDelta: chainLength,
-      moveCount: 1,
-    });
-  }
+  // Reset the game (scores, stats, board, etc.)
+  public resetGame(
+    mode: 'local' | 'online' | 'vs-bot',
+    size: number,
+    botAsFirst: boolean = false
+  ): Partial<GameState> {
 
-  static updateScoresAndStats(state: GameState, newBoard: Cell[][], chainLength: number) {
-    const scores: Record<Player["id"], number> = { 1: 0, 2: 0 };
+    const players: Record<number, Player> = {
+      1: { id: 1, name: botAsFirst && mode === 'vs-bot' ? "Bot" : "Player 1", color: "red", isBot: botAsFirst && mode === 'vs-bot' },
+      2: { id: 2, name: mode === 'vs-bot' ? "Player 1" : "Player 2", color: "blue", isBot: false },
+    };
 
-    newBoard.flat().forEach(cell => {
-      if (cell.owner) {
-        scores[cell.owner] += cell.value;
-      }
-    });
+    this.boardEngine.resetBoard(size);
+    const stats = this.initializeStats();
+    const playerStats = this.initializePlayerStats();
 
-    state.setScore(scores);
-    this.updatePlayerStats(state, state.currentPlayer.id, {
-      turnCountDelta: 1,
-      chainCountDelta: chainLength,
-      board: newBoard,
-    });
-  }
-
-  static setTimer(state: GameState, set: any, time: number | null) {
-    state.stats.elapsedTime = time ?? 0;
-    if (time !== null) {
-      const timerInterval = setInterval(() => {
-        set(produce((state: GameState) => {
-          if (state.stats.elapsedTime > 0) {
-            state.stats.elapsedTime -= 1;
-            if (state.stats.elapsedTime === 0) {
-              clearInterval(timerInterval);
-              state.checkWinner();
-            }
-          }
-        }));
-      }, 1000);
-    }
-  }
-
-  static updateTimer(state: GameState) {
-    if (state.stats.elapsedTime > 0) {
-      state.stats.elapsedTime -= 1;
-      if (state.stats.elapsedTime === 0) {
-        state.checkWinner();
-      }
-    }
-  }
-
-  static async startGame(state: GameState, mode: GameMode, size: number = 8, gameId?: string) {
-    if (mode === 'online') {
-      if (gameId) {
-        await state.joinOnlineGame(gameId);
-      } else {
-        await state.createOnlineGame(size);
-      }
-      return;
-    }
-
-    this.resetGame(state, mode, size);
-    this.initGameMode(state, mode);
-    state.showGameStartModal = true;
+    // Return the new game state
+    return {
+      boardEngine: this.boardEngine,
+      board: this.boardEngine.getBoard(),
+      gameMode: mode,
+      players,
+      currentPlayer: players[1],
+      boardSize: size,
+      stats,
+      playerStats,
+      moves: 0,
+      scores: { 1: 0, 2: 0 },
+      isGameOver: false,
+      winner: null,
+    };
   }
 }
