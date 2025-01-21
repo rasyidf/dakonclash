@@ -54,3 +54,11 @@ export interface PlayerStats {
   boardControl: number;
   tokenTotal: number;
 }
+
+export interface ScoreAnimation {
+  id: string;
+  row: number;
+  col: number;
+  score: number;
+  playerId: number;
+}

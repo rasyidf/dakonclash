@@ -3,12 +3,13 @@ import { BoardEngine } from './engine/BoardEngine';
 import { GameEngine } from './engine/GameEngine';
 import { GameMasterEngine } from './engine/GameMasterEngine';
 import type { GameStore } from './engine/types';
-import type { GameMode } from './types';
+import type { GameMode, ScoreAnimation } from './types';
 
 // Initialize engines first
 const boardEngine = new BoardEngine(5);
 const gameEngine = new GameEngine(boardEngine);
 const gameMasterEngine = new GameMasterEngine(boardEngine);
+
 
 export const useGameStore = create<GameStore>((set, get) => ({
   boardEngine,
@@ -40,7 +41,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   winner: null,
   isWinnerModalOpen: false,
   isGameStartModalOpen: true,
-  isProcessing: false,  // Add this line
+  isProcessing: false,
+  scoreAnimations: [],
 
   startGame: (mode: GameMode, size: number) => {
     const { gameMasterEngine, gameEngine } = get();
@@ -59,6 +61,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     try {
       const chainLength = await gameEngine.makeMove(row, col, currentPlayer.id);
+
 
       // Get updated board after the move
       const updatedBoard = boardEngine.getBoard();
@@ -105,5 +108,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
   showWinnerModal: (show: boolean) => set({ isWinnerModalOpen: show }),
 
   showGameStartModal: (show: boolean) => set({ isGameStartModalOpen: show }),
+
+  addScoreAnimation: (animation: ScoreAnimation) => {
+    set((state) => ({
+      scoreAnimations: [...state.scoreAnimations, animation]
+    }));
+    // Remove animation after 1 second
+    setTimeout(() => {
+      set((state) => ({
+        scoreAnimations: state.scoreAnimations.filter(a => a.id !== animation.id)
+      }));
+    }, 1000);
+  },
 
 }));

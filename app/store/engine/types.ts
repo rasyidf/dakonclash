@@ -1,7 +1,9 @@
-import type { Cell, GameMode, GameStats, Player, PlayerStats } from '../types';
+import type { Cell, GameMode, GameStats, Player, PlayerStats, ScoreAnimation } from '../types';
 import type { BoardEngine } from './BoardEngine';
 import type { GameEngine } from './GameEngine';
 import type { GameMasterEngine } from './GameMasterEngine';
+
+
 
 export type GameState = {
   // Game Configuration
@@ -36,6 +38,8 @@ export type GameState = {
   gameMasterEngine: GameMasterEngine; // Manages game flow and stats
 
   isProcessing: boolean;
+
+  scoreAnimations: ScoreAnimation[];
 };
 
 export type GameStore = GameState & {
@@ -45,5 +49,5 @@ export type GameStore = GameState & {
   showWinnerModal: (show: boolean) => void;
   showGameStartModal: (show: boolean) => void;
   changeBoardSize: (size: number) => void;
-  isProcessing: boolean;
+  addScoreAnimation: (animation: ScoreAnimation) => void;
 };
