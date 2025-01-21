@@ -1,9 +1,9 @@
-import type { BoardState, Cell } from "../types";
+import type { BoardState, Cell, BoardUpdate } from "../types";
 
 export class BoardEngine {
   private board: Cell[][];
   private history: BoardState[];
-  private subscribers: Array<(board: Cell[][]) => void> = [];
+  private subscribers: Array<(update: BoardUpdate) => void> = [];
 
   constructor(size: number) {
     this.board = BoardEngine.generate(size);
@@ -12,11 +12,13 @@ export class BoardEngine {
   }
 
   static generate(size: number): Cell[][] {
-    return Array(size).fill(null).map(() =>
-      Array(size).fill(null).map(() => ({
+    return Array(size).fill(null).map((_, y) =>
+      Array(size).fill(null).map((_, x) => ({
         owner: 0,
         value: 0,
-        criticalMass: 4 // default critical mass
+        criticalMass: 4,
+        x,
+        y
       }))
     );
   }
@@ -43,15 +45,15 @@ export class BoardEngine {
       col >= 0 && col < this.board.length;
   }
 
-  public subscribe(callback: (board: Cell[][]) => void): () => void {
+  public subscribe(callback: (update: BoardUpdate) => void): () => void {
     this.subscribers.push(callback);
     return () => {
       this.subscribers = this.subscribers.filter(sub => sub !== callback);
     };
   }
 
-  private notifySubscribers(): void {
-    this.subscribers.forEach(callback => callback(this.getBoard()));
+  private notify(update: BoardUpdate): void {
+    this.subscribers.forEach(callback => callback(update));
   }
 
   public saveState(): void {
@@ -60,7 +62,10 @@ export class BoardEngine {
       timestamp: new Date()
     };
     this.history.push(state);
-    this.notifySubscribers();
+    this.notify({
+      type: 'state_saved',
+      payload: { board: this.board }
+    });
   }
 
   public loadState(index: number): void {
@@ -79,19 +84,53 @@ export class BoardEngine {
   }
 
   public updateCell(row: number, col: number, owner: number, value: number): void {
-    if (row < 0 || row >= this.board.length || col < 0 || col >= this.board.length) {
+    if (!this.isValidCell(row, col)) {
       throw new Error("Invalid cell coordinates");
     }
 
-    this.board[row][col] = { owner, value };
+    const cell = this.board[row][col];
+    cell.owner = owner;
+    cell.value = value;
+
+    this.notify({
+      type: 'cell_updated',
+      payload: { cell, x: col, y: row }
+    });
+
+    if (value >= this.getCriticalMass(row, col, true)) {
+      this.handleOverflow(row, col);
+    }
+
     this.saveState();
-    this.notifySubscribers();
+  }
+
+  private handleOverflow(row: number, col: number): void {
+    const cell = this.board[row][col];
+    const criticalMass = this.getCriticalMass(row, col, true);
+    cell.value -= criticalMass;
+
+    const neighbors = [
+      [row - 1, col],
+      [row + 1, col],
+      [row, col - 1],
+      [row, col + 1]
+    ];
+
+    for (const [nrow, ncol] of neighbors) {
+      if (this.isValidCell(nrow, ncol)) {
+        const neighbor = this.board[nrow][ncol];
+        this.updateCell(nrow, ncol, cell.owner, neighbor.value + 1);
+      }
+    }
   }
 
   public resetBoard(size: number): void {
     this.board = BoardEngine.generate(size);
     this.history = [];
     this.saveState();
-    this.notifySubscribers();
+    this.notify({
+      type: 'board_reset',
+      payload: { board: this.board }
+    });
   }
 }

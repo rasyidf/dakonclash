@@ -18,12 +18,6 @@ export function ScoreBoard({ score, players, playerStats, currentPlayerId, winne
   const [editingPlayerId, setEditingPlayerId] = useState<Player["id"] | null>(null);
   const [editName, setEditName] = useState("");
 
-  const boardControlScore = useMemo(() => {
-    return [
-      playerStats[1].boardControl,
-      playerStats[2].boardControl
-    ];
-  }, [playerStats]);
 
   const handleEditClick = (playerId: Player["id"], currentName: string) => {
     setEditingPlayerId(playerId);
@@ -43,7 +37,7 @@ export function ScoreBoard({ score, players, playerStats, currentPlayerId, winne
   };
 
   return (
-    <div className="bg-slate-100 rounded-lg p-2">
+    <div className="bg-slate-100 rounded-lg p-2 sm:p-4 w-full max-w-md mx-auto">
       <div className="text-base sm:text-lg md:text-xl font-bold text-slate-900 mb-2 text-center">
         {winner ? (
           <div className="text-center">
@@ -62,10 +56,10 @@ export function ScoreBoard({ score, players, playerStats, currentPlayerId, winne
       </div>
 
       <h2 className="text-md font-bold text-center mt-8 mb-4 text-slate-900">Stats</h2>
-      <div className="text-sm sm:text-base md:text-lg space-y-2 ">
+      <div className="text-sm sm:text-base md:text-lg space-y-2 w-full">
         {Object.entries(score).map(([playerId, playerScore]) => (
           <div key={playerId} className={cn(
-            "space-y-1 p-2 rounded-sm bg-slate-300",
+            "space-y-1 p-2 sm:p-3 rounded-sm bg-slate-300 w-full",
             players?.[parseInt(playerId)]?.color === "red" && `text-red-500 bg-red-100`,
             players?.[parseInt(playerId)]?.color === "blue" && `text-blue-500 bg-blue-100`,
           )}>
@@ -125,11 +119,11 @@ export function ScoreBoard({ score, players, playerStats, currentPlayerId, winne
         ))}
       </div>
       {/* Board Control as ProgressBar */}
-      <div className="mt-2 bg-slate-200 rounded-md p-2">
-        <div className="text-xs text-slate-900 mb-2 text-center">Board Control</div>
+      <div className="mt-4 bg-slate-200 rounded-md p-2 sm:p-3 w-full">
+        <div className="text-xs sm:text-sm text-slate-900 mb-2 text-center">Board Control</div>
         <Progress
           value={playerStats[1].boardControl}
-          className="h-4 bg-blue-500"
+          className="h-3 sm:h-4 bg-blue-500"
           indicatorClassName="bg-red-500"
         />
       </div>

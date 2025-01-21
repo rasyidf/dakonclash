@@ -1,12 +1,13 @@
 import { DialogDescription } from '@radix-ui/react-dialog';
 import { QRCodeSVG } from 'qrcode.react';
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Slider } from "~/components/ui/slider";
 import { useGame } from "~/hooks/use-game";
+import { Separator } from './ui/separator';
 
 export function GameStartModal() {
   const {
@@ -63,8 +64,8 @@ export function GameStartModal() {
                 changeBoardSize(value[0]);
               }}
               defaultValue={[boardSize]}
-              min={4}
-              max={10}
+              min={5}
+              max={11}
               step={2}
             />
             <span className="text-sm text-muted-foreground text-center">
@@ -79,33 +80,39 @@ export function GameStartModal() {
             >
               Local Multiplayer
             </Button>
+
+            <Separator/>
+
             <Button
               variant="secondary"
               onClick={() => handleGameModeSelection('vs-bot')}
             >
-              VS Bot
+              Versus Bot
             </Button>
 
             {selectedMode === 'vs-bot' && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={botAsFirst}
-                  onChange={() => setBotAsFirst(!botAsFirst)}
-                />
-                <label>Bot plays first</label>
+              <div className="flex justify-between gap-2">
                 <Button
-                  variant="default"
                   onClick={() => {
+                    setBotAsFirst(false);
                     startGame('vs-bot', boardSize);
                     showGameStartModal(false);
                   }}
                 >
-                  Start Game
+                  You're First
+                </Button>
+                <Button
+                  onClick={() => {
+                    setBotAsFirst(true);
+                    startGame('vs-bot', boardSize);
+                    showGameStartModal(false);
+                  }}
+                >
+                  Bot First
                 </Button>
               </div>
             )}
-
+            <Separator/>
             <div className="flex flex-col gap-2">
               <Button
                 variant="outline"
@@ -114,20 +121,13 @@ export function GameStartModal() {
                 Create Online Game
               </Button>
 
-              <div className="flex gap-2">
-                {/* <Input
-                  placeholder="Enter Game ID"
-                  value={gameId ?? ""}
-                  onChange={(e) => setGameId(e.target.value)}
-                /> */}
-                <Button
-                  variant="outline"
-                  onClick={() => handleGameModeSelection('online')}
-                  disabled={!gameId}
-                >
-                  Join
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                onClick={() => handleGameModeSelection('online')}
+                disabled={!gameId}
+              >
+                Join
+              </Button>
             </div>
           </div>
         </div>

@@ -10,9 +10,6 @@ interface GameCellProps {
 }
 
 export function GameCell({ cell, currentPlayer, disabled, onClick }: GameCellProps) {
-  const getPlayerColor = (owner: number) => {
-    return owner === 1 ? "red" : owner === 2 ? "blue" : "gray";
-  };
 
   return (
     <button
@@ -20,10 +17,10 @@ export function GameCell({ cell, currentPlayer, disabled, onClick }: GameCellPro
       disabled={disabled}
       className={cn(
         "aspect-square rounded-md transition-all duration-150",
-        disabled && "cursor-not-allowed opacity-50",
-        "w-16 h-16 rounded-lg relative ",
+        // disabled && "cursor-not-allowed opacity-50",
+        "w-full h-full rounded-lg relative ", // Changed from fixed w-16 h-16
         "transition-all duration-300 ease-in-out transform hover:scale-105",
-        disabled ? "cursor-not-allowed opacity-50" : "hover:opacity-80",
+        // disabled ? "cursor-not-allowed opacity-50" : "hover:opacity-80",
         "bg-white",
         (currentPlayer.id === 1 && cell.owner === 1) && "bg-red-300",
         (currentPlayer.id === 2 && cell.owner === 2) && "bg-blue-300",
@@ -36,11 +33,11 @@ export function GameCell({ cell, currentPlayer, disabled, onClick }: GameCellPro
             cell.owner === 1 && "bg-red-500",
             cell.owner === 2 && "bg-blue-500",
           )}
-          initial={{ scale: 0.8 }}
+          initial={{ scale: 0.1 }}
           animate={{ scale: 1 }}
         >
           <div className={cn(
-            "grid gap-1",
+            "grid gap-0.5 sm:gap-1",
             cell.value === 1 && "grid-cols-1",
             cell.value === 2 && "grid-cols-2",
             cell.value >= 3 && "grid-cols-2 grid-rows-2"
@@ -50,7 +47,7 @@ export function GameCell({ cell, currentPlayer, disabled, onClick }: GameCellPro
                 key={i}
                 className={cn(
                   "rounded-full bg-white/90",
-                  cell.value === 1 ? "w-4 h-4" : "w-3 h-3"
+                  cell.value === 1 ? "w-3 h-3 sm:w-4 sm:h-4" : "w-2 h-2 sm:w-3 sm:h-3" // Made tokens responsive
                 )}
               />
             ))}

@@ -6,7 +6,7 @@ import type { GameStore } from './engine/types';
 import type { GameMode } from './types';
 
 // Initialize engines first
-const boardEngine = new BoardEngine(6);
+const boardEngine = new BoardEngine(5);
 const gameEngine = new GameEngine(boardEngine);
 const gameMasterEngine = new GameMasterEngine(boardEngine);
 
@@ -15,7 +15,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   gameEngine,
   gameMasterEngine,
   gameMode: 'local',
-  boardSize: 6,
+  boardSize: 5,
   players: {
     1: { id: 1, name: "Player 1", color: "red" },
     2: { id: 2, name: "Player 2", color: "blue" },
@@ -43,10 +43,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   isProcessing: false,  // Add this line
 
   startGame: (mode: GameMode, size: number) => {
-    const { gameMasterEngine } = get();
+    const { gameMasterEngine, gameEngine } = get();
     const newState = gameMasterEngine.resetGame(mode, size);
-    console.log(get());
-    console.log(newState);
+    gameEngine.resetFirstMoves();
     set({
       ...newState,
       isGameStartModalOpen: false,
@@ -55,9 +54,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   makeMove: async (row: number, col: number) => {
     const { gameEngine, gameMasterEngine, currentPlayer, scores, stats, playerStats } = get();
-    
+
     set({ isProcessing: true }); // Set processing state
-    
+
     try {
       const chainLength = await gameEngine.makeMove(row, col, currentPlayer.id);
 

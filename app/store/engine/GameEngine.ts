@@ -4,9 +4,16 @@ export class GameEngine {
   private boardEngine: BoardEngine;
   private subscribers: Array<(processing: boolean) => void> = [];
   private isProcessing: boolean = false;
+  public firstMoves: { [key: number]: boolean } = {};
 
   constructor(boardEngine: BoardEngine) {
     this.boardEngine = boardEngine;
+    this.resetFirstMoves();
+  }
+
+  public resetFirstMoves(): void {
+    this.firstMoves[1] = true;
+    this.firstMoves[2] = true;
   }
 
   public subscribe(callback: (processing: boolean) => void): () => void {
@@ -22,7 +29,14 @@ export class GameEngine {
 
   public isValidMove(row: number, col: number, currentPlayerId: number): boolean {
     const cell = this.boardEngine.getBoard()[row][col];
-    return cell.owner === 0 || cell.owner === currentPlayerId;
+    
+    // If it's the player's first move, they can only place on unowned cells
+    if (this.firstMoves[currentPlayerId]) {
+      return cell.owner === 0;
+    }
+    
+    // After first move, they can place on unowned or their own cells
+    return  cell.owner === currentPlayerId;
   }
 
   public async makeMove(row: number, col: number, currentPlayerId: number): Promise<number> {
@@ -31,8 +45,12 @@ export class GameEngine {
     }
 
     const board = this.boardEngine.getBoard();
-    board[row][col].value += 1;
+    const addValue = this.firstMoves[currentPlayerId] ? 3 : 1;
+    board[row][col].value += addValue;
     board[row][col].owner = currentPlayerId;
+
+    // Mark first move as completed for this player
+    this.firstMoves[currentPlayerId] = false;
 
     let chainLength = 1;
     if (board[row][col].value >= this.boardEngine.getCriticalMass(row, col)) {

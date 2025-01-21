@@ -6,18 +6,14 @@ export function useGame() {
 
   const currentPlayer = state.players[state.currentPlayer.id];
 
-  const handleCellClick = (row: number, col: number) => {
-    state.makeMove(row, col);
-  };
   // call the game start menu
-  const handleStartGame = ()=>{
+  const handleStartGame = () => {
     state.showGameStartModal(true);
-  }
+  };
 
   return {
     ...state,
     currentPlayer,
-    handleCellClick,
-    handleStartGame 
+    handleStartGame
   };
 }

@@ -4,11 +4,24 @@ export type GameMode = 'online' | 'local' | 'vs-bot';
 export interface Cell {
   owner: number;
   value: number;
+  criticalMass: number;
+  x: number;  // Added
+  y: number;  // Added
 }
 
 export interface BoardState {
   board: Cell[][];
   timestamp: Date;
+}
+
+export interface BoardUpdate {
+  type: 'cell_updated' | 'board_reset' | 'state_loaded' | 'state_saved';
+  payload: {
+    cell?: Cell;
+    board?: Cell[][];
+    x?: number;
+    y?: number;
+  };
 }
 
 export interface Player {
