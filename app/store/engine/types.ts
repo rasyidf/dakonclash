@@ -45,8 +45,16 @@ export type GameState = {
   gameStartedAt: number;
 };
 
+export type GameSettings = {
+  timer?: number | null;
+  handicap?: number | null;
+  botDifficulty?: string | null;
+  botAsFirst?: boolean | null;
+};
+
 export type GameStore = GameState & {
-  startGame: (mode: GameMode, size: number) => void;
+  startGame: (mode: GameMode, size: number,
+    settings: GameSettings) => void;
   makeMove: (row: number, col: number) => Promise<void>;
   switchPlayer: () => void;
   showWinnerModal: (show: boolean) => void;
@@ -66,4 +74,4 @@ export type BoardUpdate = {
     x?: number;
     y?: number;
   };
-}
+};

@@ -13,7 +13,7 @@ import { useGame } from "~/hooks/use-game";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 export function GameStartModal() {
-  const { startGame, isGameStartModalOpen, showGameStartModal, changeBoardSize, gameId, boardSize } = useGame();
+  const { startGame, setTimer, isGameStartModalOpen, showGameStartModal, changeBoardSize, gameId, boardSize } = useGame();
   const [selectedMode, setSelectedMode] = useState<'local' | 'vs-bot' | 'online'>('local');
   const [showQR, setShowQR] = useState(false);
   const [botAsFirst, setBotAsFirst] = useState(false);
@@ -37,7 +37,12 @@ export function GameStartModal() {
       }
     };
 
-    startGame(selectedMode, boardSize);
+    startGame(gameConfig.mode, gameConfig.boardSize, gameConfig.settings);
+
+    if (gameConfig.settings.timer) {
+      setTimer(gameConfig.settings.timer);
+    }
+
     showGameStartModal(false);
   };
 
@@ -135,7 +140,7 @@ export function GameStartModal() {
                   <Button
                     className="w-full"
                     onClick={() => {
-                      startGame('online', boardSize);
+                      startGame('online', boardSize, {});
                       setShowQR(true);
                     }}
                   >

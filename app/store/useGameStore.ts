@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { BoardEngine } from './engine/BoardEngine';
 import { GameEngine } from './engine/GameEngine';
 import { GameMasterEngine } from './engine/GameMasterEngine';
-import type { GameStore } from './engine/types';
+import type { GameSettings, GameStore } from './engine/types';
 import type { GameHistory, GameMode, ScoreAnimation } from './types';
 import { saveGameHistory } from '~/lib/storage';
 
@@ -103,7 +103,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }));
   },
 
-  startGame: (mode: GameMode, size: number) => {
+  startGame: (mode: GameMode, size: number, settings: GameSettings = {}) => {
     const { gameMasterEngine, gameEngine } = get();
     const newState = gameMasterEngine.resetGame(mode, size);
     gameEngine.resetFirstMoves();
