@@ -1,73 +1,91 @@
-import type { Cell } from '../types';
 import { BoardEngine } from './BoardEngine';
 
 export class GameEngine {
   private boardEngine: BoardEngine;
+  private subscribers: Array<(processing: boolean) => void> = [];
+  private isProcessing: boolean = false;
 
   constructor(boardEngine: BoardEngine) {
     this.boardEngine = boardEngine;
   }
 
-  public isValidMove(row: number, col: number, currentPlayerId: number, moves: number): boolean {
-    const cell = this.boardEngine.getBoard()[row][col];
-
-    // First two moves special rules
-    if (moves < 2) {
-      return cell.value === 0;
-    }
-    
-    const owner = cell.owner;
-    const isEligible = owner === currentPlayerId;
-    return isEligible && cell.value < 4;
+  public subscribe(callback: (processing: boolean) => void): () => void {
+    this.subscribers.push(callback);
+    return () => {
+      this.subscribers = this.subscribers.filter(sub => sub !== callback);
+    };
   }
 
-  public async makeMove(row: number, col: number, currentPlayerId: number, moves: number): Promise<number> {
-    if (!this.isValidMove(row, col, currentPlayerId, moves)) {
+  private notifySubscribers(): void {
+    this.subscribers.forEach(callback => callback(this.isProcessing));
+  }
+
+  public isValidMove(row: number, col: number, currentPlayerId: number): boolean {
+    const cell = this.boardEngine.getBoard()[row][col];
+    return cell.owner === 0 || cell.owner === currentPlayerId;
+  }
+
+  public async makeMove(row: number, col: number, currentPlayerId: number): Promise<number> {
+    if (!this.isValidMove(row, col, currentPlayerId)) {
       throw new Error("Invalid move");
     }
 
-    let chainLength = 0;
     const board = this.boardEngine.getBoard();
-    board[row][col].value += moves < 2 ? 3 : 1;
+    board[row][col].value += 1;
     board[row][col].owner = currentPlayerId;
 
-    if (board[row][col].value >= 4) {
-      chainLength = await this.spreadBeads(row, col, board, 1, currentPlayerId);
+    let chainLength = 1;
+    if (board[row][col].value >= this.boardEngine.getCriticalMass(row, col)) {
+      this.isProcessing = true;
+      this.notifySubscribers();
+      chainLength = await this.triggerChainReaction(row, col, currentPlayerId);
+      this.isProcessing = false;
+      this.notifySubscribers();
     }
 
     return chainLength;
   }
 
-  private async spreadBeads(row: number, col: number, board: Cell[][], chainLength: number,
-    currentPlayerId: number
+  private async triggerChainReaction(
+    row: number,
+    col: number,
+    playerId: number,
+    chainLength: number = 1
   ): Promise<number> {
-    const directions = [
-      [-1, 0], [1, 0], [0, -1], [0, 1], // up, down, left, right
-    ];
+    const board = this.boardEngine.getBoard();
+    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    const criticalMass = this.boardEngine.getCriticalMass(row, col);
+    
+    if (board[row][col].value >= criticalMass) {
+      board[row][col].value -= criticalMass;
+      if (board[row][col].value === 0) {
+        board[row][col].owner = 0;
+      }
 
-    board[row][col].value = 0;
-    board[row][col].owner = 0; // Clear ownership when cell explodes
-    let currentChainLength = chainLength;
+      let maxSubChain = chainLength;
+      for (const [dx, dy] of directions) {
+        const newRow = row + dx;
+        const newCol = col + dy;
 
-    for (const [dx, dy] of directions) {
-      const newRow = row + dx;
-      const newCol = col + dy;
-
-      if (newRow >= 0 && newRow < board.length && newCol >= 0 && newCol < board.length) {
-        // Add chain bonus to adjacent cells
-        board[newRow][newCol].value += 1;
-        board[newRow][newCol].owner = currentPlayerId;
-
-        if (board[newRow][newCol].value >= 4) {
-          await new Promise(resolve => setTimeout(resolve, 50)); // Shorter delay for smoother animation
-          const subChainLength = await this.spreadBeads(
-            newRow, newCol, board, currentChainLength + 1,
-            currentPlayerId);
-          currentChainLength = Math.max(currentChainLength, subChainLength);
+        if (this.boardEngine.isValidCell(newRow, newCol)) {
+          board[newRow][newCol].value += 1;
+          board[newRow][newCol].owner = playerId;
+          
+          if (board[newRow][newCol].value >= this.boardEngine.getCriticalMass(newRow, newCol)) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+            const subChainLength = await this.triggerChainReaction(
+              newRow,
+              newCol,
+              playerId,
+              chainLength + 1
+            );
+            maxSubChain = Math.max(maxSubChain, subChainLength);
+          }
         }
       }
+      return maxSubChain;
     }
 
-    return currentChainLength;
+    return chainLength;
   }
 }

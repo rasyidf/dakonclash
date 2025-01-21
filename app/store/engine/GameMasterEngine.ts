@@ -4,9 +4,21 @@ import type { GameState } from './types';
 
 export class GameMasterEngine {
   private boardEngine: BoardEngine;
+  private subscribers: Array<(state: Partial<GameState>) => void> = [];
 
   constructor(boardEngine: BoardEngine) {
     this.boardEngine = boardEngine;
+  }
+
+  public subscribe(callback: (state: Partial<GameState>) => void): () => void {
+    this.subscribers.push(callback);
+    return () => {
+      this.subscribers = this.subscribers.filter(sub => sub !== callback);
+    };
+  }
+
+  private notifySubscribers(state: Partial<GameState>): void {
+    this.subscribers.forEach(callback => callback(state));
   }
 
   // Initialize game stats
@@ -134,7 +146,7 @@ export class GameMasterEngine {
     const playerStats = this.initializePlayerStats();
 
     // Return the new game state
-    return {
+    const newState = {
       boardEngine: this.boardEngine,
       board: this.boardEngine.getBoard(),
       gameMode: mode,
@@ -148,5 +160,8 @@ export class GameMasterEngine {
       isGameOver: false,
       winner: null,
     };
+
+    this.notifySubscribers(newState);
+    return newState;
   }
 }

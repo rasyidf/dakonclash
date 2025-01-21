@@ -2,8 +2,8 @@ import { create } from 'zustand';
 import { BoardEngine } from './engine/BoardEngine';
 import { GameEngine } from './engine/GameEngine';
 import { GameMasterEngine } from './engine/GameMasterEngine';
-import type { GameMode, Player } from './types';
-import type { GameState, GameStore } from './engine/types';
+import type { GameStore } from './engine/types';
+import type { GameMode } from './types';
 
 // Initialize engines first
 const boardEngine = new BoardEngine(6);
@@ -40,6 +40,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   winner: null,
   isWinnerModalOpen: false,
   isGameStartModalOpen: true,
+  isProcessing: false,  // Add this line
 
   startGame: (mode: GameMode, size: number) => {
     const { gameMasterEngine } = get();
@@ -54,34 +55,42 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   makeMove: async (row: number, col: number) => {
     const { gameEngine, gameMasterEngine, currentPlayer, scores, stats, playerStats } = get();
-    const chainLength = await gameEngine.makeMove(row, col, currentPlayer.id, get().moves);
+    
+    set({ isProcessing: true }); // Set processing state
+    
+    try {
+      const chainLength = await gameEngine.makeMove(row, col, currentPlayer.id);
 
-    // Get updated board after the move
-    const updatedBoard = boardEngine.getBoard();
+      // Get updated board after the move
+      const updatedBoard = boardEngine.getBoard();
 
-    // Update scores and stats
-    gameMasterEngine.updateScores(scores);
-    gameMasterEngine.updatePlayerStats(currentPlayer.id, playerStats, chainLength);
-    gameMasterEngine.updateGameStats(stats, chainLength);
+      // Update scores and stats
+      gameMasterEngine.updateScores(scores);
+      gameMasterEngine.updatePlayerStats(currentPlayer.id, playerStats, chainLength);
+      gameMasterEngine.updateGameStats(stats, chainLength);
 
-    // Check for a winner
-    const winner = gameMasterEngine.checkWinner(scores, playerStats);
+      // Check for a winner
+      const winner = gameMasterEngine.checkWinner(scores, playerStats);
 
+      const nextPlayer = currentPlayer.id === 1 ? get().players[2] : get().players[1];
 
-    const nextPlayer = currentPlayer.id === 1 ? get().players[2] : get().players[1];
-
-    // Update all state at once
-    set({
-      board: updatedBoard,
-      moves: get().moves + 1,
-      scores,
-      stats,
-      playerStats,
-      currentPlayer: nextPlayer,
-      isGameOver: winner !== null,
-      winner,
-      isWinnerModalOpen: get().moves > 1 && winner !== null,
-    });
+      // Update all state at once
+      set({
+        board: updatedBoard,
+        moves: get().moves + 1,
+        scores,
+        stats,
+        playerStats,
+        currentPlayer: nextPlayer,
+        isGameOver: winner !== null,
+        winner,
+        isWinnerModalOpen: get().moves > 1 && winner !== null,
+        isProcessing: false, // Reset processing state
+      });
+    } catch (error) {
+      set({ isProcessing: false }); // Reset processing state on error
+      console.error(error);
+    }
   },
 
   switchPlayer: () => {

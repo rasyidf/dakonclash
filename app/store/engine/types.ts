@@ -34,6 +34,8 @@ export type GameState = {
   boardEngine: BoardEngine; // Manages the board state
   gameEngine: GameEngine; // Handles game logic
   gameMasterEngine: GameMasterEngine; // Manages game flow and stats
+
+  isProcessing: boolean;
 };
 
 export type GameStore = GameState & {
@@ -43,4 +45,5 @@ export type GameStore = GameState & {
   showWinnerModal: (show: boolean) => void;
   showGameStartModal: (show: boolean) => void;
   changeBoardSize: (size: number) => void;
+  isProcessing: boolean;
 };

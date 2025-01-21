@@ -4,67 +4,59 @@ import type { Cell, Player } from "~/store/types";
 
 interface GameCellProps {
   cell: Cell;
-  players: Record<Player["id"], Player>;
   currentPlayer: Player;
+  disabled: boolean;
   onClick: () => void;
-  moves?: number;
-  disabled?: boolean;
 }
 
-export function GameCell({ cell, currentPlayer, disabled, players, onClick }: GameCellProps) {
-
-  const cellColor = cell.owner ? players[cell.owner].color : null;
-
-  const handleClick = () => {
-    if (disabled) return;
-    onClick();
+export function GameCell({ cell, currentPlayer, disabled, onClick }: GameCellProps) {
+  const getPlayerColor = (owner: number) => {
+    return owner === 1 ? "red" : owner === 2 ? "blue" : "gray";
   };
 
-
   return (
-    <motion.button
-      onClick={handleClick}
+    <button
+      onClick={onClick}
+      disabled={disabled}
       className={cn(
-        `w-full h-full`,
-        "rounded-md relative transition-all duration-300 ease-in-out transform hover:scale-105",
-        "bg-white hover:bg-gray-50",
-        currentPlayer.color === "red" && cellColor === "red" && cell.value > 0 && "bg-red-100 hover:bg-red-200",
-        currentPlayer.color === "blue" && cellColor === "blue" && cell.value > 0 && "bg-blue-100 hover:bg-blue-200",
-        cell.value === 4 && "animate-pulse",
-        disabled && "cursor-not-allowed bg-gray-300 hover:bg-gray-300",
+        "aspect-square rounded-md transition-all duration-150",
+        disabled && "cursor-not-allowed opacity-50",
+        "w-16 h-16 rounded-lg relative ",
+        "transition-all duration-300 ease-in-out transform hover:scale-105",
+        disabled ? "cursor-not-allowed opacity-50" : "hover:opacity-80",
+        "bg-white",
+        (currentPlayer.id === 1 && cell.owner === 1) && "bg-red-300",
+        (currentPlayer.id === 2 && cell.owner === 2) && "bg-blue-300",
+        cell.value >= 4 && "animate-pulse"
       )}
-      disabled={disabled || (cell.value === 4)}
     >
       {cell.value > 0 && (
         <motion.div
-          className={cn("absolute m-2 inset-0 flex items-center justify-center rounded-full",
-            cellColor === "red" && "bg-red-500",
-            cellColor === "blue" && "bg-blue-500",
+          className={cn("absolute m-1 inset-0 flex rounded-full items-center justify-center",
+            cell.owner === 1 && "bg-red-500",
+            cell.owner === 2 && "bg-blue-500",
+          )}
+          initial={{ scale: 0.8 }}
+          animate={{ scale: 1 }}
+        >
+          <div className={cn(
+            "grid gap-1",
+            cell.value === 1 && "grid-cols-1",
+            cell.value === 2 && "grid-cols-2",
+            cell.value >= 3 && "grid-cols-2 grid-rows-2"
           )}>
-          <div
-            className={cn(
-              "grid gap-0.5",
-              cell.value === 1 && "grid-cols-1",
-              cell.value === 2 && "grid-cols-2",
-              cell.value > 2 && "grid-cols-2 grid-rows-2",
-              "animate-in fade-in duration-100"
-            )}
-          >
-            {[...Array(cell.value)].map((_, i) => (
+            {Array.from({ length: cell.value }).map((_, i) => (
               <div
                 key={i}
                 className={cn(
-                  "rounded-full bg-white/90 shadow-sm",
-                  cell.value === 1 ? "size-2 md:size-3 lg:size-4" : "size-1 md:size-2 lg:size-3",
-                  (i === 0 && cell.value == 3) && "col-span-2 m-auto",
-                  "animate-in zoom-in duration-300"
+                  "rounded-full bg-white/90",
+                  cell.value === 1 ? "w-4 h-4" : "w-3 h-3"
                 )}
               />
             ))}
           </div>
         </motion.div>
       )}
-
-    </motion.button>
+    </button>
   );
 }
