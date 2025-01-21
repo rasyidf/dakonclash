@@ -46,6 +46,7 @@ export interface GameStats {
   flipCombos: number;
   longestFlipChain: number;
   cornerThrows: number;
+  timeRemaining?: number;
 }
 
 export interface PlayerStats {
@@ -61,4 +62,39 @@ export interface ScoreAnimation {
   col: number;
   score: number;
   playerId: number;
+}
+
+export interface HandicapSettings {
+  amount: number;
+  type: 'stones' | 'moves' | 'time';
+  position: 'fixed' | 'custom';
+  advantagePlayer: 'player1' | 'player2';  // Specify which player gets the advantage
+}
+
+export interface Timer {
+  enabled: boolean;
+  timePerPlayer: number;
+  remainingTime: Record<Player["id"], number>;
+  lastTick: number;
+}
+
+export interface GameHistory {
+  id: string;
+  startedAt: number;
+  endedAt: number;
+  winner: number | 'draw' | null;
+  mode: GameMode;
+  boardSize: number;
+  players: Record<number, Player>;
+  finalScores: Record<number, number>;
+  finalStats: GameStats;
+  playerStats: Record<number, PlayerStats>;
+}
+
+export interface GameStore {
+  timer: Timer;
+  setTimer: (seconds: number) => void;
+  tickTimer: () => void;
+  gameStartedAt: number;
+  saveGameHistory: () => void;
 }

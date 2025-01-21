@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { cn } from "~/lib/utils";
 import type { Player, PlayerStats } from "~/store/types";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Progress } from "./ui/progress";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Progress } from "../ui/progress";
 
 interface ScoreBoardProps {
   score: Record<Player["id"], number>;

@@ -1,4 +1,4 @@
-import type { Cell, GameMode, GameStats, Player, PlayerStats, ScoreAnimation } from '../types';
+import type { Cell, GameMode, GameStats, Player, PlayerStats, ScoreAnimation, Timer } from '../types';
 import type { BoardEngine } from './BoardEngine';
 import type { GameEngine } from './GameEngine';
 import type { GameMasterEngine } from './GameMasterEngine';
@@ -40,6 +40,9 @@ export type GameState = {
   isProcessing: boolean;
 
   scoreAnimations: ScoreAnimation[];
+  timer: Timer;
+
+  gameStartedAt: number;
 };
 
 export type GameStore = GameState & {
@@ -50,4 +53,17 @@ export type GameStore = GameState & {
   showGameStartModal: (show: boolean) => void;
   changeBoardSize: (size: number) => void;
   addScoreAnimation: (animation: ScoreAnimation) => void;
+  saveGameHistory: () => void;
+  setTimer: (seconds: number) => void;
+  tickTimer: () => void;
 };
+
+export type BoardUpdate = {
+  type: 'cell_updated' | 'board_reset' | 'state_saved';
+  payload: {
+    board?: Cell[][];
+    cell?: Cell;
+    x?: number;
+    y?: number;
+  };
+}

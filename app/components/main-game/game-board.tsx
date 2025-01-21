@@ -1,10 +1,13 @@
 import { useChainReaction } from "~/hooks/use-chain-reaction";
 import { cn } from "~/lib/utils";
 import { GameCell } from "./game-cell";
+import { useGameTimer } from "~/hooks/useGameTimer";
 
 export function GameBoard() {
   const { board, currentPlayer, isProcessing, handleCellClick } = useChainReaction();
 
+  useGameTimer();
+  
   return (
     <div className="flex flex-col items-center justify-center gap-2 sm:gap-4 p-2 sm:p-4 w-full min-h-[50vh]">
       <div

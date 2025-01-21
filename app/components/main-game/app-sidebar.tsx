@@ -5,23 +5,18 @@ import {
   SidebarGroup,
   SidebarHeader,
 } from "~/components/ui/sidebar";
-import { useGame } from "~/hooks/use-game";
-import { useGameStore } from "~/store/engine.v1/gameStore";
+import { useGameStore } from "~/store/useGameStore";
 import type { Player } from "~/store/types";
 import { GameControls } from "./game-controls";
 import { ScoreBoard } from "./score-board";
 
 export function AppSidebar() {
-  const {
-    players,
-    stats,
-    playerStats,
-    currentPlayer,
-    winner,
-    scores,
-  } = useGame();
-
-  const setTimer = useGameStore(state => state.setTimer);
+  const players = useGameStore(state => state.players);
+  const stats = useGameStore(state => state.stats);
+  const playerStats = useGameStore(state => state.playerStats);
+  const currentPlayer = useGameStore(state => state.currentPlayer);
+  const winner = useGameStore(state => state.winner);
+  const scores = useGameStore(state => state.scores);
 
   return (
     <Sidebar>
@@ -30,7 +25,6 @@ export function AppSidebar() {
         <h1 className="text-2xl text-center mt-2 font-bold text-slate-700">Dakon Clash</h1>
         <GameControls
           elapsedTime={stats.elapsedTime}
-          onSetTimer={setTimer}
         />
       </SidebarHeader>
       <SidebarContent>
@@ -43,7 +37,9 @@ export function AppSidebar() {
             currentPlayerId={currentPlayer.id}
             winner={winner}
             onUpdatePlayerName={(playerId, newName) => {
-              players[playerId as Player["id"]].name = newName;
+              const updatedPlayers = { ...players };
+              updatedPlayers[playerId as Player["id"]].name = newName;
+              useGameStore.setState({ players: updatedPlayers });
             }}
           />
 

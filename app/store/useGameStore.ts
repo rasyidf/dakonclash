@@ -3,7 +3,8 @@ import { BoardEngine } from './engine/BoardEngine';
 import { GameEngine } from './engine/GameEngine';
 import { GameMasterEngine } from './engine/GameMasterEngine';
 import type { GameStore } from './engine/types';
-import type { GameMode, ScoreAnimation } from './types';
+import type { GameHistory, GameMode, ScoreAnimation } from './types';
+import { saveGameHistory } from '~/lib/storage';
 
 // Initialize engines first
 const boardEngine = new BoardEngine(5);
@@ -16,7 +17,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   gameEngine,
   gameMasterEngine,
   gameMode: 'local',
-  boardSize: 5,
+  boardSize: 7,
   players: {
     1: { id: 1, name: "Player 1", color: "red" },
     2: { id: 2, name: "Player 2", color: "blue" },
@@ -43,15 +44,100 @@ export const useGameStore = create<GameStore>((set, get) => ({
   isGameStartModalOpen: true,
   isProcessing: false,
   scoreAnimations: [],
+  timer: {
+    enabled: false,
+    timePerPlayer: 300, // 5 minutes in seconds
+    remainingTime: { 1: 300, 2: 300 },
+    lastTick: Date.now(),
+  },
+  gameStartedAt: Date.now(),
+
+  setTimer: (seconds: number) => {
+    set(state => ({
+      timer: {
+        ...state.timer,
+        enabled: true,
+        timePerPlayer: seconds,
+        remainingTime: { 1: seconds, 2: seconds },
+        lastTick: Date.now(),
+      }
+    }));
+  },
+
+  tickTimer: () => {
+    const state = get();
+    if (!state.timer.enabled || state.isGameOver) return;
+
+    const now = Date.now();
+    const delta = Math.floor((now - state.timer.lastTick) / 1000);
+    if (delta < 1) return;
+
+    const currentPlayerId = state.currentPlayer.id;
+    const newRemainingTime = {
+      ...state.timer.remainingTime,
+      [currentPlayerId]: Math.max(0, state.timer.remainingTime[currentPlayerId] - delta)
+    };
+
+    // Check for time loss
+    if (newRemainingTime[currentPlayerId] === 0) {
+      const winner = currentPlayerId === 1 ? 2 : 1;
+      set(state => ({
+        timer: {
+          ...state.timer,
+          lastTick: now,
+          remainingTime: newRemainingTime,
+        },
+        isGameOver: true,
+        winner,
+        isWinnerModalOpen: true,
+      }));
+      return;
+    }
+
+    set(state => ({
+      timer: {
+        ...state.timer,
+        lastTick: now,
+        remainingTime: newRemainingTime,
+      }
+    }));
+  },
 
   startGame: (mode: GameMode, size: number) => {
     const { gameMasterEngine, gameEngine } = get();
     const newState = gameMasterEngine.resetGame(mode, size);
     gameEngine.resetFirstMoves();
-    set({
+    const timePerPlayer = size > 7 ? 600 : 300; // 10 minutes for larger boards
+    set(state => ({
+      ...state,
+      timer: {
+        ...state.timer,
+        enabled: size > 7,
+        timePerPlayer,
+        remainingTime: { 1: timePerPlayer, 2: timePerPlayer },
+        lastTick: Date.now(),
+      },
       ...newState,
+      gameStartedAt: Date.now(),
       isGameStartModalOpen: false,
-    });
+    }));
+  },
+
+  saveGameHistory: () => {
+    const state = get();
+    const gameHistory: GameHistory = {
+      id: crypto.randomUUID(),
+      startedAt: state.gameStartedAt,
+      endedAt: Date.now(),
+      winner: state.winner,
+      mode: state.gameMode,
+      boardSize: state.boardSize,
+      players: state.players,
+      finalScores: state.scores,
+      finalStats: state.stats,
+      playerStats: state.playerStats,
+    };
+    saveGameHistory(gameHistory);
   },
 
   makeMove: async (row: number, col: number) => {
@@ -62,6 +148,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     try {
       const chainLength = await gameEngine.makeMove(row, col, currentPlayer.id);
 
+      // Update time bonus based on remaining time (for boards size > 7)
+      if (get().boardSize > 7 && get().timer.enabled) {
+        const timeBonus = Math.floor(get().timer.remainingTime[currentPlayer.id] / 60) * 10;
+        scores[currentPlayer.id] += timeBonus;
+      }
 
       // Get updated board after the move
       const updatedBoard = boardEngine.getBoard();
@@ -73,6 +164,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       // Check for a winner
       const winner = gameMasterEngine.checkWinner(scores, playerStats);
+      if (winner !== null) {
+        get().saveGameHistory();
+      }
 
       const nextPlayer = currentPlayer.id === 1 ? get().players[2] : get().players[1];
 

@@ -1,13 +1,12 @@
 import type { Route } from "./+types/home";
-import { GameBoard } from "../components/game-board";
-import { Header } from "~/components/header";
+import { GameBoard } from "../components/main-game/game-board";
 import { SidebarProvider, SidebarTrigger } from "~/components/ui/sidebar";
-import { AppSidebar } from "~/components/app-sidebar";
+import { AppSidebar } from "~/components/main-game/app-sidebar";
 import { cx } from "class-variance-authority";
-import { WinnerModal } from "~/components/winner-modal";
-import { useGameStore } from "~/store/engine.v1/gameStore";
+import { WinnerModal } from "~/components/main-game/winner-modal";
+import { useGameStore } from "~/store/useGameStore";
 import { useEffect } from "react";
-import { GameStartModal } from "~/components/game-start-modal";
+import { GameStartModal } from "~/components/start-menu/game-start-modal";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -25,14 +24,6 @@ export function clientLoader({ params }: Route.ClientLoaderArgs) {
 export default function Home({ loaderData }: Route.ComponentProps) {
   const { gameId } = loaderData;
 
-  const joinOnlineGame = useGameStore((state) => state.joinOnlineGame);
-
-
-  useEffect(() => {
-    if (gameId) {
-      joinOnlineGame(gameId);
-    }
-  }, [gameId]);
 
   return <>
     <SidebarProvider>
@@ -43,7 +34,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       </main>
 
       <GameStartModal />
-      <WinnerModal   />
+      <WinnerModal />
     </SidebarProvider>
     ;
   </>;

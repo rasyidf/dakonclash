@@ -133,4 +133,8 @@ export class BoardEngine {
       payload: { board: this.board }
     });
   }
+
+  public getSize(): number {
+    return this.board.length;
+  }
 }
