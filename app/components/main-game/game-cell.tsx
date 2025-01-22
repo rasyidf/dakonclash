@@ -44,7 +44,7 @@ export function GameCell({ cell, currentPlayer, disabled, onClick }: GameCellPro
           animate={{ scale: 1 }}
         >
           <div className={cn(
-            "grid gap-0.5 sm:gap-1",
+            "grid gap-0.5 sm:gap-1 justify-items-center",
             cell.value === 1 && "grid-cols-1",
             cell.value === 2 && "grid-cols-2",
             cell.value >= 3 && "grid-cols-2 grid-rows-2"
@@ -54,6 +54,7 @@ export function GameCell({ cell, currentPlayer, disabled, onClick }: GameCellPro
                 key={i}
                 className={cn(
                   "rounded-full bg-white/90",
+                  i === 2 && cell.value === 3 ? "col-span-2" : "col-span-1",
                   cell.value === 1 ? "w-3 h-3 sm:w-4 sm:h-4" : "w-2 h-2 sm:w-3 sm:h-3"
                 )}
               />

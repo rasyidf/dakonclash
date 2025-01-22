@@ -38,7 +38,7 @@ export function WinnerModal() {
       <Dialog open={isWinnerModalOpen} onOpenChange={
         () => {
           showWinnerModal(false);
-          startGame('local', boardSize);
+          startGame('local', boardSize, {});
         }
       }>
         <DialogContent className="sm:max-w-md">
@@ -58,7 +58,7 @@ export function WinnerModal() {
           <div className="flex justify-center gap-4 mt-4">
             <Button onClick={
               () => {
-                startGame('local', boardSize);
+                startGame('local', boardSize, {});
                 showWinnerModal(false);
               }
             }>Play Again</Button>
