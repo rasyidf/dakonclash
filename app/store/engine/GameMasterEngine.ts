@@ -4,9 +4,21 @@ import type { GameState } from './types';
 
 export class GameMasterEngine {
   private boardEngine: BoardEngine;
+  private subscribers: Array<(state: Partial<GameState>) => void> = [];
 
   constructor(boardEngine: BoardEngine) {
     this.boardEngine = boardEngine;
+  }
+
+  public subscribe(callback: (state: Partial<GameState>) => void): () => void {
+    this.subscribers.push(callback);
+    return () => {
+      this.subscribers = this.subscribers.filter(sub => sub !== callback);
+    };
+  }
+
+  private notifySubscribers(state: Partial<GameState>): void {
+    this.subscribers.forEach(callback => callback(state));
   }
 
   // Initialize game stats
@@ -32,9 +44,18 @@ export class GameMasterEngine {
   // Calculate the total score for a player
   public calculatePlayerScore(playerId: number): number {
     const board = this.boardEngine.getBoard();
-    return board.flat().reduce((sum, cell) => {
+    const baseScore = board.flat().reduce((sum, cell) => {
       return cell.owner === playerId ? sum + cell.value : sum;
     }, 0);
+
+    // Additional scoring for timed games (if implemented)
+    if (this.boardEngine.getSize() > 7) {
+      // Add time-based bonus calculation here
+      // This will be handled by the store's makeMove function
+      return baseScore;
+    }
+
+    return baseScore;
   }
 
   // Update the scores for both players
@@ -134,7 +155,7 @@ export class GameMasterEngine {
     const playerStats = this.initializePlayerStats();
 
     // Return the new game state
-    return {
+    const newState = {
       boardEngine: this.boardEngine,
       board: this.boardEngine.getBoard(),
       gameMode: mode,
@@ -147,6 +168,16 @@ export class GameMasterEngine {
       scores: { 1: 0, 2: 0 },
       isGameOver: false,
       winner: null,
+      timer: {
+        enabled: size > 7,
+        timePerPlayer: size > 7 ? 600 : 300,
+        remainingTime: { 1: size > 7 ? 600 : 300, 2: size > 7 ? 600 : 300 },
+        lastTick: Date.now(),
+      },
+      gameStartedAt: Date.now(),
     };
+
+    this.notifySubscribers(newState);
+    return newState;
   }
 }

@@ -1,7 +1,9 @@
-import type { Cell, GameMode, GameStats, Player, PlayerStats } from '../types';
+import type { Cell, GameMode, GameStats, Player, PlayerStats, ScoreAnimation, Timer } from '../types';
 import type { BoardEngine } from './BoardEngine';
 import type { GameEngine } from './GameEngine';
 import type { GameMasterEngine } from './GameMasterEngine';
+
+
 
 export type GameState = {
   // Game Configuration
@@ -34,13 +36,42 @@ export type GameState = {
   boardEngine: BoardEngine; // Manages the board state
   gameEngine: GameEngine; // Handles game logic
   gameMasterEngine: GameMasterEngine; // Manages game flow and stats
+
+  isProcessing: boolean;
+
+  scoreAnimations: ScoreAnimation[];
+  timer: Timer;
+
+  gameStartedAt: number;
+};
+
+export type GameSettings = {
+  timer?: number | null;
+  handicap?: number | null;
+  botDifficulty?: string | null;
+  botAsFirst?: boolean | null;
 };
 
 export type GameStore = GameState & {
-  startGame: (mode: GameMode, size: number) => void;
+  startGame: (mode: GameMode, size: number,
+    settings: GameSettings) => void;
   makeMove: (row: number, col: number) => Promise<void>;
   switchPlayer: () => void;
   showWinnerModal: (show: boolean) => void;
   showGameStartModal: (show: boolean) => void;
   changeBoardSize: (size: number) => void;
+  addScoreAnimation: (animation: ScoreAnimation) => void;
+  saveGameHistory: () => void;
+  setTimer: (seconds: number) => void;
+  tickTimer: () => void;
+};
+
+export type BoardUpdate = {
+  type: 'cell_updated' | 'board_reset' | 'state_saved';
+  payload: {
+    board?: Cell[][];
+    cell?: Cell;
+    x?: number;
+    y?: number;
+  };
 };
