@@ -43,7 +43,7 @@ export function GameBoard() {
         currentPlayer.id === 1 && "text-red-500",
         currentPlayer.id === 2 && "text-blue-500"
       )}>
-        Player {currentPlayer.id}&apos;s Turn
+        {currentPlayer.name}&apos;s Turn {currentPlayer.isBot && "(Bot)"}
       </div>
 
       {/* {isProcessing && (

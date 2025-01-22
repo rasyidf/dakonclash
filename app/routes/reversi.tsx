@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useState } from 'react';
 
 type Cell = 'black' | 'white' | null;
 type Direction = [number, number];

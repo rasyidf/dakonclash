@@ -123,7 +123,7 @@ export class GameMasterEngine {
     playerStats: Record<Player["id"], PlayerStats>
   ): number | 'draw' | null {
     const board = this.boardEngine.getBoard();
-
+    
     // Check if a player has no beads left
     const hasNoBeads = (playerId: number) =>
       board.every(row => row.every(cell => cell.owner !== playerId || cell.value === 0));
@@ -144,11 +144,26 @@ export class GameMasterEngine {
     size: number,
     botAsFirst: boolean = false
   ): Partial<GameState> {
+    let players: Record<number, Player>;
 
-    const players: Record<number, Player> = {
-      1: { id: 1, name: botAsFirst && mode === 'vs-bot' ? "Bot" : "Player 1", color: "red", isBot: botAsFirst && mode === 'vs-bot' },
-      2: { id: 2, name: mode === 'vs-bot' ? "Player 1" : "Player 2", color: "blue", isBot: false },
-    };
+    if (mode === 'vs-bot') {
+      if (botAsFirst) {
+        players = {
+          1: { id: 1, name: "Bot", color: "red", isBot: true },
+          2: { id: 2, name: "Player 1", color: "blue", isBot: false }
+        };
+      } else {
+        players = {
+          1: { id: 1, name: "Player 1", color: "red", isBot: false },
+          2: { id: 2, name: "Bot", color: "blue", isBot: true }
+        };
+      }
+    } else {
+      players = {
+        1: { id: 1, name: "Player 1", color: "red", isBot: false },
+        2: { id: 2, name: "Player 2", color: "blue", isBot: false }
+      };
+    }
 
     this.boardEngine.resetBoard(size);
     const stats = this.initializeStats();

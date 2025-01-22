@@ -1,5 +1,6 @@
 import type { Cell, GameMode, GameStats, Player, PlayerStats, ScoreAnimation, Timer } from '../types';
 import type { BoardEngine } from './BoardEngine';
+import type { BotEngine } from './BotEngine';
 import type { GameEngine } from './GameEngine';
 import type { GameMasterEngine } from './GameMasterEngine';
 
@@ -48,7 +49,7 @@ export type GameState = {
 export type GameSettings = {
   timer?: number | null;
   handicap?: number | null;
-  botDifficulty?: string | null;
+  botDifficulty?: number | null;
   botAsFirst?: boolean | null;
 };
 
@@ -64,6 +65,8 @@ export type GameStore = GameState & {
   saveGameHistory: () => void;
   setTimer: (seconds: number) => void;
   tickTimer: () => void;
+  makeBotMove: () => Promise<void>;
+  botEngine: BotEngine;
 };
 
 export type BoardUpdate = {

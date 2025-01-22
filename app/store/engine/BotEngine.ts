@@ -1,0 +1,367 @@
+import type { Cell } from '../types';
+import { BoardEngine } from './BoardEngine';
+import { GameEngine } from './GameEngine';
+import type { GameState } from './types';
+
+export class BotEngine {
+  private static readonly MAX_DEPTH = 3;
+  private static readonly INFINITY = 10000;
+  private difficulty: number;
+
+  private boardEngine: BoardEngine;
+  private gameEngine: GameEngine;
+  
+  private weights: Record<string, Record<string, number>> = {
+    Level1: {  
+      centrality: 2,
+      chainPotential: 1,
+      highValueCell: 5,
+      adjacentHighValue: 4,
+      disruption: 6,    
+      directAttack: 3,  
+      fork: 0,
+      chainExtension: 0,
+      edgeControl: 0,
+      cornerControl: 0,
+      distribution: 0,
+      chainReaction: 0
+    },
+    Level2: { 
+      centrality: 1,
+      chainPotential: 2,
+      highValueCell: 6,
+      adjacentHighValue: 5,
+      disruption: 8,  
+      directAttack: 5,
+      fork: 2,
+      chainExtension: 1,
+      edgeControl: 0,
+      cornerControl: 0,
+      distribution: 1,
+      chainReaction: 1
+    },
+    Level3: {  
+      centrality: 0,
+      chainPotential: 3,
+      highValueCell: 4,
+      adjacentHighValue: 6,
+      disruption: 12,  
+      directAttack: 8,
+      fork: 7,
+      chainExtension: 4,
+      edgeControl: 1,
+      cornerControl: 1,
+      distribution: 2,
+      chainReaction: 2
+    },
+    Level4: { 
+      centrality: 0,
+      chainPotential: 4,
+      highValueCell: 3,
+      adjacentHighValue: 5,
+      disruption: 15, 
+      directAttack: 10,
+      fork: 9,
+      chainExtension: 6,
+      edgeControl: 2,
+      cornerControl: 2,
+      distribution: 3,
+      chainReaction: 4
+    },
+    Level5: {  
+      centrality: 0,
+      chainPotential: 5,  
+      highValueCell: 5,
+      adjacentHighValue: 7,
+      disruption: 20, 
+      directAttack: 15, 
+      fork: 10,
+      chainExtension: 8,
+      edgeControl: 1, 
+      cornerControl: 1, 
+      distribution: 2,
+      chainReaction: 6 
+    }
+  };
+
+
+  constructor(boardEngine: BoardEngine, gameEngine: GameEngine, difficulty: number = 5) {
+    this.boardEngine = boardEngine;
+    this.gameEngine = gameEngine;
+    this.difficulty = difficulty;
+  }
+
+  async makeMove(state: GameState): Promise<{ row: number; col: number }> {
+    const botId = state.currentPlayer.id;
+
+    // Add logging to debug the bot's decision-making
+    console.log('Bot making move:', {
+      botId,
+      isFirstMove: this.gameEngine.firstMoves[botId],
+      difficulty: this.difficulty,
+      totalTokens: this.boardEngine.getTotalTokens()
+    });
+
+    // For lowest difficulty, always make random moves
+    if (this.difficulty === 1) {
+      return this.findRandomValidMove(botId);
+    }
+
+    // Handle first move
+    if (this.gameEngine.firstMoves[botId]) {
+      const totalTokens = this.boardEngine.getTotalTokens();
+      if (totalTokens <= 1) {
+        return this.getOpeningMove(botId);
+      } else {
+        return this.findEmptyMove();
+      }
+    }
+
+    // Handle subsequent moves
+    if (this.difficulty >= 6) {
+      return this.minimaxMove(botId);
+    } else {
+      // Use weighted strategy for medium difficulties
+      const strategicMove = this.findBestMove(botId);
+      if (this.gameEngine.isValidMove(strategicMove.row, strategicMove.col, botId)) {
+        return strategicMove;
+      }
+      // Fallback to random valid move if strategic move is invalid
+      return this.findRandomValidMove(botId);
+    }
+  }
+
+  private getStrategyWeight(strategy: string): number {
+    const level = Math.min(Math.max(this.difficulty, 1), 5); // Ensure difficulty is 1-5
+    const levelKey = `Level${level}`;
+    const weights = this.weights[levelKey] || {};
+    return weights[strategy] || 0;
+  }
+
+  private evaluateMove(row: number, col: number, botId: number): number {
+    let score = 0;
+    const opponentId = botId === 1 ? 2 : 1;
+    const currentCell = this.boardEngine.getBoard()[row][col];
+
+    // High-value cells and adjacency
+    if (currentCell.value === 3 && currentCell.owner === botId) {
+      score += this.getStrategyWeight('highValueCell');
+      const adjacentHighValueCount = this.getAdjacentCells(row, col)
+        .filter(cell => cell.owner === botId && cell.value === 3).length;
+      score += adjacentHighValueCount * this.getStrategyWeight('adjacentHighValue');
+    }
+
+    // Core strategies
+    score += this.boardEngine.getCentralityValue(row, col) * this.getStrategyWeight('centrality');
+    score += this.boardEngine.getChainPotential(row, col, botId) * this.getStrategyWeight('chainPotential');
+    score += this.checkOpponentThreats(row, col, opponentId) * this.getStrategyWeight('disruption');
+
+    // Advanced strategies
+    score += this.checkForkCreation(row, col, botId) * this.getStrategyWeight('fork');
+    score += this.countAdjacentCells(row, col, botId) * this.getStrategyWeight('chainExtension');
+    score += this.checkTokenDistribution(row, col) * this.getStrategyWeight('distribution');
+
+    // Board control
+    if (this.isEdge(row, col)) score += this.getStrategyWeight('edgeControl');
+    if (this.isCorner(row, col)) score += this.getStrategyWeight('cornerControl');
+
+    // High-level tactics
+    score += this.calculateChainReactions(row, col, botId) * this.getStrategyWeight('chainReaction');
+
+    return score;
+  }
+
+  private minimaxMove(botId: number): { row: number; col: number } {
+    let bestScore = -BotEngine.INFINITY;
+    let bestMove = this.findRandomValidMove(botId);
+    const size = this.boardEngine.getSize();
+
+    for (let row = 0; row < size; row++) {
+      for (let col = 0; col < size; col++) {
+        if (this.gameEngine.isValidMove(row, col, botId)) {
+          const score = this.minimax(row, col, botId, BotEngine.MAX_DEPTH, -BotEngine.INFINITY, BotEngine.INFINITY, false);
+          if (score > bestScore) {
+            bestScore = score;
+            bestMove = { row, col };
+          }
+        }
+      }
+    }
+    return bestMove;
+  }
+
+  private minimax(
+    row: number,
+    col: number,
+    botId: number,
+    depth: number,
+    alpha: number,
+    beta: number,
+    isMaximizing: boolean
+  ): number {
+    if (depth === 0 || this.gameEngine.isGameOver()) {
+      return this.evaluateMove(row, col, botId);
+    }
+
+    // Create simulation copies
+    const simulatedBoard = new BoardEngine(this.boardEngine.getSize());
+    simulatedBoard.loadState(this.boardEngine.getHistory().length - 1);
+    const simulatedGame = new GameEngine(simulatedBoard);
+
+    // Apply move
+    simulatedGame.makeMove(row, col, botId);
+
+    let bestScore = isMaximizing ? -BotEngine.INFINITY : BotEngine.INFINITY;
+    const currentPlayer = isMaximizing ? botId : (botId === 1 ? 2 : 1);
+
+    // Evaluate all responses
+    for (let nextRow = 0; nextRow < simulatedBoard.getSize(); nextRow++) {
+      for (let nextCol = 0; nextCol < simulatedBoard.getSize(); nextCol++) {
+        if (simulatedGame.isValidMove(nextRow, nextCol, currentPlayer)) {
+          const score = this.minimax(nextRow, nextCol, botId, depth - 1, alpha, beta, !isMaximizing);
+
+          if (isMaximizing) {
+            bestScore = Math.max(bestScore, score);
+            alpha = Math.max(alpha, score);
+          } else {
+            bestScore = Math.min(bestScore, score);
+            beta = Math.min(beta, score);
+          }
+
+          if (beta <= alpha) break;
+        }
+      }
+    }
+
+    return bestScore;
+  }
+
+  // Helper methods for strategies
+  private checkForkCreation(row: number, col: number, botId: number): number {
+    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    let threats = 0;
+
+    directions.forEach(([dx, dy]) => {
+      const newRow = row + dx;
+      const newCol = col + dy;
+      if (this.boardEngine.getChainPotential(newRow, newCol, botId) >= 2) threats++;
+    });
+
+    return threats >= 2 ? 1 : 0;
+  }
+
+  private checkOpponentThreats(row: number, col: number, opponentId: number): number {
+    const adjacent = this.getAdjacentCells(row, col);
+    return adjacent.filter(cell => cell.owner === opponentId && cell.value >= 2).length;
+  }
+
+  private countAdjacentCells(row: number, col: number, playerId: number): number {
+    return this.getAdjacentCells(row, col).filter(cell => cell.owner === playerId).length;
+  }
+
+  private checkTokenDistribution(row: number, col: number): number {
+    const adjacent = this.getAdjacentCells(row, col);
+    return adjacent.filter(cell => cell.owner !== 0).length > 2 ? 1 : 0;
+  }
+
+  private calculateChainReactions(row: number, col: number, botId: number): number {
+    const criticalMass = this.boardEngine.getCriticalMass(row, col, true);
+    return this.boardEngine.getChainPotential(row, col, botId) >= criticalMass ? 1 : 0;
+  }
+
+  private isEdge(row: number, col: number): boolean {
+    const size = this.boardEngine.getSize();
+    return row === 0 || row === size - 1 || col === 0 || col === size - 1;
+  }
+
+  private isCorner(row: number, col: number): boolean {
+    const size = this.boardEngine.getSize();
+    return (row === 0 || row === size - 1) && (col === 0 || col === size - 1);
+  }
+
+  private getAdjacentCells(row: number, col: number): Cell[] {
+    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    return directions.map(([dx, dy]) => {
+      const newRow = row + dx;
+      const newCol = col + dy;
+      return this.boardEngine.isValidCell(newRow, newCol)
+        ? this.boardEngine.getBoard()[newRow][newCol]
+        : null;
+    }).filter(cell => cell !== null);
+  }
+
+
+  private getOpeningMove(botId: number): { row: number; col: number } {
+    const size = this.boardEngine.getSize();
+    const center = Math.floor(size / 2);
+
+    const centerMoves = [
+      { row: center, col: center },
+      { row: center - 1, col: center },
+      { row: center, col: center - 1 },
+      { row: center - 1, col: center - 1 }
+    ];
+
+    for (const move of centerMoves) {
+      if (this.gameEngine.isValidMove(move.row, move.col, botId)) {
+        return move;
+      }
+    }
+
+    return this.findRandomValidMove(botId);
+  }
+
+  private findBestMove(botId: number): { row: number; col: number } {
+    let bestScore = -BotEngine.INFINITY;
+    let bestMove = null;
+    const size = this.boardEngine.getSize();
+
+    for (let row = 0; row < size; row++) {
+      for (let col = 0; col < size; col++) {
+        if (this.gameEngine.isValidMove(row, col, botId)) {
+          const score = this.evaluateMove(row, col, botId);
+          if (score > bestScore) {
+            bestScore = score;
+            bestMove = { row, col };
+          }
+        }
+      }
+    }
+
+    // If no valid move found, fallback to random
+    return bestMove || this.findRandomValidMove(botId);
+  }
+
+
+  private findRandomValidMove(botId: number): { row: number; col: number } {
+    const size = this.boardEngine.getSize();
+    const validMoves = [];
+
+    for (let row = 0; row < size; row++) {
+      for (let col = 0; col < size; col++) {
+        if (this.gameEngine.isValidMove(row, col, botId)) {
+          validMoves.push({ row, col });
+        }
+      }
+    }
+
+    return validMoves[Math.floor(Math.random() * validMoves.length)];
+  }
+
+  private findEmptyMove(): { row: number; col: number } {
+    const size = this.boardEngine.getSize();
+    const validMoves = [];
+
+    for (let row = 0; row < size; row++) {
+      for (let col = 0; col < size; col++) {
+        const cell = this.boardEngine.getBoard()[row][col];
+        if (cell.owner === 0) {
+          validMoves.push({ row, col });
+        }
+      }
+    }
+
+    // Choose random empty cell
+    return validMoves[Math.floor(Math.random() * validMoves.length)];
+  }
+}

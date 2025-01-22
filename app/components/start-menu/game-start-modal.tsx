@@ -23,7 +23,7 @@ export function GameStartModal() {
   const [timeLimit, setTimeLimit] = useState(300); // 5 minutes
   const [enableHandicap, setEnableHandicap] = useState(false);
   const [handicapAmount, setHandicapAmount] = useState(2);
-  const [botDifficulty, setBotDifficulty] = useState('medium');
+  const [botDifficulty, setBotDifficulty] = useState(3);
 
   const handleStartGame = () => {
     const gameConfig = {
@@ -37,6 +37,7 @@ export function GameStartModal() {
       }
     };
 
+    console.log('Starting game with config:', gameConfig);
     startGame(gameConfig.mode, gameConfig.boardSize, gameConfig.settings);
 
     if (gameConfig.settings.timer) {
@@ -95,14 +96,18 @@ export function GameStartModal() {
                 <BasicSettings boardSize={boardSize} onBoardSizeChange={changeBoardSize} />
                 <div className="space-y-2">
                   <Label>Bot Difficulty</Label>
-                  <Select value={botDifficulty} onValueChange={setBotDifficulty}>
+                  <Select value={botDifficulty.toString()} onValueChange={(v) => setBotDifficulty(parseInt(v))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select difficulty" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="easy">Easy</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="hard">Hard</SelectItem>
+                      {/* 6 Level */}
+                      <SelectItem value="1">Easy</SelectItem>
+                      <SelectItem value="2">Medium</SelectItem>
+                      <SelectItem value="3">Hard</SelectItem>
+                      <SelectItem value="4">Expert</SelectItem>
+                      <SelectItem value="5">Master</SelectItem>
+                      <SelectItem value="6">Grandmaster</SelectItem>
                     </SelectContent>
                   </Select>
                   <div className="flex items-center justify-between">
@@ -136,18 +141,17 @@ export function GameStartModal() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <BasicSettings boardSize={boardSize} onBoardSizeChange={changeBoardSize} />
-                {!gameId ? (
-                  <Button
-                    className="w-full"
-                    onClick={() => {
-                      startGame('online', boardSize, {});
-                      setShowQR(true);
-                    }}
-                  >
-                    Create Game
-                  </Button>
-                ) : (
-                  <OnlineGameShare gameId={gameId} />
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    // startGame('online', boardSize, {});
+                    setShowQR(true);
+                  }}
+                >
+                  Create Game
+                </Button>
+                {showQR && (
+                  <OnlineGameShare gameId={gameId ?? "asdasdas"} />
                 )}
               </CardContent>
             </Card>
