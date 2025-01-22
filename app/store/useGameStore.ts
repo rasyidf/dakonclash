@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { BoardEngine } from './engine/BoardEngine';
 import { GameEngine } from './engine/GameEngine';
 import { GameMasterEngine } from './engine/GameMasterEngine';
+import { BotEngine } from './engine/BotEngine';
 import type { GameSettings, GameStore } from './engine/types';
 import type { GameHistory, GameMode, ScoreAnimation } from './types';
 import { saveGameHistory } from '~/lib/storage';
@@ -10,12 +11,13 @@ import { saveGameHistory } from '~/lib/storage';
 const boardEngine = new BoardEngine(5);
 const gameEngine = new GameEngine(boardEngine);
 const gameMasterEngine = new GameMasterEngine(boardEngine);
-
+const botEngine = new BotEngine(boardEngine, gameEngine);  // Add this line
 
 export const useGameStore = create<GameStore>((set, get) => ({
   boardEngine,
   gameEngine,
   gameMasterEngine,
+  botEngine, // Add this line
   gameMode: 'local',
   boardSize: 7,
   players: {
@@ -105,7 +107,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   startGame: (mode: GameMode, size: number, settings: GameSettings = {}) => {
     const { gameMasterEngine, gameEngine } = get();
-    const newState = gameMasterEngine.resetGame(mode, size);
+    const botAsFirst = settings.botAsFirst || false;
+    const newState = gameMasterEngine.resetGame(mode, size, botAsFirst);
     gameEngine.resetFirstMoves();
     const timePerPlayer = size > 7 ? 600 : 300; // 10 minutes for larger boards
     set(state => ({
@@ -121,6 +124,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       gameStartedAt: Date.now(),
       isGameStartModalOpen: false,
     }));
+
+    // If bot is first player, make bot move
+    if (botAsFirst && mode === 'vs-bot') {
+      get().makeBotMove();
+    }
   },
 
   saveGameHistory: () => {
@@ -141,9 +149,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   makeMove: async (row: number, col: number) => {
-    const { gameEngine, gameMasterEngine, currentPlayer, scores, stats, playerStats } = get();
+    const { gameEngine, gameMasterEngine, currentPlayer, scores, stats, playerStats, gameMode } = get();
 
-    set({ isProcessing: true }); // Set processing state
+    set({ isProcessing: true });
 
     try {
       const chainLength = await gameEngine.makeMove(row, col, currentPlayer.id);
@@ -162,7 +170,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       gameMasterEngine.updatePlayerStats(currentPlayer.id, playerStats, chainLength);
       gameMasterEngine.updateGameStats(stats, chainLength);
 
-      // Check for a winner
       const winner = gameMasterEngine.checkWinner(scores, playerStats);
       if (winner !== null) {
         get().saveGameHistory();
@@ -178,14 +185,37 @@ export const useGameStore = create<GameStore>((set, get) => ({
         stats,
         playerStats,
         currentPlayer: nextPlayer,
-        isGameOver: winner !== null,
-        winner,
+        isGameOver: get().moves > 1 && winner !== null,
+        winner: get().moves > 1 ? winner : null,
         isWinnerModalOpen: get().moves > 1 && winner !== null,
-        isProcessing: false, // Reset processing state
+        isProcessing: false,
       });
+ 
+      if (gameMode === 'vs-bot' && nextPlayer.isBot) {
+        setTimeout(() => {
+          get().makeBotMove();
+        }, 500);
+      }
     } catch (error) {
-      set({ isProcessing: false }); // Reset processing state on error
+      set({ isProcessing: false });
       console.error(error);
+    }
+  },
+
+  makeBotMove: async () => {
+    const state = get();
+    if (state.isProcessing || state.isGameOver) return;
+
+    // Add small delay to make bot moves feel more natural
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    try {
+      const botMove = await state.botEngine.makeMove(state); // Updated this line
+      if (botMove) {
+        await state.makeMove(botMove.row, botMove.col);
+      }
+    } catch (error) {
+      console.error('Bot move error:', error);
     }
   },
 

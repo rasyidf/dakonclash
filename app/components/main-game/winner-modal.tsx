@@ -7,7 +7,7 @@ import { useGameStore } from "~/store/useGameStore";
 
 export function WinnerModal() {
 
-  const { isWinnerModalOpen, showWinnerModal, winner, players, boardSize, startGame } = useGameStore();
+  const { isWinnerModalOpen, showWinnerModal, winner, players, boardSize, startGame, gameMode } = useGameStore();
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export function WinnerModal() {
       <Dialog open={isWinnerModalOpen} onOpenChange={
         () => {
           showWinnerModal(false);
-          startGame('local', boardSize, {});
+          startGame(gameMode, boardSize, {});
         }
       }>
         <DialogContent className="sm:max-w-md">
@@ -58,7 +58,7 @@ export function WinnerModal() {
           <div className="flex justify-center gap-4 mt-4">
             <Button onClick={
               () => {
-                startGame('local', boardSize, {});
+                startGame(gameMode, boardSize, {});
                 showWinnerModal(false);
               }
             }>Play Again</Button>

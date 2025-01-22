@@ -1,4 +1,3 @@
-import { toast } from "sonner";
 import { useGameStore } from "~/store/useGameStore";
 
 export function useGame() {

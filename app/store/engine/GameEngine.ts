@@ -118,6 +118,27 @@ export class GameEngine {
     return chainLength;
   }
 
+  public isGameOver(): boolean {
+    const board = this.boardEngine.getBoard();
+    let player1Exists = false;
+    let player2Exists = false;
+
+    // Check if either player has any cells left
+    for (let row = 0; row < board.length; row++) {
+      for (let col = 0; col < board.length; col++) {
+        const cell = board[row][col];
+        if (cell.owner === 1) player1Exists = true;
+        if (cell.owner === 2) player2Exists = true;
+
+        // Early exit if both players still have cells
+        if (player1Exists && player2Exists) return false;
+      }
+    }
+
+    // Game is over if either player has been eliminated
+    return !player1Exists || !player2Exists;
+  }
+
   private async triggerChainReaction(
     row: number,
     col: number,

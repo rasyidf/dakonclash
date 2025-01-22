@@ -137,4 +137,61 @@ export class BoardEngine {
   public getSize(): number {
     return this.board.length;
   }
+
+  public isStrategicPosition(row: number, col: number): boolean {
+    const center = Math.floor(this.board.length / 2);
+    return (Math.abs(row - center) <= 1 && Math.abs(col - center) <= 1);
+  }
+
+  public getCentralityValue(row: number, col: number): number {
+    const center = Math.floor(this.board.length / 2);
+    const distance = Math.abs(row - center) + Math.abs(col - center);
+    return Math.max(0, this.board.length - distance);
+  }
+
+  public getChainPotential(row: number, col: number, playerId: number): number {
+    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    let potential = 0;
+
+    directions.forEach(([dx, dy]) => {
+      const newRow = row + dx;
+      const newCol = col + dy;
+      if (this.isValidCell(newRow, newCol)) {
+        const cell = this.board[newRow][newCol];
+        if (cell.owner === playerId) {
+          potential += cell.value - this.getCriticalMass(newRow, newCol);
+        }
+      }
+    });
+
+    return potential;
+  }
+
+  public isEmptyBoard(): boolean {
+    return this.board.every(row =>
+      row.every(cell => cell.owner === 0 && cell.value === 0)
+    );
+  }
+
+  public getCellsOwnedByPlayer(playerId: number): Cell[] {
+    const cells: Cell[] = [];
+    this.board.forEach((row, i) => {
+      row.forEach((cell, j) => {
+        if (cell.owner === playerId) {
+          cells.push({ ...cell });
+        }
+      });
+    });
+    return cells;
+  }
+
+  public getTotalTokens(): number {
+    let total = 0;
+    for (let row = 0; row < this.getSize(); row++) {
+      for (let col = 0; col < this.getSize(); col++) {
+        total += this.board[row][col].value;
+      }
+    }
+    return total;
+  }
 }
