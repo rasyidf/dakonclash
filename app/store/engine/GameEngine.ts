@@ -156,4 +156,50 @@ export class GameEngine {
 
     return chainLength;
   }
+
+  public simulateMove(row: number, col: number, playerId: number): number {
+    // Create a deep copy of the current board for simulation
+    const boardCopy = JSON.parse(JSON.stringify(this.boardEngine.getBoard()));
+    let chainLength = 0;
+
+    const simulateCellExplosion = (r: number, c: number, pId: number, chain: number): number => {
+      const criticalMass = this.boardEngine.getCriticalMass(r, c);
+      const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+      
+      // Remove tokens from current cell
+      boardCopy[r][c].value -= criticalMass;
+      boardCopy[r][c].owner = boardCopy[r][c].value > 0 ? pId : 0;
+
+      // Distribute tokens to adjacent cells
+      let maxChain = chain;
+      directions.forEach(([dx, dy]) => {
+        const newRow = r + dx;
+        const newCol = c + dy;
+        
+        if (this.boardEngine.isValidCell(newRow, newCol)) {
+          boardCopy[newRow][newCol].value += 1;
+          boardCopy[newRow][newCol].owner = pId;
+
+          // Check for chain reactions
+          if (boardCopy[newRow][newCol].value >= this.boardEngine.getCriticalMass(newRow, newCol)) {
+            maxChain = Math.max(maxChain, simulateCellExplosion(newRow, newCol, pId, chain + 1));
+          }
+        }
+      });
+
+      return maxChain;
+    };
+
+    // Simulate initial move
+    const addValue = this.firstMoves[playerId] ? 3 : 1;
+    boardCopy[row][col].value += addValue;
+    boardCopy[row][col].owner = playerId;
+
+    // Check for chain reaction
+    if (boardCopy[row][col].value >= this.boardEngine.getCriticalMass(row, col)) {
+      chainLength = simulateCellExplosion(row, col, playerId, 1);
+    }
+
+    return chainLength;
+  }
 }

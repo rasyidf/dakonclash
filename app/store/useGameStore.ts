@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { BoardEngine } from './engine/BoardEngine';
 import { GameEngine } from './engine/GameEngine';
 import { GameMasterEngine } from './engine/GameMasterEngine';
-import { BotEngine } from './engine/BotEngine';
+import { BotEngine } from './v3/BotEngine';
 import type { GameSettings, GameStore } from './engine/types';
 import type { GameHistory, GameMode, ScoreAnimation } from './types';
 import { saveGameHistory } from '~/lib/storage';
@@ -11,13 +11,13 @@ import { saveGameHistory } from '~/lib/storage';
 const boardEngine = new BoardEngine(5);
 const gameEngine = new GameEngine(boardEngine);
 const gameMasterEngine = new GameMasterEngine(boardEngine);
-const botEngine = new BotEngine(boardEngine, gameEngine);  // Add this line
+const botEngine = new BotEngine(boardEngine, gameEngine, 8);
 
 export const useGameStore = create<GameStore>((set, get) => ({
   boardEngine,
   gameEngine,
   gameMasterEngine,
-  botEngine, // Add this line
+  botEngine, 
   gameMode: 'local',
   boardSize: 7,
   players: {
@@ -206,16 +206,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     if (state.isProcessing || state.isGameOver) return;
 
-    // Add small delay to make bot moves feel more natural
-    await new Promise(resolve => setTimeout(resolve, 500));
+    set({ isProcessing: true });
 
     try {
-      const botMove = await state.botEngine.makeMove(state); // Updated this line
+      const botMove = await state.botEngine.makeMove(state);
       if (botMove) {
         await state.makeMove(botMove.row, botMove.col);
+      } else {
+        // If no valid move is found, handle it gracefully
+        set({
+          isGameOver: true,
+          winner: state.currentPlayer.id === 1 ? 2 : 1,
+          isWinnerModalOpen: true
+        });
       }
     } catch (error) {
       console.error('Bot move error:', error);
+    } finally {
+      set({ isProcessing: false });
     }
   },
 

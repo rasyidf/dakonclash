@@ -1,6 +1,6 @@
 import type { Cell, GameMode, GameStats, Player, PlayerStats, ScoreAnimation, Timer } from '../types';
 import type { BoardEngine } from './BoardEngine';
-import type { BotEngine } from './BotEngine';
+import type { BotEngine } from '../v3/BotEngine';
 import type { GameEngine } from './GameEngine';
 import type { GameMasterEngine } from './GameMasterEngine';
 

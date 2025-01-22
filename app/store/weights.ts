@@ -1,0 +1,93 @@
+
+export const weights: Record<string, Record<string, number>> = {
+  Level1: {
+    centrality: 2,
+    chainPotential: 1,
+    highValueCell: 5,
+    adjacentHighValue: 4,
+    disruption: 6,
+    directAttack: 3,
+    fork: 0,
+    chainExtension: 0,
+    edgeControl: 0,
+    cornerControl: 0,
+    distribution: 0,
+    chainReaction: 0
+  },
+  Level2: {
+    centrality: 1,
+    chainPotential: 2,
+    highValueCell: 6,
+    adjacentHighValue: 5,
+    disruption: 8,
+    directAttack: 5,
+    fork: 2,
+    chainExtension: 1,
+    edgeControl: 0,
+    cornerControl: 0,
+    distribution: 1,
+    chainReaction: 1
+  },
+  Level3: {
+    centrality: 0,
+    chainPotential: 3,
+    highValueCell: 4,
+    adjacentHighValue: 6,
+    disruption: 12,
+    directAttack: 8,
+    fork: 7,
+    chainExtension: 4,
+    edgeControl: 1,
+    cornerControl: 1,
+    distribution: 2,
+    chainReaction: 2
+  },
+  Level4: {
+    centrality: 0,
+    chainPotential: 4,
+    highValueCell: 3,
+    adjacentHighValue: 5,
+    disruption: 15,
+    directAttack: 10,
+    fork: 9,
+    chainExtension: 6,
+    edgeControl: 2,
+    cornerControl: 2,
+    distribution: 3,
+    chainReaction: 4
+  },
+  Level5: {
+    centrality: 0,
+    chainPotential: 5,
+    highValueCell: 5,
+    adjacentHighValue: 7,
+    disruption: 20,
+    directAttack: 15,
+    fork: 10,
+    chainExtension: 8,
+    edgeControl: 1,
+    cornerControl: 1,
+    distribution: 2,
+    chainReaction: 6
+  },
+
+  Level6: {
+    centrality: 0,
+    chainPotential: 6,
+    highValueCell: 4,
+    adjacentHighValue: 8,
+    disruption: 25,
+    directAttack: 18,
+    fork: 12,
+    chainExtension: 10,
+    defensiveBlock: 10,
+    mobility: 9,
+    tempo: 8,
+    edgeControl: 3,
+    cornerControl: 2,
+    distribution: 4,
+    chainReaction: 8,
+    sacrifice: 5,
+    longTermChain: 4
+  }
+};

@@ -185,7 +185,7 @@ export class GameMasterEngine {
       winner: null,
       timer: {
         enabled: size > 7,
-        timePerPlayer: size > 7 ? 600 : 300,
+        timePerPlayer: size > 7 ? 400 : 250,
         remainingTime: { 1: size > 7 ? 600 : 300, 2: size > 7 ? 600 : 300 },
         lastTick: Date.now(),
       },
@@ -195,4 +195,4 @@ export class GameMasterEngine {
     this.notifySubscribers(newState);
     return newState;
   }
-}
+}``

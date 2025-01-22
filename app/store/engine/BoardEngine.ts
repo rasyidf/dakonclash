@@ -3,9 +3,11 @@ import type { BoardState, Cell, BoardUpdate } from "../types";
 export class BoardEngine {
   private board: Cell[][];
   private history: BoardState[];
+  private size: number;
   private subscribers: Array<(update: BoardUpdate) => void> = [];
 
   constructor(size: number) {
+    this.size = size;
     this.board = BoardEngine.generate(size);
     this.history = [];
     this.saveState();
@@ -24,15 +26,13 @@ export class BoardEngine {
   }
 
   public getCriticalMass(row: number, col: number, customCriticalMass = false): number {
-    const size = this.board.length;
-
     if (customCriticalMass) {
       // Corners
-      if ((row === 0 || row === size - 1) && (col === 0 || col === size - 1)) {
+      if ((row === 0 || row === this.size - 1) && (col === 0 || col === this.size - 1)) {
         return 2;
       }
       // Edges
-      if (row === 0 || row === size - 1 || col === 0 || col === size - 1) {
+      if (row === 0 || row === this.size - 1 || col === 0 || col === this.size - 1) {
         return 3;
       }
     }
@@ -41,8 +41,8 @@ export class BoardEngine {
   }
 
   public isValidCell(row: number, col: number): boolean {
-    return row >= 0 && row < this.board.length &&
-      col >= 0 && col < this.board.length;
+    return row >= 0 && row < this.size &&
+      col >= 0 && col < this.size;
   }
 
   public subscribe(callback: (update: BoardUpdate) => void): () => void {
@@ -77,6 +77,13 @@ export class BoardEngine {
 
   public getBoard(): Cell[][] {
     return this.board;
+  }
+
+  public getCell(row: number, col: number): Cell {
+    if (!this.isValidCell(row, col)) {
+      throw new Error("Invalid cell coordinates");
+    }
+    return this.board[row][col];
   }
 
   public getHistory(): BoardState[] {
@@ -125,6 +132,7 @@ export class BoardEngine {
   }
 
   public resetBoard(size: number): void {
+    this.size = size;
     this.board = BoardEngine.generate(size);
     this.history = [];
     this.saveState();
@@ -135,18 +143,18 @@ export class BoardEngine {
   }
 
   public getSize(): number {
-    return this.board.length;
+    return this.size;
   }
 
   public isStrategicPosition(row: number, col: number): boolean {
-    const center = Math.floor(this.board.length / 2);
+    const center = Math.floor(this.size / 2);
     return (Math.abs(row - center) <= 1 && Math.abs(col - center) <= 1);
   }
 
   public getCentralityValue(row: number, col: number): number {
-    const center = Math.floor(this.board.length / 2);
+    const center = Math.floor(this.size / 2);
     const distance = Math.abs(row - center) + Math.abs(col - center);
-    return Math.max(0, this.board.length - distance);
+    return Math.max(0, this.size - distance);
   }
 
   public getChainPotential(row: number, col: number, playerId: number): number {
@@ -193,5 +201,69 @@ export class BoardEngine {
       }
     }
     return total;
+  }
+
+  public clone(): BoardEngine {
+    const clonedEngine = new BoardEngine(this.size);
+    // Only clone the current board state, not the history
+    clonedEngine.board = this.board.map(row => row.map(cell => ({ ...cell })));
+    return clonedEngine;
+  }
+
+  public getAllValidMoves(playerId: number): { row: number; col: number }[] {
+    const validMoves: { row: number; col: number }[] = [];
+
+    for (let row = 0; row < this.getSize(); row++) {
+      for (let col = 0; col < this.getSize(); col++) {
+        const cell = this.board[row][col];
+        if (cell.owner === 0 || cell.owner === playerId) {
+          validMoves.push({ row, col });
+        }
+      }
+    }
+
+    return validMoves;
+  }
+
+  public getFilledCellCount(): number {
+    let count = 0;
+    for (let row = 0; row < this.getSize(); row++) {
+      for (let col = 0; col < this.getSize(); col++) {
+        if (this.board[row][col].value > 0) {
+          count++;
+        }
+      }
+    }
+    return count;
+  }
+
+  public makeMove(row: number, col: number, playerId: number): BoardEngine {
+    if (!this.isValidCell(row, col)) {
+      throw new Error("Invalid cell coordinates");
+    }
+
+    const simulatedBoard = this.clone();
+    const cell = simulatedBoard.board[row][col];
+
+    if (cell.owner !== 0 && cell.owner !== playerId) {
+      throw new Error("Cannot move to opponent's cell");
+    }
+
+    simulatedBoard.updateCell(row, col, playerId, cell.value + 1);
+    return simulatedBoard;
+  }
+
+  public getCellOwner(row: number, col: number): number {
+    if (!this.isValidCell(row, col)) {
+      throw new Error("Invalid cell coordinates");
+    }
+    return this.board[row][col].owner;
+  }
+
+  public getAdjacentCells(row: number, col: number): Cell[] {
+    return [[-1, 0], [1, 0], [0, -1], [0, 1]]
+      .map(([dx, dy]) => ({ row: row + dx, col: col + dy }))
+      .filter(pos => this.isValidCell(pos.row, pos.col))
+      .map(pos => this.board[pos.row][pos.col]);
   }
 }
