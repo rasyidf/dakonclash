@@ -83,7 +83,7 @@ export class BoardEngine {
     return this.history;
   }
 
-  public updateCell(row: number, col: number, owner: number, value: number): void {
+  public updateCell(row: number, col: number, owner: number, value: number, cascade: boolean = false): void {
     if (!this.isValidCell(row, col)) {
       throw new Error("Invalid cell coordinates");
     }
@@ -101,13 +101,21 @@ export class BoardEngine {
       this.handleOverflow(row, col);
     }
 
-    this.saveState();
+    // Only save state if this is not part of a cascade
+    if (!cascade) {
+      this.saveState();
+    }
   }
 
   private handleOverflow(row: number, col: number): void {
     const cell = this.board[row][col];
     const criticalMass = this.getCriticalMass(row, col, true);
     cell.value -= criticalMass;
+
+    this.notify({
+      type: 'explosion',
+      payload: { cell, x: col, y: row }
+    });
 
     const neighbors = [
       [row - 1, col],
@@ -119,9 +127,12 @@ export class BoardEngine {
     for (const [nrow, ncol] of neighbors) {
       if (this.isValidCell(nrow, ncol)) {
         const neighbor = this.board[nrow][ncol];
-        this.updateCell(nrow, ncol, cell.owner, neighbor.value + 1);
+        this.updateCell(nrow, ncol, cell.owner, neighbor.value + 1, true);
       }
     }
+
+    // Save state after explosion chain is complete
+    this.saveState();
   }
 
   public resetBoard(size: number): void {

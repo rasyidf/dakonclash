@@ -15,7 +15,7 @@ export interface BoardState {
 }
 
 export interface BoardUpdate {
-  type: 'cell_updated' | 'board_reset' | 'state_loaded' | 'state_saved';
+  type: 'cell_updated' | 'board_reset' | 'state_loaded' | 'state_saved' | 'explosion';
   payload: {
     cell?: Cell;
     board?: Cell[][];

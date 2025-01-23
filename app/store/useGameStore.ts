@@ -156,6 +156,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     try {
       const chainLength = await gameEngine.makeMove(row, col, currentPlayer.id);
 
+      // Add a small delay after chain reactions complete
+      await new Promise(resolve => setTimeout(resolve, 200));
+
       // Update time bonus based on remaining time (for boards size > 7)
       if (get().boardSize > 7 && get().timer.enabled) {
         const timeBonus = Math.floor(get().timer.remainingTime[currentPlayer.id] / 60) * 10;
@@ -190,7 +193,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         isWinnerModalOpen: get().moves > 1 && winner !== null,
         isProcessing: false,
       });
- 
+
       if (gameMode === 'vs-bot' && nextPlayer.isBot) {
         setTimeout(() => {
           get().makeBotMove();

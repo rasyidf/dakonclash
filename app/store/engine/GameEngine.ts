@@ -1,17 +1,19 @@
 const CHAIN_REACTION_DELAY_MS = 300;
 
 import { BoardEngine } from './BoardEngine';
+import type { Cell, Player } from '../types';
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export class GameEngine {
   private boardEngine: BoardEngine;
+  firstMoves: Record<Player["id"], boolean> = { 1: true, 2: true };
   private subscribers: Array<(processing: boolean) => void> = [];
   private scoreSubscribers: Array<(row: number, col: number, score: number, playerId: number) => void> = [];
   private isProcessing: boolean = false;
-  public firstMoves: { [key: number]: boolean; } = {};
 
   constructor(boardEngine: BoardEngine) {
     this.boardEngine = boardEngine;
-    this.resetFirstMoves();
   }
 
   public resetFirstMoves(): void {
@@ -77,7 +79,7 @@ export class GameEngine {
         const newCol = col + dy;
 
         this.handleCellUpdate(newRow, newCol, playerId, 1);
-        
+        this.notifySubscribers();
         if (board[newRow][newCol].value >= this.boardEngine.getCriticalMass(newRow, newCol)) {
           await new Promise(resolve => setTimeout(resolve, CHAIN_REACTION_DELAY_MS));
           return this.triggerChainReaction(newRow, newCol, playerId, chainLength + 1);
@@ -87,13 +89,51 @@ export class GameEngine {
 
     const chainResults = await Promise.all(chainPromises);
     const maxChainLength = Math.max(...chainResults);
-    
+
     // Notify score subscribers about the chain reaction
     if (maxChainLength > chainLength) {
       this.notifyScoreSubscribers(row, col, maxChainLength, playerId);
     }
-    
+
     return maxChainLength;
+  }
+
+  private async explodeCell(cell: Cell, row: number, col: number, playerId: number): Promise<number> {
+    const board = this.boardEngine.getBoard();
+    const criticalMass = this.boardEngine.getCriticalMass(row, col);
+    let chainLength = 0;
+
+    if (cell.value >= criticalMass) {
+      // Notify subscribers before explosion
+      this.notifyScoreSubscribers(row, col, cell.value, playerId);
+
+      // Wait for animation
+      await delay(200);
+
+      // Distribute tokens
+      const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+      board[row][col].value = 0;
+      board[row][col].owner = 0;
+
+      for (const [dx, dy] of directions) {
+        const newRow = row + dx;
+        const newCol = col + dy;
+
+        if (this.boardEngine.isValidCell(newRow, newCol)) {
+          const targetCell = board[newRow][newCol];
+          targetCell.value++;
+          targetCell.owner = playerId;
+
+          // Check for chain reactions
+          if (targetCell.value >= this.boardEngine.getCriticalMass(newRow, newCol)) {
+            chainLength += await this.explodeCell(targetCell, newRow, newCol, playerId);
+          }
+        }
+      }
+      chainLength++;
+    }
+
+    return chainLength;
   }
 
   public async makeMove(row: number, col: number, currentPlayerId: number): Promise<number> {
@@ -101,21 +141,26 @@ export class GameEngine {
       throw new Error("Invalid move");
     }
 
-    const addValue = this.firstMoves[currentPlayerId] ? 3 : 1;
-    this.handleCellUpdate(row, col, currentPlayerId, addValue);
-    this.firstMoves[currentPlayerId] = false;
-
     const board = this.boardEngine.getBoard();
-    let chainLength = 1;
-    
-    if (board[row][col].value >= this.boardEngine.getCriticalMass(row, col)) {
-      this.isProcessing = true;
-      chainLength = await this.triggerChainReaction(row, col, currentPlayerId);
-      this.isProcessing = false;
-      this.notifySubscribers();
+    let totalChainLength = 0;
+
+    // Place token
+    const cell = board[row][col];
+    const addValue = this.firstMoves[currentPlayerId] ? 3 : 1;
+    cell.value += addValue;
+    cell.owner = currentPlayerId;
+
+    // Check for explosion
+    if (cell.value >= this.boardEngine.getCriticalMass(row, col)) {
+      totalChainLength = await this.explodeCell(cell, row, col, currentPlayerId);
     }
 
-    return chainLength;
+    // Record first move
+    if (this.firstMoves[currentPlayerId]) {
+      this.firstMoves[currentPlayerId] = false;
+    }
+
+    return totalChainLength;
   }
 
   public isGameOver(): boolean {
