@@ -118,7 +118,7 @@ export class BotEngine {
     }
 
     // Handle subsequent moves
-    if (this.difficulty >= 6) {
+    if (this.difficulty === 5) {
       return this.minimaxMove(botId);
     } else {
       // Use weighted strategy for medium difficulties
@@ -151,6 +151,9 @@ export class BotEngine {
       score += adjacentHighValueCount * this.getStrategyWeight('adjacentHighValue');
     }
 
+    if (currentCell.value >= this.boardEngine.getCriticalMass(row, col, true) - 1) {
+      score += this.getStrategyWeight('highValueCell');
+    }
     // Core strategies
     score += this.boardEngine.getCentralityValue(row, col) * this.getStrategyWeight('centrality');
     score += this.boardEngine.getChainPotential(row, col, botId) * this.getStrategyWeight('chainPotential');

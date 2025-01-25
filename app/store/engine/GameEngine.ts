@@ -1,4 +1,5 @@
 const CHAIN_REACTION_DELAY_MS = 300;
+const FIRST_MOVE_VALUE = 3; // Replaced magic number 3
 
 import { BoardEngine } from './BoardEngine';
 import type { Cell, Player } from '../types';
@@ -44,53 +45,43 @@ export class GameEngine {
   }
 
   public isValidMove(row: number, col: number, currentPlayerId: number): boolean {
-    const cell = this.boardEngine.getBoard()[row][col];
+    const cell = this.boardEngine.getCellAt(row, col);
 
-    // If it's the player's first move, they can only place on unowned cells
     if (this.firstMoves[currentPlayerId]) {
       return cell.owner === 0;
     }
 
-    // After first move, they can place on unowned or their own cells
     return cell.owner === currentPlayerId;
   }
 
-  private handleCellUpdate(row: number, col: number, playerId: number, addValue: number): void {
-    const board = this.boardEngine.getBoard();
-    board[row][col].value += addValue;
-    board[row][col].owner = playerId;
-    if (board[row][col].value === 0) {
-      board[row][col].owner = 0;
-    }
+  private handleCellUpdate(row: number, col: number, playerId: number, delta: number): void {
+    this.boardEngine.updateCellDelta(row, col, delta, playerId);
     this.notifySubscribers();
   }
 
   private async processCellExplosion(row: number, col: number, playerId: number, chainLength: number): Promise<number> {
-    const board = this.boardEngine.getBoard();
     const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
     const criticalMass = this.boardEngine.getCriticalMass(row, col);
 
     this.handleCellUpdate(row, col, playerId, -criticalMass);
 
-    const chainPromises = directions
-      .filter(([dx, dy]) => this.boardEngine.isValidCell(row + dx, col + dy))
-      .map(async ([dx, dy]) => {
-        const newRow = row + dx;
-        const newCol = col + dy;
+    let maxChainLength = chainLength;
 
-        this.handleCellUpdate(newRow, newCol, playerId, 1);
-        this.notifySubscribers();
-        if (board[newRow][newCol].value >= this.boardEngine.getCriticalMass(newRow, newCol)) {
-          await new Promise(resolve => setTimeout(resolve, CHAIN_REACTION_DELAY_MS));
-          return this.triggerChainReaction(newRow, newCol, playerId, chainLength + 1);
-        }
-        return chainLength;
-      });
+    for (const [dx, dy] of directions) {
+      const newRow = row + dx;
+      const newCol = col + dy;
 
-    const chainResults = await Promise.all(chainPromises);
-    const maxChainLength = Math.max(...chainResults);
+      if (!this.boardEngine.isValidCell(newRow, newCol)) continue;
 
-    // Notify score subscribers about the chain reaction
+      this.handleCellUpdate(newRow, newCol, playerId, 1);
+
+      if (this.boardEngine.getCellAt(newRow, newCol).value >= this.boardEngine.getCriticalMass(newRow, newCol)) {
+        await delay(CHAIN_REACTION_DELAY_MS);
+        const chainResult = await this.triggerChainReaction(newRow, newCol, playerId, chainLength + 1);
+        maxChainLength = Math.max(maxChainLength, chainResult);
+      }
+    }
+
     if (maxChainLength > chainLength) {
       this.notifyScoreSubscribers(row, col, maxChainLength, playerId);
     }
@@ -98,90 +89,34 @@ export class GameEngine {
     return maxChainLength;
   }
 
-  private async explodeCell(cell: Cell, row: number, col: number, playerId: number): Promise<number> {
-    const board = this.boardEngine.getBoard();
-    const criticalMass = this.boardEngine.getCriticalMass(row, col);
-    let chainLength = 0;
-
-    if (cell.value >= criticalMass) {
-      // Notify subscribers before explosion
-      this.notifyScoreSubscribers(row, col, cell.value, playerId);
-
-      // Wait for animation
-      await delay(200);
-
-      // Distribute tokens
-      const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-      board[row][col].value = 0;
-      board[row][col].owner = 0;
-
-      for (const [dx, dy] of directions) {
-        const newRow = row + dx;
-        const newCol = col + dy;
-
-        if (this.boardEngine.isValidCell(newRow, newCol)) {
-          const targetCell = board[newRow][newCol];
-          targetCell.value++;
-          targetCell.owner = playerId;
-
-          // Check for chain reactions
-          if (targetCell.value >= this.boardEngine.getCriticalMass(newRow, newCol)) {
-            chainLength += await this.explodeCell(targetCell, newRow, newCol, playerId);
-          }
-        }
-      }
-      chainLength++;
-    }
-
-    return chainLength;
-  }
-
   public async makeMove(row: number, col: number, currentPlayerId: number): Promise<number> {
     if (!this.isValidMove(row, col, currentPlayerId)) {
       throw new Error("Invalid move");
     }
 
-    const board = this.boardEngine.getBoard();
+    const addValue = this.firstMoves[currentPlayerId] ? FIRST_MOVE_VALUE : 1;
+    this.handleCellUpdate(row, col, currentPlayerId, addValue);
+
     let totalChainLength = 0;
-
-    // Place token
-    const cell = board[row][col];
-    const addValue = this.firstMoves[currentPlayerId] ? 3 : 1;
-    cell.value += addValue;
-    cell.owner = currentPlayerId;
-
-    // Check for explosion
-    if (cell.value >= this.boardEngine.getCriticalMass(row, col)) {
-      totalChainLength = await this.explodeCell(cell, row, col, currentPlayerId);
+    if (this.boardEngine.getCellAt(row, col).value >= this.boardEngine.getCriticalMass(row, col)) {
+      this.isProcessing = true;
+      this.notifySubscribers();
+      totalChainLength = await this.triggerChainReaction(row, col, currentPlayerId, 1);
     }
 
-    // Record first move
     if (this.firstMoves[currentPlayerId]) {
       this.firstMoves[currentPlayerId] = false;
     }
 
+    this.isProcessing = false;
+    this.notifySubscribers();
     return totalChainLength;
   }
 
   public isGameOver(): boolean {
-    const board = this.boardEngine.getBoard();
-    let player1Exists = false;
-    let player2Exists = false;
-
-    // Check if either player has any cells left
-    for (let row = 0; row < board.length; row++) {
-      for (let col = 0; col < board.length; col++) {
-        const cell = board[row][col];
-        if (cell.owner === 1) player1Exists = true;
-        if (cell.owner === 2) player2Exists = true;
-
-        // Early exit if both players still have cells
-        if (player1Exists && player2Exists) return false;
-      }
-    }
-
-    // Game is over if either player has been eliminated
-    return !player1Exists || !player2Exists;
+    const count1 = this.boardEngine.getPlayerCellCount(1);
+    const count2 = this.boardEngine.getPlayerCellCount(2);
+    return count1 === 0 || count2 === 0;
   }
 
   private async triggerChainReaction(
@@ -190,15 +125,11 @@ export class GameEngine {
     playerId: number,
     chainLength: number = 1
   ): Promise<number> {
-    const board = this.boardEngine.getBoard();
-    const criticalMass = this.boardEngine.getCriticalMass(row, col);
-
-    if (board[row][col].value >= criticalMass) {
+    if (this.boardEngine.getCellAt(row, col).value >= this.boardEngine.getCriticalMass(row, col)) {
       this.isProcessing = true;
       this.notifySubscribers();
       return this.processCellExplosion(row, col, playerId, chainLength);
     }
-
     return chainLength;
   }
 }

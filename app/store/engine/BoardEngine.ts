@@ -22,6 +22,11 @@ export class BoardEngine {
       }))
     );
   }
+  public clone(): BoardEngine {
+    const clone = new BoardEngine(this.board.length);
+    clone.board = JSON.parse(JSON.stringify(this.board));
+    return clone;
+  }
 
   public getCriticalMass(row: number, col: number, customCriticalMass = false): number {
     const size = this.board.length;
@@ -83,6 +88,16 @@ export class BoardEngine {
     return this.history;
   }
 
+  public updateCellDelta(row: number, col: number, delta: number, owner: number): void {
+    const cell = this.board[row][col];
+    cell.value += delta;
+    cell.owner = owner;
+    this.notify({
+      type: 'cell_updated',
+      payload: { cell, x: col, y: row }
+    });
+  }
+
   public updateCell(row: number, col: number, owner: number, value: number, cascade: boolean = false): void {
     if (!this.isValidCell(row, col)) {
       throw new Error("Invalid cell coordinates");
@@ -110,13 +125,12 @@ export class BoardEngine {
   private handleOverflow(row: number, col: number): void {
     const cell = this.board[row][col];
     const criticalMass = this.getCriticalMass(row, col, true);
+
+    // Save state before explosion chain
+    this.saveState();
+
+    // Process explosion without intermediate saves
     cell.value -= criticalMass;
-
-    this.notify({
-      type: 'explosion',
-      payload: { cell, x: col, y: row }
-    });
-
     const neighbors = [
       [row - 1, col],
       [row + 1, col],
@@ -124,15 +138,24 @@ export class BoardEngine {
       [row, col + 1]
     ];
 
-    for (const [nrow, ncol] of neighbors) {
+    neighbors.forEach(([nrow, ncol]) => {
       if (this.isValidCell(nrow, ncol)) {
         const neighbor = this.board[nrow][ncol];
-        this.updateCell(nrow, ncol, cell.owner, neighbor.value + 1, true);
+        neighbor.value++;
+        neighbor.owner = cell.owner;
+        if (neighbor.value >= this.getCriticalMass(nrow, ncol, true)) {
+          this.handleOverflow(nrow, ncol);
+        }
       }
-    }
+    });
+  }
 
-    // Save state after explosion chain is complete
-    this.saveState();
+  public getPlayerCellCount(playerId: number): number {
+    return this.board.reduce((acc, row) => {
+      return acc + row.reduce((acc, cell) => {
+        return acc + (cell.owner === playerId ? 1 : 0);
+      }, 0);
+    }, 0);
   }
 
   public resetBoard(size: number): void {
@@ -204,5 +227,9 @@ export class BoardEngine {
       }
     }
     return total;
+  }
+
+  public getCellAt(row: number, col: number): Cell {
+    return this.board[row][col];
   }
 }

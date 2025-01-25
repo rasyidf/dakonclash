@@ -21,6 +21,10 @@ export class GameMasterEngine {
     this.subscribers.forEach(callback => callback(state));
   }
 
+  public checkGameOver(scores: Record<number, number>): boolean {
+    return scores[1] === 0 || scores[2] === 0;
+  }
+
   // Initialize game stats
   public initializeStats(): GameStats {
     return {
