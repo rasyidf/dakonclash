@@ -1,13 +1,15 @@
-import type { BoardState, Cell, BoardUpdate } from "../types";
+import { BoardHistoryManager } from "./BoardHistoryManager";
+import { ObservableClass } from "./Observable";
+import type { BoardUpdate, Cell } from "./types";
 
-export class BoardEngine {
+export class BoardStateManager extends ObservableClass<BoardUpdate> {
   private board: Cell[][];
-  private history: BoardState[];
-  private subscribers: Array<(update: BoardUpdate) => void> = [];
+  private history: BoardHistoryManager;
 
   constructor(size: number) {
-    this.board = BoardEngine.generate(size);
-    this.history = [];
+    super();
+    this.board = BoardStateManager.generate(size);
+    this.history = new BoardHistoryManager();
     this.saveState();
   }
 
@@ -22,8 +24,8 @@ export class BoardEngine {
       }))
     );
   }
-  public clone(): BoardEngine {
-    const clone = new BoardEngine(this.board.length);
+  public clone(): BoardStateManager {
+    const clone = new BoardStateManager(this.board.length);
     clone.board = JSON.parse(JSON.stringify(this.board));
     return clone;
   }
@@ -50,23 +52,8 @@ export class BoardEngine {
       col >= 0 && col < this.board.length;
   }
 
-  public subscribe(callback: (update: BoardUpdate) => void): () => void {
-    this.subscribers.push(callback);
-    return () => {
-      this.subscribers = this.subscribers.filter(sub => sub !== callback);
-    };
-  }
-
-  private notify(update: BoardUpdate): void {
-    this.subscribers.forEach(callback => callback(update));
-  }
-
   public saveState(): void {
-    const state: BoardState = {
-      board: JSON.parse(JSON.stringify(this.board)),
-      timestamp: new Date()
-    };
-    this.history.push(state);
+    this.history.save(this.board);
     this.notify({
       type: 'state_saved',
       payload: { board: this.board }
@@ -74,18 +61,15 @@ export class BoardEngine {
   }
 
   public loadState(index: number): void {
-    if (index < 0 || index >= this.history.length) {
-      throw new Error("Invalid history index");
-    }
-    this.board = JSON.parse(JSON.stringify(this.history[index].board));
+    this.board = this.history.load(index);
   }
 
   public getBoard(): Cell[][] {
     return this.board;
   }
 
-  public getHistory(): BoardState[] {
-    return this.history;
+  public getHistory() {
+    return this.history.getHistory();
   }
 
   public updateCellDelta(row: number, col: number, delta: number, owner: number): void {
@@ -159,8 +143,8 @@ export class BoardEngine {
   }
 
   public resetBoard(size: number): void {
-    this.board = BoardEngine.generate(size);
-    this.history = [];
+    this.board = BoardStateManager.generate(size);
+    this.history.clear();
     this.saveState();
     this.notify({
       type: 'board_reset',
@@ -173,14 +157,14 @@ export class BoardEngine {
   }
 
   public isStrategicPosition(row: number, col: number): boolean {
-    const center = Math.floor(this.board.length / 2);
+    const center = Math.floor(this.getSize() / 2);
     return (Math.abs(row - center) <= 1 && Math.abs(col - center) <= 1);
   }
 
   public getCentralityValue(row: number, col: number): number {
-    const center = Math.floor(this.board.length / 2);
+    const center = Math.floor(this.getSize() / 2);
     const distance = Math.abs(row - center) + Math.abs(col - center);
-    return Math.max(0, this.board.length - distance);
+    return Math.max(0, this.getSize() - distance);
   }
 
   public getChainPotential(row: number, col: number, playerId: number): number {
@@ -191,7 +175,7 @@ export class BoardEngine {
       const newRow = row + dx;
       const newCol = col + dy;
       if (this.isValidCell(newRow, newCol)) {
-        const cell = this.board[newRow][newCol];
+        const cell = this.getCellAt(newRow, newCol);
         if (cell.owner === playerId) {
           potential += cell.value - this.getCriticalMass(newRow, newCol);
         }
@@ -202,9 +186,14 @@ export class BoardEngine {
   }
 
   public isEmptyBoard(): boolean {
-    return this.board.every(row =>
-      row.every(cell => cell.owner === 0 && cell.value === 0)
-    );
+    for (const row of this.board) {
+      for (const cell of row) {
+        if (cell.owner !== 0 || cell.value !== 0) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   public getCellsOwnedByPlayer(playerId: number): Cell[] {

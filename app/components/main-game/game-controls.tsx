@@ -11,7 +11,7 @@ export function GameControls({ }: GameControlsProps) {
   const showGameStartModal = useGameStore(state => state.showGameStartModal);
 
   return (
-    <div className="flex flex-col items-center gap-4 my-8">
+    <div className="flex flex-col items-center gap-4 my-3">
       {timer.enabled && (
         <div className="text-lg font-bold p-3 rounded-md bg-slate-300">
           {currentPlayer.name}: {Math.floor(timer.remainingTime[currentPlayer.id] / 60)}:

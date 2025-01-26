@@ -1,24 +1,14 @@
-import type { GameStats, Player, PlayerStats } from '../types';
-import { BoardEngine } from './BoardEngine';
+import type { BoardState, GameStats, Player, PlayerStats } from './types';
+import { BoardStateManager } from './BoardStateManager';
 import type { GameState } from './types';
+import { Observable, ObservableClass } from './Observable';
 
-export class GameMasterEngine {
-  private boardEngine: BoardEngine;
-  private subscribers: Array<(state: Partial<GameState>) => void> = [];
-
-  constructor(boardEngine: BoardEngine) {
+export class GameStateManager extends ObservableClass<Partial<GameState> | Partial<BoardState>> {
+  private boardEngine: BoardStateManager;
+ 
+  constructor(boardEngine: BoardStateManager) {
+    super();
     this.boardEngine = boardEngine;
-  }
-
-  public subscribe(callback: (state: Partial<GameState>) => void): () => void {
-    this.subscribers.push(callback);
-    return () => {
-      this.subscribers = this.subscribers.filter(sub => sub !== callback);
-    };
-  }
-
-  private notifySubscribers(state: Partial<GameState>): void {
-    this.subscribers.forEach(callback => callback(state));
   }
 
   public checkGameOver(scores: Record<number, number>): boolean {
@@ -196,7 +186,7 @@ export class GameMasterEngine {
       gameStartedAt: Date.now(),
     };
 
-    this.notifySubscribers(newState);
+    this.notify(newState);
     return newState;
   }
 }

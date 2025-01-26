@@ -1,19 +1,20 @@
 const CHAIN_REACTION_DELAY_MS = 300;
 const FIRST_MOVE_VALUE = 3; // Replaced magic number 3
 
-import { BoardEngine } from './BoardEngine';
-import type { Cell, Player } from '../types';
+import { BoardStateManager } from './BoardStateManager';
+import { ObservableClass } from './Observable';
+import type { Player } from './types';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export class GameEngine {
-  private boardEngine: BoardEngine;
+export class GameMechanicsEngine extends ObservableClass<{ processing: boolean; }> {
+  private boardEngine: BoardStateManager;
   firstMoves: Record<Player["id"], boolean> = { 1: true, 2: true };
-  private subscribers: Array<(processing: boolean) => void> = [];
   private scoreSubscribers: Array<(row: number, col: number, score: number, playerId: number) => void> = [];
   private isProcessing: boolean = false;
 
-  constructor(boardEngine: BoardEngine) {
+  constructor(boardEngine: BoardStateManager) {
+    super();
     this.boardEngine = boardEngine;
   }
 
@@ -22,22 +23,11 @@ export class GameEngine {
     this.firstMoves[2] = true;
   }
 
-  public subscribe(callback: (processing: boolean) => void): () => void {
-    this.subscribers.push(callback);
-    return () => {
-      this.subscribers = this.subscribers.filter(sub => sub !== callback);
-    };
-  }
-
   public subscribeToScores(callback: (row: number, col: number, score: number, playerId: number) => void): () => void {
     this.scoreSubscribers.push(callback);
     return () => {
       this.scoreSubscribers = this.scoreSubscribers.filter(sub => sub !== callback);
     };
-  }
-
-  private notifySubscribers(): void {
-    this.subscribers.forEach(callback => callback(this.isProcessing));
   }
 
   private notifyScoreSubscribers(row: number, col: number, score: number, playerId: number): void {
@@ -56,7 +46,7 @@ export class GameEngine {
 
   private handleCellUpdate(row: number, col: number, playerId: number, delta: number): void {
     this.boardEngine.updateCellDelta(row, col, delta, playerId);
-    this.notifySubscribers();
+    this.notify({ processing: this.isProcessing });
   }
 
   private async processCellExplosion(row: number, col: number, playerId: number, chainLength: number): Promise<number> {
@@ -66,6 +56,7 @@ export class GameEngine {
     this.handleCellUpdate(row, col, playerId, -criticalMass);
 
     let maxChainLength = chainLength;
+    const promises: Promise<number>[] = [];
 
     for (const [dx, dy] of directions) {
       const newRow = row + dx;
@@ -76,10 +67,21 @@ export class GameEngine {
       this.handleCellUpdate(newRow, newCol, playerId, 1);
 
       if (this.boardEngine.getCellAt(newRow, newCol).value >= this.boardEngine.getCriticalMass(newRow, newCol)) {
-        await delay(CHAIN_REACTION_DELAY_MS);
-        const chainResult = await this.triggerChainReaction(newRow, newCol, playerId, chainLength + 1);
-        maxChainLength = Math.max(maxChainLength, chainResult);
+        const promise = (async () => {
+
+          await delay(CHAIN_REACTION_DELAY_MS);
+
+          this.notify({ processing: this.isProcessing });
+          const chainResult = await this.triggerChainReaction(newRow, newCol, playerId, chainLength + 1);
+          return chainResult;
+        })();
+        promises.push(promise);
       }
+    }
+
+    if (promises.length > 0) {
+      const results = await Promise.all(promises);
+      maxChainLength = Math.max(maxChainLength, ...results);
     }
 
     if (maxChainLength > chainLength) {
@@ -100,7 +102,6 @@ export class GameEngine {
     let totalChainLength = 0;
     if (this.boardEngine.getCellAt(row, col).value >= this.boardEngine.getCriticalMass(row, col)) {
       this.isProcessing = true;
-      this.notifySubscribers();
       totalChainLength = await this.triggerChainReaction(row, col, currentPlayerId, 1);
     }
 
@@ -109,7 +110,8 @@ export class GameEngine {
     }
 
     this.isProcessing = false;
-    this.notifySubscribers();
+
+    this.notify({ processing: this.isProcessing });
     return totalChainLength;
   }
 
@@ -127,7 +129,8 @@ export class GameEngine {
   ): Promise<number> {
     if (this.boardEngine.getCellAt(row, col).value >= this.boardEngine.getCriticalMass(row, col)) {
       this.isProcessing = true;
-      this.notifySubscribers();
+
+      this.notify({ processing: this.isProcessing });
       return this.processCellExplosion(row, col, playerId, chainLength);
     }
     return chainLength;

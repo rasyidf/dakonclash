@@ -1,13 +1,13 @@
 import { useChainReaction } from "~/hooks/use-chain-reaction";
+import { useGameTimer } from "~/hooks/useGameTimer";
 import { cn } from "~/lib/utils";
 import { GameCell } from "./game-cell";
-import { useGameTimer } from "~/hooks/useGameTimer";
 
 export function GameBoard() {
-  const { board, currentPlayer, isProcessing, handleCellClick } = useChainReaction();
+  const { board, currentPlayer } = useChainReaction();
 
   useGameTimer();
-  
+
   return (
     <div className="flex flex-col items-center justify-center gap-2 sm:gap-4 p-2 sm:p-4 w-full min-h-[50vh]">
       <div
@@ -16,7 +16,7 @@ export function GameBoard() {
           // Portrait: use almost full width, Landscape: use almost full height
           "w-[min(95vw,80vh)] portrait:w-[90vw] landscape:w-[80vh]", // Reduced from 95vh to 80vh in landscape
           "max-w-[800px]", // Added max-width constraint
-          "aspect-square", 
+          "aspect-square",
           "transition-all duration-300 ease-in-out",
           currentPlayer.id === 1 && "ring-4 ring-red-500 drop-shadow-board",
           currentPlayer.id === 2 && "ring-4 ring-blue-500 drop-shadow-board",
@@ -28,13 +28,7 @@ export function GameBoard() {
       >
         {board.map((row, x) =>
           row.map((cell, y) => (
-            <GameCell
-              key={`${x}-${y}`}
-              cell={cell}
-              currentPlayer={currentPlayer}
-              disabled={false}
-              onClick={() => !isProcessing && handleCellClick(x, y)}
-            />
+            <GameCell key={`${x}-${y}`} cell={cell} />
           ))
         )}
       </div>
@@ -46,11 +40,6 @@ export function GameBoard() {
         {currentPlayer.name}&apos;s Turn {currentPlayer.isBot && "(Bot)"}
       </div>
 
-      {/* {isProcessing && (
-        <div className="text-gray-600 animate-pulse">
-          Processing move...
-        </div>
-      )} */}
     </div>
   );
 }

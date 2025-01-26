@@ -1,26 +1,24 @@
 import { cn } from "~/lib/utils";
 import { motion } from "framer-motion";
-import type { Cell, Player } from "~/store/types";
+import type { Cell, Player } from "~/store/engine/types";
 import { useGameStore } from "~/store/useGameStore";
 import { ScorePopup } from "./score-popup";
+import { useChainReaction } from "~/hooks/use-chain-reaction";
 
 interface GameCellProps {
   cell: Cell;
-  currentPlayer: Player;
-  disabled: boolean;
-  onClick: () => void;
 }
 
-export function GameCell({ cell, currentPlayer, disabled, onClick }: GameCellProps) {
+export function GameCell({ cell }: GameCellProps) {
   const { scoreAnimations } = useGameStore();
+  const { currentPlayer, isProcessing, handleCellClick } = useChainReaction();
   const cellAnimations = scoreAnimations.filter(
     a => a.row === cell.x && a.col === cell.y
   );
 
   return (
     <button
-      onClick={onClick}
-      disabled={disabled}
+      onClick={() => !isProcessing && handleCellClick(cell.x, cell.y)}
       className={cn(
         "aspect-square rounded-md transition-all duration-150",
         "w-full h-full rounded-lg relative ",

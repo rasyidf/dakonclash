@@ -1,6 +1,6 @@
-import type { Cell } from '../types';
-import { BoardEngine } from './BoardEngine';
-import { GameEngine } from './GameEngine';
+import type { Cell } from './types';
+import { BoardStateManager } from './BoardStateManager';
+import { GameMechanicsEngine } from './GameMechanicsEngine';
 import type { GameState } from './types';
 
 export class BotEngine {
@@ -8,17 +8,17 @@ export class BotEngine {
   private static readonly INFINITY = 10000;
   private difficulty: number;
 
-  private boardEngine: BoardEngine;
-  private gameEngine: GameEngine;
-  
+  private boardEngine: BoardStateManager;
+  private gameEngine: GameMechanicsEngine;
+
   private weights: Record<string, Record<string, number>> = {
-    Level1: {  
+    Level1: {
       centrality: 2,
       chainPotential: 1,
       highValueCell: 5,
       adjacentHighValue: 4,
-      disruption: 6,    
-      directAttack: 3,  
+      disruption: 6,
+      directAttack: 3,
       fork: 0,
       chainExtension: 0,
       edgeControl: 0,
@@ -26,12 +26,12 @@ export class BotEngine {
       distribution: 0,
       chainReaction: 0
     },
-    Level2: { 
+    Level2: {
       centrality: 1,
       chainPotential: 2,
       highValueCell: 6,
       adjacentHighValue: 5,
-      disruption: 8,  
+      disruption: 8,
       directAttack: 5,
       fork: 2,
       chainExtension: 1,
@@ -40,12 +40,12 @@ export class BotEngine {
       distribution: 1,
       chainReaction: 1
     },
-    Level3: {  
+    Level3: {
       centrality: 0,
       chainPotential: 3,
       highValueCell: 4,
       adjacentHighValue: 6,
-      disruption: 12,  
+      disruption: 12,
       directAttack: 8,
       fork: 7,
       chainExtension: 4,
@@ -54,12 +54,12 @@ export class BotEngine {
       distribution: 2,
       chainReaction: 2
     },
-    Level4: { 
+    Level4: {
       centrality: 0,
       chainPotential: 4,
       highValueCell: 3,
       adjacentHighValue: 5,
-      disruption: 15, 
+      disruption: 15,
       directAttack: 10,
       fork: 9,
       chainExtension: 6,
@@ -68,30 +68,30 @@ export class BotEngine {
       distribution: 3,
       chainReaction: 4
     },
-    Level5: {  
+    Level5: {
       centrality: 0,
-      chainPotential: 5,  
+      chainPotential: 5,
       highValueCell: 5,
       adjacentHighValue: 7,
-      disruption: 20, 
-      directAttack: 15, 
+      disruption: 20,
+      directAttack: 15,
       fork: 10,
       chainExtension: 8,
-      edgeControl: 1, 
-      cornerControl: 1, 
+      edgeControl: 1,
+      cornerControl: 1,
       distribution: 2,
-      chainReaction: 6 
+      chainReaction: 6
     }
   };
 
 
-  constructor(boardEngine: BoardEngine, gameEngine: GameEngine, difficulty: number = 5) {
+  constructor(boardEngine: BoardStateManager, gameEngine: GameMechanicsEngine, difficulty: number = 5) {
     this.boardEngine = boardEngine;
     this.gameEngine = gameEngine;
     this.difficulty = difficulty;
   }
 
-  async makeMove(state: GameState): Promise<{ row: number; col: number }> {
+  async makeMove(state: GameState): Promise<{ row: number; col: number; }> {
     const botId = state.currentPlayer.id;
 
     // Add logging to debug the bot's decision-making
@@ -174,7 +174,7 @@ export class BotEngine {
     return score;
   }
 
-  private minimaxMove(botId: number): { row: number; col: number } {
+  private minimaxMove(botId: number): { row: number; col: number; } {
     let bestScore = -BotEngine.INFINITY;
     let bestMove = this.findRandomValidMove(botId);
     const size = this.boardEngine.getSize();
@@ -207,9 +207,9 @@ export class BotEngine {
     }
 
     // Create simulation copies
-    const simulatedBoard = new BoardEngine(this.boardEngine.getSize());
+    const simulatedBoard = new BoardStateManager(this.boardEngine.getSize());
     simulatedBoard.loadState(this.boardEngine.getHistory().length - 1);
-    const simulatedGame = new GameEngine(simulatedBoard);
+    const simulatedGame = new GameMechanicsEngine(simulatedBoard);
 
     // Apply move
     simulatedGame.makeMove(row, col, botId);
@@ -294,7 +294,7 @@ export class BotEngine {
   }
 
 
-  private getOpeningMove(botId: number): { row: number; col: number } {
+  private getOpeningMove(botId: number): { row: number; col: number; } {
     const size = this.boardEngine.getSize();
     const center = Math.floor(size / 2);
 
@@ -314,7 +314,7 @@ export class BotEngine {
     return this.findRandomValidMove(botId);
   }
 
-  private findBestMove(botId: number): { row: number; col: number } {
+  private findBestMove(botId: number): { row: number; col: number; } {
     let bestScore = -BotEngine.INFINITY;
     let bestMove = null;
     const size = this.boardEngine.getSize();
@@ -336,7 +336,7 @@ export class BotEngine {
   }
 
 
-  private findRandomValidMove(botId: number): { row: number; col: number } {
+  private findRandomValidMove(botId: number): { row: number; col: number; } {
     const size = this.boardEngine.getSize();
     const validMoves = [];
 
@@ -351,7 +351,7 @@ export class BotEngine {
     return validMoves[Math.floor(Math.random() * validMoves.length)];
   }
 
-  private findEmptyMove(): { row: number; col: number } {
+  private findEmptyMove(): { row: number; col: number; } {
     const size = this.boardEngine.getSize();
     const validMoves = [];
 

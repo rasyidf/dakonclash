@@ -6,17 +6,10 @@ import {
   SidebarHeader,
 } from "~/components/ui/sidebar";
 import { useGameStore } from "~/store/useGameStore";
-import type { Player } from "~/store/types";
 import { GameControls } from "./game-controls";
-import { ScoreBoard } from "./score-board";
 
 export function AppSidebar() {
-  const players = useGameStore(state => state.players);
   const stats = useGameStore(state => state.stats);
-  const playerStats = useGameStore(state => state.playerStats);
-  const currentPlayer = useGameStore(state => state.currentPlayer);
-  const winner = useGameStore(state => state.winner);
-  const scores = useGameStore(state => state.scores);
 
   return (
     <Sidebar>
@@ -27,27 +20,11 @@ export function AppSidebar() {
           elapsedTime={stats.elapsedTime}
         />
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-
-          <ScoreBoard
-            score={scores}
-            players={players}
-            playerStats={playerStats}
-            currentPlayerId={currentPlayer.id}
-            winner={winner}
-            onUpdatePlayerName={(playerId, newName) => {
-              const updatedPlayers = { ...players };
-              updatedPlayers[playerId as Player["id"]].name = newName;
-              useGameStore.setState({ players: updatedPlayers });
-            }}
-          />
-
-        </SidebarGroup>
+      <SidebarContent> 
 
       </SidebarContent>
       <SidebarFooter>
-        <SidebarGroup>      {/* Undo Redo */}
+         {/*  <SidebarGroup>    Undo Redo */}
           {/* <h2 className="text-md font-bold text-center text-slate-900">History</h2> */}
           {/* <Pagination>
             <PaginationContent>
@@ -62,8 +39,8 @@ export function AppSidebar() {
                 />
               </PaginationItem>
             </PaginationContent>
-          </Pagination> */}
-        </SidebarGroup>
+          </Pagination>
+        </SidebarGroup> */}
         <SidebarGroup>
           <h2 className="text-md font-bold text-center text-slate-900">About</h2>
           <p className="text-sm text-center">
