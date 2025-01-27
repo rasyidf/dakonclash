@@ -6,7 +6,7 @@ import { cx } from "class-variance-authority";
 import { WinnerModal } from "~/components/main-game/winner-modal";
 import { useGameStore } from "~/store/useGameStore";
 import { useEffect } from "react";
-import { GameStartModal } from "~/components/start-menu/game-start-modal";
+import { GameStartModal } from "~/components/main-game/start-menu/game-start-modal";
 import { ScoreBoard } from "~/components/main-game/score-board";
 import type { Player } from "~/store/engine/types";
 

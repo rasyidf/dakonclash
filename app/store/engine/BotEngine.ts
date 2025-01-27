@@ -1,7 +1,6 @@
-import type { Cell } from './types';
-import { BoardStateManager } from './BoardStateManager';
-import { GameMechanicsEngine } from './GameMechanicsEngine';
-import type { GameState } from './types';
+import { BoardStateManager } from './boards/BoardStateManager';
+import { DakonMechanics, GameMechanicsEngine } from './GameMechanicsEngine';
+import type { Cell, GameState } from './types';
 
 export class BotEngine {
   private static readonly MAX_DEPTH = 3;
@@ -97,7 +96,7 @@ export class BotEngine {
     // Add logging to debug the bot's decision-making
     console.log('Bot making move:', {
       botId,
-      isFirstMove: this.gameEngine.firstMoves[botId],
+      isFirstMove: this.gameEngine.isFirstMove(botId),
       difficulty: this.difficulty,
       totalTokens: this.boardEngine.getTotalTokens()
     });
@@ -108,7 +107,7 @@ export class BotEngine {
     }
 
     // Handle first move
-    if (this.gameEngine.firstMoves[botId]) {
+    if (this.gameEngine.isFirstMove(botId)) {
       const totalTokens = this.boardEngine.getTotalTokens();
       if (totalTokens <= 1) {
         return this.getOpeningMove(botId);
@@ -151,7 +150,7 @@ export class BotEngine {
       score += adjacentHighValueCount * this.getStrategyWeight('adjacentHighValue');
     }
 
-    if (currentCell.value >= this.boardEngine.getCriticalMass(row, col, true) - 1) {
+    if (currentCell.value >= this.boardEngine.calculateCriticalMass(row, col) - 1) {
       score += this.getStrategyWeight('highValueCell');
     }
     // Core strategies
@@ -209,7 +208,7 @@ export class BotEngine {
     // Create simulation copies
     const simulatedBoard = new BoardStateManager(this.boardEngine.getSize());
     simulatedBoard.loadState(this.boardEngine.getHistory().length - 1);
-    const simulatedGame = new GameMechanicsEngine(simulatedBoard);
+    const simulatedGame = new DakonMechanics(simulatedBoard);
 
     // Apply move
     simulatedGame.makeMove(row, col, botId);
@@ -268,7 +267,7 @@ export class BotEngine {
   }
 
   private calculateChainReactions(row: number, col: number, botId: number): number {
-    const criticalMass = this.boardEngine.getCriticalMass(row, col, true);
+    const criticalMass = this.boardEngine.calculateCriticalMass(row, col);
     return this.boardEngine.getChainPotential(row, col, botId) >= criticalMass ? 1 : 0;
   }
 

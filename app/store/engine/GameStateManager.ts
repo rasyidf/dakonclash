@@ -1,9 +1,16 @@
-import type { BoardState, GameStats, Player, PlayerStats } from './types';
-import { BoardStateManager } from './BoardStateManager';
-import type { GameState } from './types';
-import { Observable, ObservableClass } from './Observable';
+interface GameStateEvents {
+  stateUpdate: Partial<GameState>;
+  boardUpdate: Partial<BoardState>;
+  scoreUpdate: Record<number, number>;
+  gameOver: { winner: number | 'draw'; scores: Record<number, number> };
+  statsUpdate: { gameStats: GameStats; playerStats: Record<Player["id"], PlayerStats> };
+}
 
-export class GameStateManager extends ObservableClass<Partial<GameState> | Partial<BoardState>> {
+import { BoardStateManager } from './boards/BoardStateManager';
+import { ObservableClass } from './Observable';
+import type { BoardState, GameState, GameStats, Player, PlayerStats } from './types';
+
+export class GameStateManager extends ObservableClass<GameStateEvents> {
   private boardEngine: BoardStateManager;
  
   constructor(boardEngine: BoardStateManager) {
@@ -56,6 +63,7 @@ export class GameStateManager extends ObservableClass<Partial<GameState> | Parti
   public updateScores(scores: Record<Player["id"], number>): void {
     scores[1] = this.calculatePlayerScore(1);
     scores[2] = this.calculatePlayerScore(2);
+    this.notify('scoreUpdate', scores);
   }
 
   private calculateBoardControl(): { [key: number]: number; } {
@@ -100,6 +108,11 @@ export class GameStateManager extends ObservableClass<Partial<GameState> | Parti
         tokenTotal: playerTokenTotal,
       };
     });
+
+    this.notify('statsUpdate', { 
+      gameStats: this.initializeStats(), 
+      playerStats 
+    });
   }
 
   // Update game stats (flip combos, longest chain, etc.)
@@ -126,7 +139,12 @@ export class GameStateManager extends ObservableClass<Partial<GameState> | Parti
     const p2NoBeads = hasNoBeads(2);
 
     if (p1NoBeads || p2NoBeads) {
-      return scores[1] > scores[2] ? 1 : scores[2] > scores[1] ? 2 : 'draw';
+      const result = scores[1] > scores[2] ? 1 : scores[2] > scores[1] ? 2 : 'draw';
+      this.notify('gameOver', { 
+        winner: result, 
+        scores 
+      });
+      return result;
     }
 
     return null;
@@ -186,7 +204,7 @@ export class GameStateManager extends ObservableClass<Partial<GameState> | Parti
       gameStartedAt: Date.now(),
     };
 
-    this.notify(newState);
+    this.notify('stateUpdate', newState);
     return newState;
   }
 }

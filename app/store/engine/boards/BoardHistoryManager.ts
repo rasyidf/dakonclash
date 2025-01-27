@@ -1,4 +1,4 @@
-import type { BoardState, Cell, Move, HistorySnapshot } from "./types";
+import type { BoardState, Cell, Move, HistorySnapshot } from "../types";
 
 export class BoardHistoryManager {
   private snapshots: HistorySnapshot[] = [];

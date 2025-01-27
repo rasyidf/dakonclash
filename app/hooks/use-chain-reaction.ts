@@ -3,19 +3,8 @@ import { useGameStore } from '~/store/useGameStore';
 import { nanoid } from 'nanoid';
 
 export function useChainReaction() {
-  const { makeMove, currentPlayer, board, isProcessing, gameEngine, addScoreAnimation } = useGameStore();
+  const { makeMove, currentPlayer, players, board, isProcessing, mechanics, addScoreAnimation } = useGameStore();
 
-  useEffect(() => {
-    return gameEngine.subscribeToScores((row, col, score, playerId) => {
-      addScoreAnimation({
-        id: nanoid(),
-        row,
-        col,
-        score,
-        playerId
-      });
-    });
-  }, [gameEngine, addScoreAnimation]);
 
   const handleCellClick = (row: number, col: number) => {
     if (!isProcessing) {
@@ -26,6 +15,7 @@ export function useChainReaction() {
   return {
     board,
     currentPlayer,
+    players,
     isProcessing,
     handleCellClick
   };

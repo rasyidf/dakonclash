@@ -1,5 +1,5 @@
 import type { GameMode, TailwindColor, } from '../types';
-import type { BoardStateManager } from './BoardStateManager';
+import type { BoardStateManager } from './boards/BoardStateManager';
 import type { BotEngine } from './BotEngine';
 import type { GameMechanicsEngine } from './GameMechanicsEngine';
 import type { GameStateManager } from './GameStateManager';
@@ -8,9 +8,8 @@ import type { GameStateManager } from './GameStateManager';
 export interface Cell {
   owner: number;
   value: number;
-  criticalMass: number;
-  x: number;  // Added
-  y: number;  // Added
+  x: number;
+  y: number;
 }
 
 export interface BoardState {
@@ -129,7 +128,7 @@ export type GameState = {
 
   // Engines (optional, if you want to include them in the state)
   boardEngine: BoardStateManager; // Manages the board state
-  gameEngine: GameMechanicsEngine; // Handles game logic
+  mechanics: GameMechanicsEngine; // Handles game logic
   gameMasterEngine: GameStateManager; // Manages game flow and stats
 
   isProcessing: boolean;

@@ -1,21 +1,22 @@
 import { create } from 'zustand';
-import { BoardStateManager } from './engine/BoardStateManager';
-import { GameMechanicsEngine } from './engine/GameMechanicsEngine';
+import { BoardStateManager } from './engine/boards/BoardStateManager';
+import { DakonMechanics, GameMechanicsEngine } from './engine/GameMechanicsEngine';
 import { GameStateManager } from './engine/GameStateManager';
 import { BotEngine } from './engine/BotEngine';
 import type { GameSettings, GameStore, GameHistory, ScoreAnimation } from './engine/types';
 import type { GameMode } from './types';
 import { saveGameHistory } from '~/lib/storage';
+import { persist } from 'zustand/middleware';
 
 // Initialize engines first
 const boardEngine = new BoardStateManager(5);
-const gameEngine = new GameMechanicsEngine(boardEngine);
+const gameEngine = new DakonMechanics(boardEngine);
 const gameMasterEngine = new GameStateManager(boardEngine);
 const botEngine = new BotEngine(boardEngine, gameEngine);  // Add this line
 
 export const useGameStore = create<GameStore>((set, get) => ({
   boardEngine,
-  gameEngine,
+  mechanics: gameEngine,
   gameMasterEngine,
   botEngine, // Add this line
   gameMode: 'local',
@@ -106,10 +107,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   startGame: (mode: GameMode, size: number, settings: GameSettings = {}) => {
-    const { gameMasterEngine, gameEngine } = get();
+    const { gameMasterEngine, mechanics } = get();
     const botAsFirst = settings.botAsFirst || false;
     const newState = gameMasterEngine.resetGame(mode, size, botAsFirst);
-    gameEngine.resetFirstMoves();
+    (mechanics as DakonMechanics).resetFirstMoves();
     const timePerPlayer = size > 7 ? 600 : 300; // 10 minutes for larger boards
     set(state => ({
       ...state,
@@ -150,12 +151,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   makeMove: async (row: number, col: number) => {
     const state = get();
-    const { gameEngine, gameMasterEngine, currentPlayer, scores, stats, playerStats, gameMode, isProcessing } = state;
+    const { mechanics: gameEngine, gameMasterEngine, currentPlayer, scores, stats, playerStats, gameMode, isProcessing } = state;
 
     // Additional check to prevent non-bot players from moving during bot's turn
     if (gameMode === 'vs-bot' && currentPlayer.isBot) return;
     if (isProcessing || state.isGameOver) return;
-    
+
     set({ isProcessing: true });
 
     try {
@@ -219,9 +220,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     // Stricter checks for bot moves
     if (
-      state.isProcessing || 
-      state.isGameOver || 
-      !state.currentPlayer.isBot || 
+      state.isProcessing ||
+      state.isGameOver ||
+      !state.currentPlayer.isBot ||
       state.gameMode !== 'vs-bot'  // Ensure we're in vs-bot mode
     ) return;
 

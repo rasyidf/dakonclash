@@ -10,7 +10,7 @@ import { Slider } from "~/components/ui/slider";
 import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useGame } from "~/hooks/use-game";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 
 export function GameStartModal() {
   const { startGame, setTimer, isGameStartModalOpen, showGameStartModal, changeBoardSize, gameId, boardSize } = useGame();

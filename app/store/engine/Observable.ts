@@ -1,45 +1,74 @@
+type EventHandler<T> = (value: T) => void;
 
-export class Observable<T> {
-  private subscribers: Array<(value: T) => void> = [];
-  private value: T;
+interface EventMap {
+  [key: string]: any;
+}
 
-  constructor(value: T) {
-    this.value = value;
+export class Observable<T extends EventMap> {
+  private subscribers: Map<keyof T, EventHandler<T[keyof T]>[]> = new Map();
+  private values: Partial<T> = {};
+
+  constructor(initialValues?: Partial<T>) {
+    if (initialValues) {
+      this.values = initialValues;
+    }
   }
 
-  public subscribe(callback: (value: T) => void): () => void {
-    this.subscribers.push(callback);
+  public subscribe<K extends keyof T>(event: K, callback: EventHandler<T[K]>): () => void {
+    if (!this.subscribers.has(event)) {
+      this.subscribers.set(event, []);
+    }
+    const handlers = this.subscribers.get(event)!;
+    handlers.push(callback as EventHandler<T[keyof T]>);
+
     return () => {
-      this.subscribers = this.subscribers.filter(sub => sub !== callback);
+      const currentHandlers = this.subscribers.get(event);
+      if (currentHandlers) {
+        this.subscribers.set(event, currentHandlers.filter(sub => sub !== callback));
+      }
     };
   }
 
-  public set(value: T): void {
-    this.value = value;
-    this.notifySubscribers();
+  public set<K extends keyof T>(event: K, value: T[K]): void {
+    this.values[event] = value;
+    this.notifySubscribers(event);
   }
 
-  public get(): T {
-    return this.value;
+  public get<K extends keyof T>(event: K): T[K] | undefined {
+    return this.values[event];
   }
 
-  private notifySubscribers(): void {
-    this.subscribers.forEach(callback => callback(this.value));
+  private notifySubscribers<K extends keyof T>(event: K): void {
+    const handlers = this.subscribers.get(event);
+    const value = this.values[event];
+    if (handlers && value !== undefined) {
+      handlers.forEach(callback => callback(value));
+    }
   }
 }
 
-export class ObservableClass<T> {
-  private subscribers: Array<(value: T) => void> = [];
-  public subscribe(callback: (value: T) => void): () => void {
-    this.subscribers.push(callback);
+export class ObservableClass<T extends EventMap> {
+  private subscribers: Map<keyof T, EventHandler<T[keyof T]>[]> = new Map();
+
+  public subscribe<K extends keyof T>(event: K, callback: EventHandler<T[K]>): () => void {
+    if (!this.subscribers.has(event)) {
+      this.subscribers.set(event, []);
+    }
+    const handlers = this.subscribers.get(event)!;
+    handlers.push(callback as EventHandler<T[keyof T]>);
+
     return () => {
-      this.subscribers = this.subscribers.filter(sub => sub !== callback);
+      const currentHandlers = this.subscribers.get(event);
+      if (currentHandlers) {
+        this.subscribers.set(event, currentHandlers.filter(sub => sub !== callback));
+      }
     };
   }
 
-  public notify(
-    value: T,
-  ): void {
-    this.subscribers.forEach(callback => callback(value));
+  public notify<K extends keyof T>(event: K, value: T[K]): void {
+    const handlers = this.subscribers.get(event);
+    if (handlers) {
+      handlers.forEach(callback => callback(value));
+    }
   }
 }

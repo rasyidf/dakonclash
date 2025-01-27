@@ -3,7 +3,24 @@ import type { Config } from "tailwindcss";
 export default {
   darkMode: ["class"],
   content: ["./app/**/{**,.client,.server}/**/*.{js,jsx,ts,tsx}"],
+  safelist: [
+    'text-2xl',
+    'text-3xl',
+    {
+      pattern: /bg-(.*)-(.*)/,
+    },
+    {
+      pattern: /text-(.*)-(.*)/,
+    },
+    {
+      pattern: /ring-(.*)-(.*)/,
+    },
+    {
+      pattern: /border-(.*)-(.*)/,
+    },
+  ],
   theme: {
+
     extend: {
       fontFamily: {
         sans: [

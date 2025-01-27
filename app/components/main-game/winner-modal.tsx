@@ -6,9 +6,9 @@ import { cn } from "~/lib/utils";
 import { useGameStore } from "~/store/useGameStore";
 
 export function WinnerModal() {
-
   const { isWinnerModalOpen, showWinnerModal, winner, players, boardSize, startGame, gameMode } = useGameStore();
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (isWinnerModalOpen) {
@@ -16,10 +16,11 @@ export function WinnerModal() {
         width: window.innerWidth,
         height: window.innerHeight,
       });
+      setIsLoading(false);
     }
   }, [isWinnerModalOpen]);
 
-  if (!winner) return null;
+  if (!winner || isLoading) return null;
 
   return (
     <>
@@ -35,14 +36,12 @@ export function WinnerModal() {
           ]}
         />
       )}
-      <Dialog open={isWinnerModalOpen} onOpenChange={
-        () => {
-          showWinnerModal(false);
-          startGame(gameMode, boardSize, {});
-        }
-      }>
+      <Dialog open={isWinnerModalOpen} onOpenChange={() => {
+        showWinnerModal(false);
+        startGame(gameMode, boardSize, {});
+      }}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+          <DialogHeader >
             <DialogTitle className={cn(
               "text-2xl font-bold text-center",
               winner !== 'draw' && `text-${players[winner].color}-500`
@@ -56,15 +55,11 @@ export function WinnerModal() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center gap-4 mt-4">
-            <Button onClick={
-              () => {
-                startGame(gameMode, boardSize, {});
-                showWinnerModal(false);
-              }
-            }>Play Again</Button>
-            <Button variant="outline" onClick={
-              () => showWinnerModal(false)
-            }>Close</Button>
+            <Button onClick={() => {
+              startGame(gameMode, boardSize, {});
+              showWinnerModal(false);
+            }}>Play Again</Button>
+            <Button variant="outline" onClick={() => showWinnerModal(false)}>Close</Button>
           </div>
         </DialogContent>
       </Dialog>
