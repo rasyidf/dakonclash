@@ -58,8 +58,8 @@ export class BoardStateManager extends ObservableClass<BoardStateEvents> {
     this.board.updateCell(row, col, delta, owner);
     this.notify('cellUpdate', {
       cell: this.board.getCellAt(row, col),
-      x: col,
-      y: row
+      x: row,
+      y: col
     });
   }
 
@@ -67,8 +67,8 @@ export class BoardStateManager extends ObservableClass<BoardStateEvents> {
     this.board.updateCell(row, col, owner, value, cascade);
     this.notify('cellUpdate', {
       cell: this.board.getCellAt(row, col),
-      x: col,
-      y: row
+      x: row,
+      y: col
     });
   }
 

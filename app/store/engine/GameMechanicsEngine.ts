@@ -78,7 +78,7 @@ export class DakonMechanics extends GameMechanicsEngine {
     const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
     const criticalMass = this.boardManager.calculateCriticalMass(row, col);
 
-    this.handleCellUpdate(row, col, playerId, -criticalMass);
+    this.handleCellUpdate(row, col, 0, -criticalMass);
 
     let maxChainLength = chainLength;
     const promises: Promise<number>[] = [];

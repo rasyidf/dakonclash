@@ -3,7 +3,7 @@ import { useGameStore } from '~/store/useGameStore';
 import { nanoid } from 'nanoid';
 
 export function useChainReaction() {
-  const { makeMove, currentPlayer, players, board, isProcessing, mechanics, addScoreAnimation } = useGameStore();
+  const { makeMove, currentPlayer, boardEngine, players, board, isProcessing, mechanics, addScoreAnimation } = useGameStore();
 
 
   const handleCellClick = (row: number, col: number) => {
@@ -16,6 +16,7 @@ export function useChainReaction() {
     board,
     currentPlayer,
     players,
+    boardManager: boardEngine,
     isProcessing,
     handleCellClick
   };

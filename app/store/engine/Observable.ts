@@ -65,6 +65,13 @@ export class ObservableClass<T extends EventMap> {
     };
   }
 
+  public unsubscribe<K extends keyof T>(event: K, callback: EventHandler<T[K]>): void {
+    const handlers = this.subscribers.get(event);
+    if (handlers) {
+      this.subscribers.set(event, handlers.filter(sub => sub !== callback));
+    }
+  }
+
   public notify<K extends keyof T>(event: K, value: T[K]): void {
     const handlers = this.subscribers.get(event);
     if (handlers) {

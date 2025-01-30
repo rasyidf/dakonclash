@@ -2,7 +2,7 @@ import type { Cell } from "../types";
 import { Board } from "./Board";
 
 export class DakonBoard extends Board<Cell> {
- 
+
 
   public clone(): DakonBoard {
     const newBoard = new DakonBoard(this.getSize());
@@ -15,8 +15,8 @@ export class DakonBoard extends Board<Cell> {
     return cell.owner === 0 || cell.owner === playerId;
   }
 
-  public updateCell(row: number, col: number, delta: number, owner: number, cascade = false): void { 
-    const cell = this.ensureValidCell(row, col); 
+  public updateCell(row: number, col: number, delta: number, owner: number, cascade = false): void {
+    const cell = this.ensureValidCell(row, col);
 
     cell.value += delta;
     cell.owner = owner;
