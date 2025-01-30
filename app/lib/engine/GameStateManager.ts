@@ -12,7 +12,7 @@ import type { BoardState, GameState, GameStats, Player, PlayerStats } from './ty
 
 export class GameStateManager extends ObservableClass<GameStateEvents> {
   private boardEngine: BoardStateManager;
- 
+
   constructor(boardEngine: BoardStateManager) {
     super();
     this.boardEngine = boardEngine;
@@ -22,7 +22,6 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
     return scores[1] === 0 || scores[2] === 0;
   }
 
-  // Initialize game stats
   public initializeStats(): GameStats {
     return {
       startTime: Date.now(),
@@ -109,9 +108,9 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
       };
     });
 
-    this.notify('statsUpdate', { 
-      gameStats: this.initializeStats(), 
-      playerStats 
+    this.notify('statsUpdate', {
+      gameStats: this.initializeStats(),
+      playerStats
     });
   }
 
@@ -130,7 +129,7 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
     playerStats: Record<Player["id"], PlayerStats>
   ): number | 'draw' | null {
     const board = this.boardEngine.getBoard();
-    
+
     // Check if a player has no beads left
     const hasNoBeads = (playerId: number) =>
       board.every(row => row.every(cell => cell.owner !== playerId || cell.value === 0));
@@ -140,9 +139,9 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
 
     if (p1NoBeads || p2NoBeads) {
       const result = scores[1] > scores[2] ? 1 : scores[2] > scores[1] ? 2 : 'draw';
-      this.notify('gameOver', { 
-        winner: result, 
-        scores 
+      this.notify('gameOver', {
+        winner: result,
+        scores
       });
       return result;
     }

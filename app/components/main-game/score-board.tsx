@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cn } from "~/lib/utils";
-import type { Player, PlayerStats } from "~/store/engine/types";
+import type { Player, PlayerStats } from "~/lib/engine/types";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Progress } from "../ui/progress";

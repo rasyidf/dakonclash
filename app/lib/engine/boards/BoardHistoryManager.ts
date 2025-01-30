@@ -1,4 +1,4 @@
-import type { BoardState, Cell, Move, HistorySnapshot } from "../types";
+import type { BoardState, Cell, HistorySnapshot, Move } from "../types";
 
 export class BoardHistoryManager {
   private snapshots: HistorySnapshot[] = [];
@@ -57,11 +57,9 @@ export class BoardHistoryManager {
     if (!snapshot) {
       throw new Error("No valid snapshot found");
     }
-
-    // Clone the snapshot board to avoid mutation
+ 
     let board = JSON.parse(JSON.stringify(snapshot.board));
-
-    // Apply subsequent moves up to the requested index
+ 
     for (let i = snapshot.moveIndex; i < moveIndex; i++) {
       const move = this.moves[i];
       const cell = board[move.y]?.[move.x];

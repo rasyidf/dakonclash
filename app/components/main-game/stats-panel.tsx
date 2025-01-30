@@ -1,6 +1,6 @@
 
 import { Skeleton } from "~/components/ui/skeleton";
-import type { GameStats } from "~/store/engine/types";
+import type { GameStats } from "~/lib/engine/types";
 
 interface StatsProps {
   stats: GameStats;

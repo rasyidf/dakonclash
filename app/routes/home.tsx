@@ -8,7 +8,7 @@ import { useGameStore } from "~/store/useGameStore";
 import { useEffect } from "react";
 import { GameStartModal } from "~/components/main-game/start-menu/game-start-modal";
 import { ScoreBoard } from "~/components/main-game/score-board";
-import type { Player } from "~/store/engine/types";
+import type { Player } from "~/lib/engine/types";
 
 import {
   ResizableHandle,

@@ -1,61 +1,11 @@
-const CHAIN_REACTION_DELAY_MS = 100;
-const FIRST_MOVE_VALUE = 3;
+import { delay } from '../utils';
+import { CHAIN_REACTION_DELAY_MS, FIRST_MOVE_VALUE, GameMechanicsEngine } from './base/GameMechanicsEngine';
+import type { BoardStateManager } from './boards/BoardStateManager';
 
-import { BoardStateManager } from './boards/BoardStateManager';
-import { ObservableClass } from './Observable';
-import type { Player } from './types';
-
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Add these interfaces at the top
-interface GameMechanicsEvents {
-  processing: { isProcessing: boolean; };
-  chainReaction: { row: number; col: number; chainLength: number; playerId: number; };
-  moveComplete: { row: number; col: number; chainLength: number; playerId: number; };
-  score: { row: number; col: number; score: number; playerId: number; };
-}
-
-export abstract class GameMechanicsEngine extends ObservableClass<GameMechanicsEvents> {
-  protected boardManager: BoardStateManager;
-  protected isProcessing: boolean = false;
-  protected firstMoves: Record<Player["id"], boolean> = { 1: true, 2: true };
-
-  constructor(boardManager: BoardStateManager) {
-    super();
-    this.boardManager = boardManager;
-  }
-
-  public resetFirstMoves(): void {
-    this.firstMoves[1] = true;
-    this.firstMoves[2] = true;
-  }
-
-  public isFirstMove(playerId: number): boolean {
-    return this.firstMoves[playerId];
-  }
-
-  public updateFirstMove(playerId: number, value: boolean): void {
-    this.firstMoves[playerId] = value;
-  }
-
-  public abstract makeMove(row: number, col: number, playerId: number): Promise<number>;
-  public abstract isValidMove(row: number, col: number, playerId: number): boolean;
-  public abstract isGameOver(): boolean;
-
-}
 
 export class DakonMechanics extends GameMechanicsEngine {
-  private scoreSubscribers: Array<(row: number, col: number, score: number, playerId: number) => void> = [];
-
   constructor(boardManager: BoardStateManager) {
     super(boardManager);
-  }
-
-  public subscribeToScores(callback: (row: number, col: number, score: number, playerId: number) => void): () => void {
-    this.scoreSubscribers.push(callback);
-    return () => {
-      this.scoreSubscribers = this.scoreSubscribers.filter(sub => sub !== callback);
-    };
   }
 
 
@@ -93,7 +43,6 @@ export class DakonMechanics extends GameMechanicsEngine {
 
       if (this.boardManager.getCellAt(newRow, newCol).value >= this.boardManager.calculateCriticalMass(newRow, newCol)) {
         const promise = (async () => {
-          this.notify('processing', { isProcessing: this.isProcessing });
           this.notify('chainReaction', { row: newRow, col: newCol, chainLength, playerId });
           await delay(CHAIN_REACTION_DELAY_MS);
           const chainResult = await this.triggerChainReaction(newRow, newCol, playerId, chainLength + 1);

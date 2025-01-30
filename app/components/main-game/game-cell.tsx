@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useChainReaction } from "~/hooks/use-chain-reaction";
 import { cn } from "~/lib/utils";
-import type { Cell } from "~/store/engine/types";
+import type { Cell } from "~/lib/engine/types";
 import { useGameStore } from "~/store/useGameStore";
 import { ScorePopup } from "./score-popup";
 

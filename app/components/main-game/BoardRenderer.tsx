@@ -1,4 +1,4 @@
-import type { Cell } from "~/store/engine/types";
+import type { Cell } from "~/lib/engine/types";
 import { GameCell } from "./game-cell";
 import { useCellUpdates } from "~/hooks/useCellUpdates";
 import { memo } from "react";

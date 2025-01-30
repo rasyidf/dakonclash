@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useChainReaction } from './use-chain-reaction';
-import type { Cell } from '~/store/engine/types';
+import type { Cell } from '~/lib/engine/types';
 
 export function useCellUpdates() {
     const { boardManager } = useChainReaction();

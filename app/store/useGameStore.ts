@@ -1,24 +1,24 @@
 import { create } from 'zustand';
-import { BoardStateManager } from './engine/boards/BoardStateManager';
-import { DakonMechanics, GameMechanicsEngine } from './engine/GameMechanicsEngine';
-import { GameStateManager } from './engine/GameStateManager';
-import { BotEngine } from './engine/BotEngine';
-import type { GameSettings, GameStore, GameHistory, ScoreAnimation } from './engine/types';
-import type { GameMode } from './types';
 import { saveGameHistory } from '~/lib/storage';
-import { persist } from 'zustand/middleware';
+import { BoardStateManager } from '../lib/engine/boards/BoardStateManager';
+import { BotEngine } from '../lib/engine/BotEngine';
+import { DakonMechanics } from '~/lib/engine/DakonMechanics';
+import { GameStateManager } from '../lib/engine/GameStateManager';
+import type { GameHistory, GameMode, GameSettings, GameStore, ScoreAnimation } from '../lib/engine/types';
+import { delay } from '~/lib/utils';
+import { CHAIN_REACTION_DELAY_MS } from '~/lib/engine/base/GameMechanicsEngine';
 
 // Initialize engines first
-const boardEngine = new BoardStateManager(5);
-const gameEngine = new DakonMechanics(boardEngine);
-const gameMasterEngine = new GameStateManager(boardEngine);
-const botEngine = new BotEngine(boardEngine, gameEngine);  // Add this line
+const boardState = new BoardStateManager(5);
+const mechanics = new DakonMechanics(boardState);
+const gameState = new GameStateManager(boardState);
+const botEngine = new BotEngine(boardState, mechanics);
 
 export const useGameStore = create<GameStore>((set, get) => ({
-  boardEngine,
-  mechanics: gameEngine,
-  gameMasterEngine,
-  botEngine, // Add this line
+  boardState,
+  gameState,
+  botEngine,
+  mechanics,
   gameMode: 'local',
   boardSize: 7,
   players: {
@@ -26,7 +26,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     2: { id: 2, name: "Player 2", color: "blue" },
   },
   currentPlayer: { id: 1, name: "Player 1", color: "red" },
-  board: boardEngine.getBoard(),
+  board: boardState.getBoard(),
   moves: 0,
   scores: { 1: 0, 2: 0 },
   stats: {
@@ -49,7 +49,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   scoreAnimations: [],
   timer: {
     enabled: false,
-    timePerPlayer: 300, // 5 minutes in seconds
+    timePerPlayer: 300,
     remainingTime: { 1: 300, 2: 300 },
     lastTick: Date.now(),
   },
@@ -107,11 +107,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   startGame: (mode: GameMode, size: number, settings: GameSettings = {}) => {
-    const { gameMasterEngine, mechanics } = get();
+    const { gameState, mechanics } = get();
     const botAsFirst = settings.botAsFirst || false;
-    const newState = gameMasterEngine.resetGame(mode, size, botAsFirst);
+    const newState = gameState.resetGame(mode, size, botAsFirst);
     (mechanics as DakonMechanics).resetFirstMoves();
-    const timePerPlayer = size > 7 ? 600 : 300; // 10 minutes for larger boards
+    const timePerPlayer = size > 7 ? 600 : 300;
     set(state => ({
       ...state,
       timer: {
@@ -126,7 +126,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       isGameStartModalOpen: false,
     }));
 
-    // If bot is first player, make bot move
     if (botAsFirst && mode === 'vs-bot') {
       get().makeBotMove();
     }
@@ -151,43 +150,37 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   makeMove: async (row: number, col: number) => {
     const state = get();
-    const { mechanics: gameEngine, gameMasterEngine, currentPlayer, scores, stats, playerStats, gameMode, isProcessing } = state;
+    const { mechanics, gameState, currentPlayer, scores, stats, playerStats, gameMode, isProcessing } = state;
 
-    // Additional check to prevent non-bot players from moving during bot's turn
     if (gameMode === 'vs-bot' && currentPlayer.isBot) return;
     if (isProcessing || state.isGameOver) return;
 
     set({ isProcessing: true });
 
     try {
-      const chainLength = await gameEngine.makeMove(col, row, currentPlayer.id);
+      const chainLength = await mechanics.makeMove(col, row, currentPlayer.id);
 
-      // Add a small delay after chain reactions complete
-      await new Promise(resolve => setTimeout(resolve, 200));
+      delay(CHAIN_REACTION_DELAY_MS);
 
-      // Update time bonus based on remaining time (for boards size > 7)
       if (state.boardSize > 7 && state.timer.enabled) {
         const timeBonus = Math.floor(state.timer.remainingTime[currentPlayer.id] / 60) * 10;
         scores[currentPlayer.id] += timeBonus;
       }
 
-      // Get updated board after the move
-      const updatedBoard = boardEngine.getBoard();
+      const updatedBoard = boardState.getBoard();
 
-      // Update scores and stats
-      gameMasterEngine.updateScores(scores);
-      gameMasterEngine.updatePlayerStats(currentPlayer.id, playerStats, chainLength);
-      gameMasterEngine.updateGameStats(stats, chainLength);
+      gameState.updateScores(scores);
+      gameState.updatePlayerStats(currentPlayer.id, playerStats, chainLength);
+      gameState.updateGameStats(stats, chainLength);
 
-      const winner = gameMasterEngine.checkWinner(scores, playerStats);
+      const winner = gameState.checkWinner(scores, playerStats);
+
       if (winner !== null) {
         state.saveGameHistory();
       }
 
-      // Calculate next player
       const nextPlayer = state.players[currentPlayer.id === 1 ? 2 : 1];
 
-      // Update all state at once
       set({
         board: updatedBoard,
         moves: state.moves + 1,
@@ -201,14 +194,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
         isProcessing: false,
       });
 
-      // Update bot handling - only trigger bot moves in vs-bot mode
       if (gameMode === 'vs-bot' && !state.isGameOver && nextPlayer.isBot) {
         setTimeout(() => {
           const currentState = get();
           if (!currentState.isGameOver && currentState.currentPlayer.isBot) {
             get().makeBotMove();
           }
-        }, 1000); // Increased delay to 1 second
+        }, 1000);
       }
     } catch (error) {
       set({ isProcessing: false });
@@ -218,16 +210,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   makeBotMove: async () => {
     const state = get();
-    // Stricter checks for bot moves
     if (
       state.isProcessing ||
       state.isGameOver ||
       !state.currentPlayer.isBot ||
-      state.gameMode !== 'vs-bot'  // Ensure we're in vs-bot mode
+      state.gameMode !== 'vs-bot'
     ) return;
-
-    // Add small delay to make bot moves feel more natural
-    await new Promise(resolve => setTimeout(resolve, 500));
 
     try {
       const botMove = await state.botEngine.makeMove(state);
@@ -258,7 +246,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set((state) => ({
       scoreAnimations: [...state.scoreAnimations, animation]
     }));
-    // Remove animation after 1 second
+
     setTimeout(() => {
       set((state) => ({
         scoreAnimations: state.scoreAnimations.filter(a => a.id !== animation.id)

@@ -1,8 +1,18 @@
-import type { GameMode, TailwindColor, } from '../types';
+
 import type { BoardStateManager } from './boards/BoardStateManager';
 import type { BotEngine } from './BotEngine';
-import type { GameMechanicsEngine } from './GameMechanicsEngine';
+import type { GameMechanicsEngine } from './base/GameMechanicsEngine';
 import type { GameStateManager } from './GameStateManager';
+
+export type TailwindColor = "red" | "blue" | "green" | "yellow" | "purple" | "pink" | "orange" | "teal";
+export type GameMode = 'online' | 'local' | 'vs-bot';
+
+export interface GameMechanicsEvents {
+  processing: { isProcessing: boolean; };
+  chainReaction: { row: number; col: number; chainLength: number; playerId: number; };
+  moveComplete: { row: number; col: number; chainLength: number; playerId: number; };
+  score: { row: number; col: number; score: number; playerId: number; };
+}
 
 
 export interface Cell {
@@ -118,18 +128,16 @@ export type GameState = {
   stats: GameStats; // Game-wide statistics (e.g., flip combos, longest chain)
   playerStats: Record<Player["id"], PlayerStats>; // Player-specific stats
 
-  // Game Status
+  // Game Status 
   isGameOver: boolean; // Whether the game has ended
   winner: Player["id"] | 'draw' | null; // The winner of the game (1, 2, 'draw', or null)
 
-  // UI State
   isWinnerModalOpen: boolean; // Whether to show the winner modal
   isGameStartModalOpen: boolean; // Whether to show the game start modal 
 
-  // Engines (optional, if you want to include them in the state)
-  boardEngine: BoardStateManager; // Manages the board state
+  boardState: BoardStateManager; // Manages the board state
   mechanics: GameMechanicsEngine; // Handles game logic
-  gameMasterEngine: GameStateManager; // Manages game flow and stats
+  gameState: GameStateManager; // Manages game flow and stats
 
   isProcessing: boolean;
 
@@ -140,10 +148,10 @@ export type GameState = {
 };
 
 export type GameSettings = {
-  timer?: number | null;
-  handicap?: number | null;
-  botDifficulty?: number | null;
-  botAsFirst?: boolean | null;
+  timer?: number;
+  handicap?: number;
+  botDifficulty?: number;
+  botAsFirst?: boolean;
 };
 
 export type GameStore = GameState & {

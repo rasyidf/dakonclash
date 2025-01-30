@@ -41,15 +41,6 @@ export class DakonBoard extends Board<Cell> {
   }
 
   public calculateCriticalMass(x: number, y: number, size: number): number {
-    // // Corners
-    // if ((x === 0 || x === size - 1) && (y === 0 || y === size - 1)) {
-    //   return 2;
-    // }
-    // // Edges
-    // if (x === 0 || x === size - 1 || y === 0 || y === size - 1) {
-    //   return 3;
-    // }
-    // Center cells
     return 4;
   }
 }
