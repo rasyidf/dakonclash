@@ -1,6 +1,6 @@
-# Bead Clash Game
+# Dakon Clash Game
 
-Bead Clash is a turn-based strategy game built with React. Players take turns placing beads on a 5x5 grid, with each bead affecting the surrounding cells by spreading in four directions (up, down, left, right). The goal is to control the grid by strategically placing and spreading beads of different colors.
+Dakon Clash is a turn-based strategy game built with React. Players take turns placing beads on a n x n grid, with each bead affecting the surrounding cells by spreading in four directions (up, down, left, right). The goal is to control the grid by strategically placing and spreading beads of their own colors.
 
 
 ![image](https://github.com/user-attachments/assets/a2f2025b-30ca-4fc2-8b76-fba355bf66e9)
