@@ -8,7 +8,6 @@ interface GameControlsProps {
 export function GameControls({ }: GameControlsProps) {
   const timer = useGameStore(state => state.timer);
   const currentPlayer = useGameStore(state => state.currentPlayer);
-  const showGameStartModal = useGameStore(state => state.showGameStartModal);
 
   return (
     <div className="flex flex-col items-center gap-4 my-3">
@@ -18,9 +17,6 @@ export function GameControls({ }: GameControlsProps) {
           {(timer.remainingTime[currentPlayer.id] % 60).toString().padStart(2, '0')}
         </div>
       )}
-      <div className="flex flex-col gap-2">
-        <Button onClick={() => showGameStartModal(true)}>New Game</Button>
-      </div>
     </div>
   );
 }

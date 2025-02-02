@@ -1,6 +1,6 @@
 import type { Route } from "./+types/home";
 import { GameBoard } from "../components/main-game/game-board";
-import { SidebarProvider, SidebarTrigger } from "~/components/ui/sidebar";
+import { Sidebar, SidebarInset, SidebarProvider, SidebarRail, SidebarTrigger } from "~/components/ui/sidebar";
 import { AppSidebar } from "~/components/main-game/app-sidebar";
 import { cx } from "class-variance-authority";
 import { WinnerModal } from "~/components/main-game/winner-modal";
@@ -15,6 +15,8 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "~/components/ui/resizable";
+import { GameScore } from "~/components/main-game/game-score";
+import { AppBottomNav } from "~/components/main-game/app-bottom-nav";
 
 
 export function meta({ }: Route.MetaArgs) {
@@ -31,44 +33,26 @@ export function clientLoader({ params }: Route.ClientLoaderArgs) {
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { gameId } = loaderData;
+
 
   const players = useGameStore(state => state.players);
   const playerStats = useGameStore(state => state.playerStats);
   const currentPlayer = useGameStore(state => state.currentPlayer);
-  const winner = useGameStore(state => state.winner);
   const scores = useGameStore(state => state.scores);
+  const winner = useGameStore(state => state.winner);
 
   return <>
     <SidebarProvider>
       <AppSidebar />
-      <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel defaultSize={60} minSize={1} maxSize={90}>
-          <main className={cx("flex flex-col w-full h-full")}>
-            <SidebarTrigger />
-            <GameBoard />
-          </main>
-        </ResizablePanel>
-        <ResizableHandle />
-        <ResizablePanel defaultSize={20} minSize={10} maxSize={20}>
-          <ScoreBoard
-            score={scores}
-            players={players}
-            playerStats={playerStats}
-            currentPlayerId={currentPlayer.id}
-            winner={winner}
-            onUpdatePlayerName={(playerId, newName) => {
-              const updatedPlayers = { ...players };
-              updatedPlayers[playerId as Player["id"]].name = newName;
-              useGameStore.setState({ players: updatedPlayers });
-            }}
-          />
-        </ResizablePanel>
-      </ResizablePanelGroup> 
-
-      <GameStartModal />
-      <WinnerModal />
+      <SidebarInset>
+        <main className={cx("flex flex-col  p-2")}>
+          <GameScore score={scores} players={players} playerStats={playerStats} currentPlayerId={currentPlayer.id} />
+          <GameBoard />
+        </main>
+        <GameStartModal />
+        <WinnerModal />
+      </SidebarInset>
+      <AppBottomNav />
     </SidebarProvider>
-    ;
   </>;
 }

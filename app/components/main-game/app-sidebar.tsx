@@ -1,49 +1,59 @@
+import { Info, Plus, RotateCcw, Undo, History } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarHeader,
+  SidebarMenuButton,
+  SidebarRail
 } from "~/components/ui/sidebar";
 import { useGameStore } from "~/store/useGameStore";
-import { GameControls } from "./game-controls";
-import { Skeleton } from "~/components/ui/skeleton";
+import { useState } from "react";
+import { AboutModal } from "./about-modal";
+import { FooterAbout } from "./footer-about";
 
 export function AppSidebar() {
-  const stats = useGameStore(state => state.stats);
-  const isLoading = useGameStore(state => state.isProcessing);
+  const [showAboutModal, setShowAboutModal] = useState(false);
+  const
+    showGameStartModal
+      = useGameStore(state => state.showGameStartModal);
 
   return (
-    <Sidebar>
+    <Sidebar variant="inset" collapsible="icon">
       <SidebarHeader>
-        <img src="/favicon.ico" alt="Dakon Clash" className="w-16 h-16 mx-auto" />
-        <h1 className="text-2xl text-center mt-2 font-bold text-slate-700">Dakon Clash</h1>
-
-        <GameControls elapsedTime={stats.elapsedTime} />
-
+        <SidebarMenuButton variant="outline" onClick={() => showGameStartModal(true)}>
+          <Plus size={24} />
+          <span>New Game</span>
+        </SidebarMenuButton>
       </SidebarHeader>
+
       <SidebarContent>
-        {/* Add more content here if needed */}
-      </SidebarContent>
-      <SidebarFooter>
         <SidebarGroup>
-          <h2 className="text-md font-bold text-center text-slate-900">About</h2>
-          <p className="text-sm text-center">
-            Dakon Clash is a two-player strategy game where the goal is to capture the most seeds.
-          </p>
-          <a
-            href="https://github.com/rasyidf/dakonclash"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-center bg-slate-50 text-slate-900 font-semibold hover:underline"
-          >
-            Github
-          </a>
-          <div className="flex justify-center mt-4 space-x-4">
-            <span className="text-sm text-slate-500">&copy; 2025 Subsidi Tepat Teams</span>
-          </div>
+          <SidebarMenuButton  >
+            <Undo size={24} />
+            <span>Undo Move</span>
+          </SidebarMenuButton>
+          <SidebarMenuButton  >
+            <RotateCcw size={24} />
+            <span>Restart Game</span>
+          </SidebarMenuButton>
+          <SidebarMenuButton disabled>
+            <History size={24} />
+            <span>Game History</span>
+          </SidebarMenuButton>
         </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter>
+        <SidebarMenuButton onClick={() => setShowAboutModal(true)}>
+          <Info size={24} />
+          <span>About</span>
+        </SidebarMenuButton>
       </SidebarFooter>
+      <SidebarRail />
+      <AboutModal isOpen={showAboutModal} onClose={() => setShowAboutModal(false)} />
     </Sidebar>
   );
 }
+

@@ -1,9 +1,7 @@
-import { useEffect } from 'react';
 import { useGameStore } from '~/store/useGameStore';
-import { nanoid } from 'nanoid';
 
 export function useChainReaction() {
-  const { makeMove, currentPlayer, boardState: boardEngine, players, board, isProcessing, mechanics, addScoreAnimation } = useGameStore();
+  const { makeMove, currentPlayer, boardState, players, board, isProcessing } = useGameStore();
 
 
   const handleCellClick = (row: number, col: number) => {
@@ -16,7 +14,7 @@ export function useChainReaction() {
     board,
     currentPlayer,
     players,
-    boardManager: boardEngine,
+    boardManager: boardState,
     isProcessing,
     handleCellClick
   };
