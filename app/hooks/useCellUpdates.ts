@@ -8,12 +8,23 @@ export function useCellUpdates() {
 
     useEffect(() => {
         const handler = ({ cell, x, y }: { cell: Cell; x: number; y: number }) => {
-            setUpdates(prev => new Map(prev).set(`${x}-${y}`, cell));
+            setUpdates(prev => {
+                const newUpdates = new Map(prev);
+                newUpdates.set(`${x}-${y}`, cell);
+
+                // Clear updates after a short delay to trigger re-renders
+                setTimeout(() => {
+                    setUpdates(new Map());
+                }, 100);
+
+                return newUpdates;
+            });
         };
 
         boardManager.subscribe('cellUpdate', handler);
         return () => {
             boardManager.unsubscribe('cellUpdate', handler);
+            setUpdates(new Map());
         };
     }, [boardManager]);
 
