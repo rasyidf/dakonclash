@@ -1,5 +1,5 @@
 import { delay } from '../utils';
-import { CHAIN_REACTION_DELAY_MS, FIRST_MOVE_VALUE, GameMechanicsEngine } from './base/GameMechanicsEngine';
+import { CHAIN_REACTION_DELAY_MS, FIRST_MOVE_VALUE, GameMechanicsEngine } from './abstracts/GameMechanicsEngine';
 import type { BoardStateManager } from './boards/BoardStateManager';
 
 

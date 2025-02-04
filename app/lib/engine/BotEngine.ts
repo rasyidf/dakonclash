@@ -1,5 +1,5 @@
 import { BoardStateManager } from './boards/BoardStateManager';
-import { GameMechanicsEngine } from './base/GameMechanicsEngine';
+import { GameMechanicsEngine } from './abstracts/GameMechanicsEngine';
 import { DakonMechanics } from './DakonMechanics';
 import type { Cell, GameState } from './types';
 import gameWeights from './weights.json';

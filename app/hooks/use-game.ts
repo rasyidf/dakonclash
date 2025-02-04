@@ -5,7 +5,6 @@ export function useGame() {
 
   const currentPlayer = state.players[state.currentPlayer.id];
 
-  // call the game start menu
   const handleStartGame = () => {
     state.showGameStartModal(true);
   };

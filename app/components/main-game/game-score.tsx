@@ -19,22 +19,31 @@ interface GameScoreProps {
 
 export function GameScore({ score, players, playerStats, currentPlayerId }: GameScoreProps) {
   return (
-    <div className="grid gap-2 sm:grid-cols-2">
-      {Object.entries(score).map(([playerId, playerScore]) => (
-        <PlayerScore
-          key={playerId}
-          playerId={parseInt(playerId)}
-          score={playerScore}
-          player={players[parseInt(playerId)]}
-          stats={playerStats[parseInt(playerId)]}
-          isCurrentPlayer={currentPlayerId === parseInt(playerId)}
+    <div className="container mx-auto container-xm">
+      <div className="grid gap-2 sm:grid-cols-2">
+        {Object.entries(score).map(([playerId, playerScore]) => (
+          <PlayerScore
+            key={playerId}
+            playerId={parseInt(playerId)}
+            score={playerScore}
+            player={players[parseInt(playerId)]}
+            stats={playerStats[parseInt(playerId)]}
+            isCurrentPlayer={currentPlayerId === parseInt(playerId)}
+          />
+        ))}
+        <Progress
+          value={playerStats[1].boardControl}
+          className="h-3 col-span-2 sm:h-4 bg-blue-500"
+          indicatorClassName="bg-red-500"
         />
-      ))}
-      <Progress
-        value={playerStats[1].boardControl}
-        className="h-3 col-span-2 sm:h-4 bg-blue-500"
-        indicatorClassName="bg-red-500"
-      />
+
+        {/* <div className={cn(
+        "text-sm sm:text-base md:text-md text-center font-bold w-full transition-colors",
+        `text-${players[currentPlayerId].color}-500`,
+      )}>
+        {players[currentPlayerId].name}&apos;s Turn {players[currentPlayerId].isBot && "(Bot)"}
+      </div> */}
+      </div>
     </div>
   );
 }
@@ -52,7 +61,7 @@ function PlayerScore({ score, player, stats, isCurrentPlayer }: PlayerScoreProps
     <Dialog>
       <DialogTrigger asChild>
         <button className={cn(
-          "flex items-center justify-between rounded-lg border p-4 w-full transition-colors",
+          "flex items-center justify-between rounded-lg border p-2 w-full transition-colors",
           player.color === "red" && "bg-red-100 border-red-200 hover:bg-red-200",
           player.color === "blue" && "bg-blue-100 border-blue-200 hover:bg-blue-200",
           isCurrentPlayer && "ring-2",
@@ -60,14 +69,14 @@ function PlayerScore({ score, player, stats, isCurrentPlayer }: PlayerScoreProps
           isCurrentPlayer && player.color === "blue" && "ring-blue-500"
         )}>
           <span className={cn(
-            "text-lg font-medium",
+            "text-md font-medium",
             player.color === "red" && "text-red-700",
             player.color === "blue" && "text-blue-700"
           )}>
             {player.name}
           </span>
           <span className={cn(
-            "text-2xl font-bold",
+            "text-lg font-bold rounded-full w-20 bg-white",
             player.color === "red" && "text-red-700",
             player.color === "blue" && "text-blue-700"
           )}>
@@ -79,7 +88,7 @@ function PlayerScore({ score, player, stats, isCurrentPlayer }: PlayerScoreProps
       <DialogContent>
         <DialogHeader>
           <DialogTitle className={cn(
-            "text-xl font-bold",
+            "text-md font-bold",
             player.color === "red" && "text-red-700",
             player.color === "blue" && "text-blue-700"
           )}>

@@ -1,4 +1,6 @@
-import type { GameHistory } from '~/store/types';
+import type { GameHistory } from "./engine/types";
+
+
 
 const GAME_HISTORY_KEY = 'dakonclash_game_history';
 

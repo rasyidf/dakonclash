@@ -6,7 +6,7 @@ import { DakonMechanics } from '~/lib/engine/DakonMechanics';
 import { GameStateManager } from '../lib/engine/GameStateManager';
 import type { GameHistory, GameMode, GameSettings, GameStore, ScoreAnimation } from '../lib/engine/types';
 import { delay } from '~/lib/utils';
-import { CHAIN_REACTION_DELAY_MS } from '~/lib/engine/base/GameMechanicsEngine';
+import { CHAIN_REACTION_DELAY_MS } from '~/lib/engine/abstracts/GameMechanicsEngine';
 
 // Initialize engines first
 const boardState = new BoardStateManager(5);
@@ -239,19 +239,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   showWinnerModal: (show: boolean) => set({ isWinnerModalOpen: show }),
-
   showGameStartModal: (show: boolean) => set({ isGameStartModalOpen: show }),
-
-  addScoreAnimation: (animation: ScoreAnimation) => {
-    set((state) => ({
-      scoreAnimations: [...state.scoreAnimations, animation]
-    }));
-
-    setTimeout(() => {
-      set((state) => ({
-        scoreAnimations: state.scoreAnimations.filter(a => a.id !== animation.id)
-      }));
-    }, 1000);
-  },
 
 }));

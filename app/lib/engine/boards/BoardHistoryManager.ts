@@ -1,74 +1,11 @@
-import type { BoardState, Cell, HistorySnapshot, Move } from "../types";
+import type { Cell, Move } from "../types";
 
 export class BoardHistoryManager {
-  private snapshots: HistorySnapshot[] = [];
   private moves: Move[] = [];
-  private snapshotInterval: number = 10;
+  private readonly COLUMNS = 'ABCDEFGHIJKLMNO';
 
-  public addMove(x: number, y: number, playerId: number, beadsAdded: number): void {
-    const move: Move = {
-      x,
-      y,
-      playerId,
-      beadsAdded,
-      timestamp: new Date()
-    };
-    this.moves.push(move);
-
-    if (this.moves.length % this.snapshotInterval === 0) {
-      this.createSnapshot();
-    }
-  }
-
-  public save(board: Cell[][]): void {
-    const snapshot: HistorySnapshot = {
-      board: JSON.parse(JSON.stringify(board)),
-      moveIndex: this.moves.length,
-      timestamp: new Date()
-    };
-    this.snapshots.push(snapshot);
-  }
-
-  public getHistory(): BoardState[] {
-    return this.snapshots.map(s => ({
-      board: s.board,
-      timestamp: s.timestamp,
-    }));
-  }
-
-  private createSnapshot(): void {
-    this.save(this.load(this.moves.length));
-  }
-
-  public load(moveIndex: number): Cell[][] {
-    if (moveIndex < 0 || moveIndex > this.moves.length) {
-      throw new Error("Invalid move index");
-    }
-
-    let snapshot: HistorySnapshot | undefined;
-    // Find the nearest snapshot (reverse iteration for efficiency)
-    for (let i = this.snapshots.length - 1; i >= 0; i--) {
-      if (this.snapshots[i].moveIndex <= moveIndex) {
-        snapshot = this.snapshots[i];
-        break;
-      }
-    }
-
-    if (!snapshot) {
-      throw new Error("No valid snapshot found");
-    }
- 
-    let board = JSON.parse(JSON.stringify(snapshot.board));
- 
-    for (let i = snapshot.moveIndex; i < moveIndex; i++) {
-      const move = this.moves[i];
-      const cell = board[move.y]?.[move.x];
-      if (cell) {
-        cell.beads[move.playerId] = (cell.beads[move.playerId] || 0) + move.beadsAdded;
-      }
-    }
-
-    return board;
+  public addMove(x: number, y: number): void {
+    this.moves.push({ x, y });
   }
 
   public getMoves(): Move[] {
@@ -76,7 +13,6 @@ export class BoardHistoryManager {
   }
 
   public clear(): void {
-    this.snapshots = [];
     this.moves = [];
   }
 
@@ -88,7 +24,33 @@ export class BoardHistoryManager {
     return this.moves[this.moves.length - 1];
   }
 
-  public getMoveAt(index: number): Move | undefined {
+  // Convert move to string notation (e.g., "D3")
+  private moveToNotation(move: Move): string {
+    return `${this.COLUMNS[move.x]}${move.y + 1}`;
+  }
+
+  // Convert string notation to move (e.g., "D3" -> {x: 3, y: 2})
+  private notationToMove(notation: string): Move {
+    const x = this.COLUMNS.indexOf(notation[0]);
+    const y = parseInt(notation[1]) - 1;
+    return { x, y };
+  }
+
+  // Get complete game history as string (e.g., "D3E3F6C4...")
+  public getNotation(): string {
+    return this.moves.map(move => this.moveToNotation(move)).join('');
+  }
+
+  // Load moves from notation string
+  public loadFromNotation(notation: string): void {
+    this.clear();
+    for (let i = 0; i < notation.length; i += 2) {
+      const moveNotation = notation.substr(i, 2);
+      this.moves.push(this.notationToMove(moveNotation));
+    }
+  }
+
+  public getMove(index: number): Move | undefined {
     return this.moves[index];
   }
 }

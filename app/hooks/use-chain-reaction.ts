@@ -1,7 +1,7 @@
 import { useGameStore } from '~/store/useGameStore';
 
 export function useChainReaction() {
-  const { makeMove, currentPlayer, boardState, players, board, isProcessing } = useGameStore();
+  const { makeMove, currentPlayer, players, board, isProcessing } = useGameStore();
 
 
   const handleCellClick = (row: number, col: number) => {
@@ -14,7 +14,6 @@ export function useChainReaction() {
     board,
     currentPlayer,
     players,
-    boardManager: boardState,
     isProcessing,
     handleCellClick
   };

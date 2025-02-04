@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { cn } from '~/lib/utils';
+import { useEffect, useRef, useState } from 'react';
 import { Spinner } from '~/components/ui/spinner';
+import { cn } from '~/lib/utils';
 
 // Debug constants for WebRTC configuration
 const statusColors: Record<Partial<RTCIceConnectionState> | "disconnected" | "creating" | "waiting" | "joining" | "connecting" | "checking" | "connected", string> = {

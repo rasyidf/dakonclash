@@ -5,11 +5,11 @@ import type { Cell } from "../types";
 
 // Define typed events for board state
 interface BoardStateEvents {
-  boardUpdate: { board: Cell[][] };
-  cellUpdate: { cell: Cell; x: number; y: number };
-  stateChange: { type: 'save' | 'reset' | 'load'; board: Cell[][] };
-  criticalMass: { x: number; y: number; mass: number };
-  playerCells: { playerId: number; cells: Cell[] };
+  boardUpdate: { board: Cell[][]; };
+  cellUpdate: { cell: Cell; x: number; y: number; };
+  stateChange: { type: 'save' | 'reset' | 'load'; board: Cell[][]; };
+  criticalMass: { x: number; y: number; mass: number; };
+  playerCells: { playerId: number; cells: Cell[]; };
 }
 
 export class BoardStateManager extends ObservableClass<BoardStateEvents> {
@@ -20,7 +20,6 @@ export class BoardStateManager extends ObservableClass<BoardStateEvents> {
     super();
     this.board = new DakonBoard(size);
     this.history = new BoardHistoryManager();
-    this.saveState();
   }
 
   public clone(): BoardStateManager {
@@ -29,29 +28,13 @@ export class BoardStateManager extends ObservableClass<BoardStateEvents> {
     return clone;
   }
 
-  public saveState(): void {
-    this.history.save(this.board.getBoard());
-    this.notify('stateChange', {
-      type: 'save',
-      board: this.board.getBoard()
-    });
-  }
-
-  public loadState(index: number): void {
-    const loadedBoard = this.history.load(index);
-    this.board.setBoard(loadedBoard);
-    this.notify('stateChange', {
-      type: 'load',
-      board: loadedBoard
-    });
-  }
 
   public getBoard(): Cell[][] {
     return this.board.getBoard();
   }
 
   public getHistory() {
-    return this.history.getHistory();
+    return this.history.getMoves();
   }
 
   public updateCellDelta(row: number, col: number, delta: number, owner: number): void {
@@ -79,7 +62,6 @@ export class BoardStateManager extends ObservableClass<BoardStateEvents> {
   public resetBoard(size: number): void {
     this.board = new DakonBoard(size);
     this.history.clear();
-    this.saveState();
     this.notify('stateChange', {
       type: 'reset',
       board: this.board.getBoard()

@@ -1,4 +1,4 @@
-import { AppIcon } from "./AppIcon";
+import { AppIcon } from "./app-icon";
 
 export function FooterAbout() {
   return (

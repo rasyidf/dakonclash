@@ -1,5 +1,5 @@
 import type { Cell } from "../types";
-import { Board } from "./Board";
+import { Board } from "../abstracts/Board";
 
 export class DakonBoard extends Board<Cell> {
 

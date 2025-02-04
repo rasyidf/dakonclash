@@ -1,7 +1,6 @@
-
 import type { BoardStateManager } from './boards/BoardStateManager';
 import type { BotEngine } from './BotEngine';
-import type { GameMechanicsEngine } from './base/GameMechanicsEngine';
+import type { GameMechanicsEngine } from './abstracts/GameMechanicsEngine';
 import type { GameStateManager } from './GameStateManager';
 
 export type TailwindColor = "red" | "blue" | "green" | "yellow" | "purple" | "pink" | "orange" | "teal";
@@ -98,9 +97,6 @@ export interface GameHistory {
 export interface Move {
   x: number;
   y: number;
-  playerId: number;
-  beadsAdded: number;
-  timestamp: Date;
 }
 
 export interface HistorySnapshot {
@@ -162,7 +158,6 @@ export type GameStore = GameState & {
   showWinnerModal: (show: boolean) => void;
   showGameStartModal: (show: boolean) => void;
   changeBoardSize: (size: number) => void;
-  addScoreAnimation: (animation: ScoreAnimation) => void;
   saveGameHistory: () => void;
   setTimer: (seconds: number) => void;
   tickTimer: () => void;

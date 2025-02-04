@@ -1,4 +1,5 @@
-import { Info, Plus, RotateCcw, Undo, History } from "lucide-react";
+import { History, Info, Plus, RotateCcw, Undo } from "lucide-react";
+import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -9,9 +10,7 @@ import {
   SidebarRail
 } from "~/components/ui/sidebar";
 import { useGameStore } from "~/store/useGameStore";
-import { useState } from "react";
 import { AboutModal } from "./about-modal";
-import { FooterAbout } from "./footer-about";
 
 export function AppSidebar() {
   const [showAboutModal, setShowAboutModal] = useState(false);

@@ -30,10 +30,10 @@ export function GameStartModal() {
       mode: selectedMode,
       boardSize,
       settings: {
-        timer: enableTimer ? timeLimit : null,
-        handicap: enableHandicap ? handicapAmount : null,
+        timer: enableTimer ? timeLimit : undefined,
+        handicap: enableHandicap ? handicapAmount : undefined,
         botDifficulty,
-        botAsFirst: selectedMode === 'vs-bot' ? botAsFirst : null,
+        botAsFirst: selectedMode === 'vs-bot' ? botAsFirst : undefined,
       }
     };
 
@@ -171,7 +171,7 @@ export function GameStartModal() {
   );
 }
 
-function BasicSettings({ boardSize, onBoardSizeChange }: { boardSize: number, onBoardSizeChange: (size: number) => void; }) {
+export function BasicSettings({ boardSize, onBoardSizeChange }: { boardSize: number, onBoardSizeChange: (size: number) => void; }) {
   return (
     <div className="space-y-4">
       <Label>Board Size</Label>
@@ -189,7 +189,7 @@ function BasicSettings({ boardSize, onBoardSizeChange }: { boardSize: number, on
   );
 }
 
-function AdvancedSettings({
+export function AdvancedSettings({
   enableTimer, setEnableTimer,
   timeLimit, setTimeLimit,
   enableHandicap, setEnableHandicap,
@@ -336,7 +336,7 @@ function AdvancedSettings({
   );
 }
 
-function OnlineGameShare({ gameId }: { gameId: string; }) {
+export function OnlineGameShare({ gameId }: { gameId: string; }) {
   const gameUrl = `${window.location.origin}?id=${gameId}`;
 
   return (
