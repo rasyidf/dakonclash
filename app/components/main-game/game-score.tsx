@@ -19,8 +19,8 @@ interface GameScoreProps {
 
 export function GameScore({ score, players, playerStats, currentPlayerId }: GameScoreProps) {
   return (
-    <div className="container mx-auto container-xm">
-      <div className="grid gap-2 sm:grid-cols-2">
+    <div className="container mx-auto container-sm">
+      <div className="grid gap-2 grid-cols-1 landscape:grid-cols-2 ">
         {Object.entries(score).map(([playerId, playerScore]) => (
           <PlayerScore
             key={playerId}
@@ -33,7 +33,7 @@ export function GameScore({ score, players, playerStats, currentPlayerId }: Game
         ))}
         <Progress
           value={playerStats[1].boardControl}
-          className="h-3 col-span-2 sm:h-4 bg-blue-500"
+          className="h-3 col-span-2 landscape:col-span-1 sm:h-4 bg-blue-500"
           indicatorClassName="bg-red-500"
         />
 

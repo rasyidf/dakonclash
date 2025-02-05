@@ -46,7 +46,7 @@ export function GameCell({ cell, isPreview }: GameCellProps) {
       className={cn(
         "aspect-square rounded-md transition-all duration-150",
         "w-full h-full rounded-lg relative",
-        !isPreview && "transition-all duration-300 ease-in-out transform hover:scale-105",
+        !isPreview && "transition-all duration-300 ease-in-out transform",
         "bg-white",
         cell.owner === 1 && currentPlayer.id === 1 && "bg-red-200",
         cell.owner === 2 && currentPlayer.id === 2 && "bg-blue-200",

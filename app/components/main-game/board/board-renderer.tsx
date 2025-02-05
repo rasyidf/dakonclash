@@ -8,25 +8,23 @@ interface BoardRendererProps {
   isPreview?: boolean;
 }
 
-export const BoardRenderer = memo(function BoardRenderer({ 
-  board, 
-  isPreview 
+export const BoardRenderer = memo(function BoardRenderer({
+  board,
+  isPreview
 }: BoardRendererProps) {
   const updates = useCellUpdates();
-  
-  const cells = useMemo(() => 
-    board.map((row, x) => 
+
+  const cells = useMemo(() =>
+    board.map((row, x) =>
       row.map((cell, y) => {
         const key = `${x}-${y}`;
         const updatedCell = !isPreview ? updates.get(key) ?? cell : cell;
-        
+
         return (
           <div
             key={key}
-            style={{
-              gridRow: x + 2,
-              gridColumn: y + 2,
-            }}
+            className="relative bg-white rounded-md shadow-sm transition-all duration-200 hover:shadow-md"
+       
           >
             <GameCell
               cell={updatedCell}
@@ -36,10 +34,10 @@ export const BoardRenderer = memo(function BoardRenderer({
         );
       })
     ).flat()
-  , [board, updates, isPreview]);
+    , [board, updates, isPreview]);
 
   return <>{cells}</>;
 }, (prevProps, nextProps) => {
   return JSON.stringify(prevProps.board) === JSON.stringify(nextProps.board) &&
-         prevProps.isPreview === nextProps.isPreview;
+    prevProps.isPreview === nextProps.isPreview;
 });

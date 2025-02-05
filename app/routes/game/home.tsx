@@ -25,10 +25,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const currentPlayer = useGameStore(state => state.currentPlayer);
   const scores = useGameStore(state => state.scores);
 
+
   return (
     <>
       <main className={cx("flex flex-col p-2")}>
-        <GameScore score={scores} players={players} playerStats={playerStats} currentPlayerId={currentPlayer.id} />
+        <div className="landscape:hidden portrait:visible">
+          <GameScore score={scores} players={players} playerStats={playerStats} currentPlayerId={currentPlayer.id} />
+        </div>
         <GameBoard />
       </main>
       <GameStartModal />

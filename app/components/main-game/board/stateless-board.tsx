@@ -1,7 +1,7 @@
 import { cn } from "~/lib/utils";
 import type { Cell } from "~/lib/engine/types";
-import { BoardRenderer } from "./board-renderer";
 import { BoardLabels } from "./board-labels";
+import { BoardRenderer } from "./board-renderer";
 
 interface StatelessBoardProps {
   board: Cell[][];
@@ -9,32 +9,57 @@ interface StatelessBoardProps {
   className?: string;
 }
 
-export function StatelessBoard({
+interface BoardProps {
+  size?: 5 | 7 | 9 | 11;
+  board: Cell[][];
+  isPreview?: boolean;
+  className?: string;
+}
+
+const StatelessBoard = ({
   board,
   isPreview = false,
   className
-}: StatelessBoardProps) {
+}: BoardProps) => {
   const boardSize = board.length;
-  const boardPadding = 0.6;
 
   return (
     <div
       className={cn(
-        "grid gap-1 sm:gap-2 bg-gray-200 rounded-lg",
-        "w-[min(90vw,_76vh)] portrait:w-[85vw] landscape:w-[80vh]",
+        "grid bg-gray-200 rounded-lg p-6",
+        "w-full h-full",
         "transition-all duration-300 ease-in-out",
-        isPreview && "pointer-events-none ",
+        isPreview && "pointer-events-none",
         className
       )}
       style={{
-        gridTemplateColumns: `${boardPadding}rem repeat(${boardSize}, 1fr) ${boardPadding}rem`,
-        gridTemplateRows: `${boardPadding}rem repeat(${boardSize}, 1fr) ${boardPadding}rem`,
-        aspectRatio: `${boardSize + 2}/${boardSize + 2}`,
+        gridTemplateColumns: `repeat(${boardSize}, minmax(0, 1fr))`,
+        gridTemplateRows: `repeat(${boardSize}, minmax(0, 1fr))`, 
+        rowGap: boardSize <= 7 ? '0.5rem' : '0.25rem',
+        columnGap: boardSize <= 7 ? '0.5rem' : '0.25rem',
+        aspectRatio: '1 / 1'
       }}
     >
-      <div className="col-span-full row-span-full bg-gray-200 rounded-lg" />
-      <BoardLabels size={boardSize} />
       <BoardRenderer board={board} isPreview={isPreview} />
+
+    </div>
+  );
+};
+
+export function LabeledBoard({ board, isPreview = false, className }: StatelessBoardProps) {
+
+  return (
+    <div className="relative w-full max-w-[min(90vw,90vh)] mx-auto">
+      <div className="absolute inset-0 pointer-events-none">
+        <BoardLabels size={board.length} />
+      </div>
+      <div className="p-6">
+        <StatelessBoard
+          board={board}
+          isPreview={isPreview}
+          className={className}
+        />
+      </div>
     </div>
   );
 }

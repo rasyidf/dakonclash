@@ -11,12 +11,18 @@ import {
 } from "~/components/ui/sidebar";
 import { useGameStore } from "~/store/useGameStore";
 import { AboutModal } from "./about-modal";
+import { GameScore } from "./game-score";
 
 export function AppSidebar() {
   const [showAboutModal, setShowAboutModal] = useState(false);
   const
     showGameStartModal
       = useGameStore(state => state.showGameStartModal);
+
+  const players = useGameStore(state => state.players);
+  const playerStats = useGameStore(state => state.playerStats);
+  const currentPlayer = useGameStore(state => state.currentPlayer);
+  const scores = useGameStore(state => state.scores);
 
   return (
     <Sidebar variant="inset" collapsible="icon">
@@ -41,6 +47,9 @@ export function AppSidebar() {
             <History size={24} />
             <span>Game History</span>
           </SidebarMenuButton>
+        </SidebarGroup>
+        <SidebarGroup>
+          <GameScore score={scores} players={players} playerStats={playerStats} currentPlayerId={currentPlayer.id} />
         </SidebarGroup>
       </SidebarContent>
 

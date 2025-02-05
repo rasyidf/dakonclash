@@ -1,29 +1,27 @@
+
 interface BoardLabelsProps {
   size: number;
 }
 
-export function BoardLabels({ size }: BoardLabelsProps) {
+export const BoardLabels = ({ size }: BoardLabelsProps) => {
   return (
     <>
-      {Array.from({ length: size }, (_, i) => (
-        <div
-          key={`col-${i}`}
-          className="text-center text-xs font-semibold text-gray-600"
-          style={{ gridRow: 1, gridColumn: i + 2 }}
-        >
-          {String.fromCharCode(65 + i)}
-        </div>
-      ))}
-      
-      {Array.from({ length: size }, (_, i) => (
-        <div
-          key={`row-${i}`}
-          className="text-right pl-1 pr-1 text-xs font-semibold text-gray-600 self-center"
-          style={{ gridRow: i + 2, gridColumn: 1 }}
-        >
-           {i + 1}
-        </div>
-      ))}
+      {/* Row labels (numbers) */}
+      <div className="absolute left-0 top-10 bottom-10 flex flex-col justify-around text-xs sm:text-sm font-medium text-gray-600">
+        {Array.from({ length: size }, (_, i) => (
+          <div key={`row-${i}`} className="flex items-center justify-center w-6">
+            {i + 1}
+          </div>
+        ))}
+      </div>
+      {/* Column labels (letters) */}
+      <div className="absolute top-0 left-10 right-10 flex justify-around text-xs sm:text-sm font-medium text-gray-600">
+        {Array.from({ length: size }, (_, i) => (
+          <div key={`col-${String.fromCharCode(65 + i)}`} className="flex items-center justify-center h-6 w-full">
+            {String.fromCharCode(65 + i)}
+          </div>
+        ))}
+      </div>
     </>
   );
-}
+};
