@@ -20,7 +20,7 @@ interface GameScoreProps {
 export function GameScore({ score, players, playerStats, currentPlayerId }: GameScoreProps) {
   return (
     <div className="container mx-auto container-sm">
-      <div className="grid gap-2 grid-cols-1 landscape:grid-cols-2 ">
+      <div className="grid gap-2 grid-cols-2 landscape:grid-cols-1 ">
         {Object.entries(score).map(([playerId, playerScore]) => (
           <PlayerScore
             key={playerId}

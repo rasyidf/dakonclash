@@ -11,13 +11,13 @@ export function AppBottomNav() {
 
   return (
     <>
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 py-4 bg-background border-t">
-        <div className="mx-auto h-full max-w-screen-xl px-2">
+      <nav className="landscape:hidden fixed bottom-4 left-4 right-4 rounded-md shadow-md z-50 py-2 bg-background border-t">
+        <div className="mx-auto h-full max-w-screen-xl">
           <div className="grid h-full grid-cols-5 items-center justify-items-center">
             <Button variant="ghost"
               onClick={() => showGameStartModal(true)}
               className={cn(
-                "flex flex-col items-center justify-center py-4 gap-1", 
+                "flex flex-col items-center justify-center py-8 gap-1", 
               )}
             >
               <Plus size={24} />
@@ -26,7 +26,7 @@ export function AppBottomNav() {
 
             <Button variant="ghost"
               className={cn(
-                "flex flex-col items-center justify-center py-4 gap-1", 
+                "flex flex-col items-center justify-center py-8 gap-1", 
               )}
             >
               <Undo size={24} />
@@ -35,7 +35,7 @@ export function AppBottomNav() {
 
             <Button variant="ghost"
               className={cn(
-                "flex flex-col items-center justify-center py-4 gap-1", 
+                "flex flex-col items-center justify-center py-8 gap-1", 
               )}
             >
               <RotateCcw size={24} />
@@ -45,7 +45,7 @@ export function AppBottomNav() {
             <Button variant="ghost"
               disabled
               className={cn(
-                "flex flex-col items-center justify-center py-4 gap-1", 
+                "flex flex-col items-center justify-center py-8 gap-1", 
               )}
             >
               <History size={24} />
@@ -55,7 +55,7 @@ export function AppBottomNav() {
             <Button variant="ghost"
               onClick={() => setShowAboutModal(true)}
               className={cn(
-                "flex flex-col items-center justify-center py-4 gap-1", 
+                "flex flex-col items-center justify-center py-8 gap-1", 
               )}
             >
               <Info size={24} />

@@ -8,6 +8,7 @@ import {
 
 import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
+import globalsStylesheet from "./globals.css?url";
 import { Toaster } from "./components/ui/sonner";
 
 export const links: Route.LinksFunction = () => [
@@ -22,6 +23,7 @@ export const links: Route.LinksFunction = () => [
     href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
   },
   { rel: "stylesheet", href: stylesheet },
+  { rel: "stylesheet", href: globalsStylesheet },
 ];
 
 export function Layout({ children }: { children: React.ReactNode; }) {

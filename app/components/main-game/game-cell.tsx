@@ -1,97 +1,73 @@
-import { motion } from "framer-motion";
-import { useChainReaction } from "~/hooks/use-chain-reaction";
+import { useEffect, useState } from "react";
 import { cn } from "~/lib/utils";
 import type { Cell } from "~/lib/engine/types";
-import { useGameStore } from "~/store/useGameStore";
-
-interface GameCellProps {
-  cell: Cell;
-  isPreview?: boolean;
-}
+import { useChainReaction } from "~/hooks/use-chain-reaction";
 
 const getBeadPosition = (index: number, value: number) => {
-
-  if (value === 1) {
-    // All beads centered
-    return { x: 50, y: 50 };
-  } else if (value === 2) {
-    return index % 2 === 0 ? { x: 32, y: 50 } : { x: 68, y: 50 };
-  } else if (value === 3) {
-    const positions = [
-      { x: 50, y: 32 }, // top
-      { x: 32, y: 60 }, // left-bottom
-      { x: 68, y: 60 }, // right-bottom
-      { x: 50, y: 32 }, // center (hidden)
-    ];
-    return positions[index];
-  } else {
-    // Four corners
-    const positions = [
-      { x: 32, y: 32 },
-      { x: 68, y: 32 },
-      { x: 32, y: 68 },
-      { x: 68, y: 68 },
-    ];
-    return positions[index];
+  if (value === 1) return { x: 50, y: 50 };
+  if (value === 2) return index % 2 === 0 ? { x: 32, y: 50 } : { x: 68, y: 50 };
+  if (value === 3) {
+    return [
+      { x: 50, y: 32 },
+      { x: 32, y: 60 },
+      { x: 68, y: 60 },
+      { x: 50, y: 32 },
+    ][index];
   }
+  return [
+    { x: 32, y: 32 },
+    { x: 68, y: 32 },
+    { x: 32, y: 68 },
+    { x: 68, y: 68 },
+  ][index];
 };
 
-export function GameCell({ cell, isPreview }: GameCellProps) {
+export function GameCell({ cell, isPreview }: { cell: Cell; isPreview?: boolean; }) {
   const { currentPlayer, isProcessing, handleCellClick } = useChainReaction();
+  const [mounted, setMounted] = useState(false);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <button
       onClick={() => !isPreview && !isProcessing && handleCellClick(cell.x, cell.y)}
       className={cn(
-        "aspect-square rounded-md transition-all duration-150",
-        "w-full h-full rounded-lg relative",
-        !isPreview && "transition-all duration-300 ease-in-out transform",
-        "bg-white",
+        "aspect-square rounded-md transition-colors duration-150 w-full h-full relative bg-white",
         cell.owner === 1 && currentPlayer.id === 1 && "bg-red-200",
         cell.owner === 2 && currentPlayer.id === 2 && "bg-blue-200",
-        cell.value >= 4 && "animate-pulse"
+        cell.value >= 4 && "animate-pulse",
       )}
     >
-
       {cell.value > 0 && (
-        <motion.div
-          className={cn(
-            "absolute inset-0 flex rounded-full items-center justify-center",
-            cell.owner === 1 && "bg-red-500",
-            cell.owner === 2 && "bg-blue-500",
-          )}
-          initial={{ scale: 0.1 }}
-          animate={{ scale: 1 }}
-        >
+        <div className={cn("cell-content",
+          'transition-colors duration-150',
+          `bg-${cell.owner === 1 ? "red" : "blue"}-500`,
+        )}>
           <div className="relative w-full h-full p-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <motion.div
-                key={i}
-                className={cn(
-                  "absolute rounded-full bg-white/90",
-                  "w-3 h-3 sm:w-4 sm:h-4",
-                  "left-0 top-0"
-                )}
-                initial={{
-                  left: "50%",
-                  top: "50%",
-                  transform: "translate(-50%, -50%)",
-                  opacity: 0,
-                }}
-                animate={{
-                  left: `${getBeadPosition(i, cell.value).x}%`,
-                  top: `${getBeadPosition(i, cell.value).y}%`,
-                  transform: "translate(-50%, -50%)",
-                  opacity: cell.value === 3 && i === 3 ? 0 : 1,
-                }}
-                transition={{
-                  duration: 0.1,
-                }}
-              />
-            ))}
+            {Array.from({ length: 4 }).map((_, i) => {
+              const pos = getBeadPosition(i, cell.value);
+              return (
+                <div
+                  key={i}
+                  className={cn(
+                    "bead",
+                    cell.value === 3 && i === 3 && "bead-hidden",
+                    mounted && "bead-mounted",
+                    cell.value === 3 && "bead-ready-to-explode",
+                  )}
+                  style={
+                    {
+                      "--x": `${pos.x}%`,
+                      "--y": `${pos.y}%`,
+                    } as React.CSSProperties
+                  }
+                />
+              );
+            })}
           </div>
-        </motion.div>
+        </div>
       )}
     </button>
   );

@@ -25,7 +25,7 @@ export function AppSidebar() {
   const scores = useGameStore(state => state.scores);
 
   return (
-    <Sidebar variant="inset" collapsible="icon">
+    <Sidebar variant="floating" collapsible="offcanvas" >
       <SidebarHeader>
         <SidebarMenuButton variant="outline" onClick={() => showGameStartModal(true)}>
           <Plus size={24} />

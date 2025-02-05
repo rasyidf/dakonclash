@@ -6,11 +6,9 @@ import { SidebarInset, SidebarProvider } from "../components/ui/sidebar";
 
 export default function SidebarLayout() {
   return (
-    <SidebarProvider>
+    <SidebarProvider className="justify-evenly">
       <AppSidebar />
-      <SidebarInset>
-        <Outlet/>
-      </SidebarInset>
+      <Outlet />
       <AppBottomNav />
     </SidebarProvider>
   );

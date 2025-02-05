@@ -4,7 +4,7 @@ import { LabeledBoard } from "./stateless-board";
 export function GameBoard() {
   const { board,   isProcessing } = useChainReaction();
   return (
-    <div className="p-0 w-[90dvw] portrait:h-[90dvh] landscape:w-[90dvw]">
+    <div className="w-[90dvw] portrait:h-[90dvh] landscape:w-[90dvw]">
       <LabeledBoard
         board={board}
         className={isProcessing ? "pointer-events-none" : ""}

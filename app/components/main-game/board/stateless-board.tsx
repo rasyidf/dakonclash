@@ -34,7 +34,7 @@ const StatelessBoard = ({
       )}
       style={{
         gridTemplateColumns: `repeat(${boardSize}, minmax(0, 1fr))`,
-        gridTemplateRows: `repeat(${boardSize}, minmax(0, 1fr))`, 
+        gridTemplateRows: `repeat(${boardSize}, minmax(0, 1fr))`,
         rowGap: boardSize <= 7 ? '0.5rem' : '0.25rem',
         columnGap: boardSize <= 7 ? '0.5rem' : '0.25rem',
         aspectRatio: '1 / 1'
@@ -49,17 +49,15 @@ const StatelessBoard = ({
 export function LabeledBoard({ board, isPreview = false, className }: StatelessBoardProps) {
 
   return (
-    <div className="relative w-full max-w-[min(90vw,90vh)] mx-auto">
+    <div className="relative mt-4 w-full max-w-[min(90vw,90vh)] mx-auto">
       <div className="absolute inset-0 pointer-events-none">
         <BoardLabels size={board.length} />
       </div>
-      <div className="p-6">
-        <StatelessBoard
-          board={board}
-          isPreview={isPreview}
-          className={className}
-        />
-      </div>
+      <StatelessBoard
+        board={board}
+        isPreview={isPreview}
+        className={className}
+      />
     </div>
   );
 }
