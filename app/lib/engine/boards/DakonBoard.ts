@@ -3,11 +3,14 @@ import { Board } from "../abstracts/Board";
 
 export class DakonBoard extends Board<Cell> {
 
-
   public clone(): DakonBoard {
-    const newBoard = new DakonBoard(this.getSize());
-    newBoard.cells = JSON.parse(JSON.stringify(this.cells));
-    return newBoard;
+    try {
+      const newBoard = new DakonBoard(this.getSize());
+      newBoard.cells = this.cells.clone();
+      return newBoard;
+    } catch (error: any) {
+      throw new Error(`Failed to clone board: ${error.message}`);
+    }
   }
 
   public isValidMove(row: number, col: number, playerId: number): boolean {
@@ -16,6 +19,9 @@ export class DakonBoard extends Board<Cell> {
   }
 
   public updateCell(row: number, col: number, delta: number, owner: number, cascade = false): void {
+    if (!Number.isInteger(delta) || !Number.isInteger(owner)) {
+      throw new Error('Delta and owner must be integers');
+    }
     const cell = this.ensureValidCell(row, col);
 
     cell.value += delta;
@@ -23,9 +29,7 @@ export class DakonBoard extends Board<Cell> {
   }
 
   public getPlayerCellCount(playerId: number): number {
-    return this.cells.reduce((acc, row) =>
-      acc + row.reduce((count, cell) =>
-        count + (cell.owner === playerId ? 1 : 0), 0), 0);
+    return this.cells.filter(cell => cell.owner === playerId).length;
   }
 
   public calculateCriticalMass(x: number, y: number, size: number): number {
@@ -33,19 +37,17 @@ export class DakonBoard extends Board<Cell> {
   }
 
   public getAdjacentCells(row: number, col: number): Cell[] {
-    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-    const adjacent = [];
-
-    for (const [dx, dy] of directions) {
-      const newRow = row + dx;
-      const newCol = col + dy;
-
-      if (this.isValidCell(newRow, newCol)) {
-        adjacent.push(this.cells[newRow][newCol]);
-      }
+    if (!this.isValidCell(row, col)) {
+      return [];
     }
-
-    return adjacent;
+    const DIRECTIONS = Object.freeze([[-1, 0], [1, 0], [0, -1], [0, 1]]);
+    return DIRECTIONS.reduce((adjacent: Cell[], [dx, dy]) => {
+      const newRow = row + dx, newCol = col + dy;
+      if (this.isValidCell(newRow, newCol)) {
+        adjacent.push(this.getCellAt(newRow, newCol));
+      }
+      return adjacent;
+    }, []);
   }
 
 }

@@ -3,6 +3,8 @@ import type { BoardStateManager } from './BoardStateManager';
 import type { Cell } from '../types';
 
 export class BoardAnalyzer {
+  private cache: Map<string, any> = new Map();
+
   constructor(private boardManager: BoardStateManager) {}
 
   getAdjacentCells(row: number, col: number): Cell[] {
@@ -66,9 +68,34 @@ export class BoardAnalyzer {
     return total;
   }
 
-  calculateTerritoryControl(playerId: number): number {
-    return this.getCellsInTerritory(playerId).reduce((sum, cell) => 
+  private getCacheKey(method: string, ...args: any[]): string {
+    return `${method}:${args.join(':')}`;
+  }
+
+  public calculateTerritoryControl(playerId: number): number {
+    const cacheKey = this.getCacheKey('territoryControl', playerId);
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+    const result = this.getCellsInTerritory(playerId).reduce((sum, cell) => 
       sum + (cell.owner === playerId ? cell.value : 0), 0);
+    this.cache.set(cacheKey, result);
+    return result;
+  }
+
+  public clearCache(): void {
+    this.cache.clear();
+  }
+
+  public evaluatePosition(playerId: number): number {
+    return this.calculateTerritoryControl(playerId) +
+           this.calculateTotalControl(playerId) * 0.5 +
+           this.getCellsInTerritory(playerId)
+               .filter((_, i) => this.isStrategicCell(
+                 Math.floor(i / this.boardManager.getSize()),
+                 i % this.boardManager.getSize()
+               ))
+               .length * 2;
   }
 
   calculateTerritoryScore(playerId: number): number {

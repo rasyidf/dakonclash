@@ -15,11 +15,8 @@ export interface GameMechanicsEvents {
 
 
 export interface Cell {
-  id?: string;
   owner: number;
   value: number;
-  x: number;
-  y: number;
 }
 
 export interface BoardState {

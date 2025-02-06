@@ -1,35 +1,28 @@
 import type { Cell } from "../types";
-
+import { Matrix } from "../utils/Matrix";
 
 export abstract class Board<T extends Cell> {
-  protected cells: T[][];
+  protected cells: Matrix<T>;
 
   constructor(size: number) {
     this.cells = this.generate(size);
   }
 
-  protected generate(size: number): T[][] {
-    return Array(size).fill(null).map((_, y) =>
-      Array(size).fill(null).map((_, x) => ({
-        owner: 0,
-        value: 0,
-        x,
-        y
-      } as T))
-    );
+  protected generate(size: number): Matrix<T> {
+    const matrix = new Matrix<T>(size, size, { owner: 0, value: 0 } as T);
+    return matrix;
   }
 
   public isValidCell(row: number, col: number): boolean {
-    return row >= 0 && row < this.cells.length &&
-      col >= 0 && col < this.cells.length;
+    return this.cells.isValid(row, col);
   }
 
   public getCellAt(row: number, col: number): T {
-    return this.cells[row][col];
+    return this.cells.get(row, col);
   }
 
   public setCellAt(row: number, col: number, cell: T): void {
-    this.cells[row][col] = cell;
+    this.cells.set(row, col, cell);
   }
 
   public ensureValidCell(row: number, col: number): T {
@@ -40,30 +33,35 @@ export abstract class Board<T extends Cell> {
   }
 
   public getBoard(): T[][] {
-    return this.cells;
-  }
-
-  public setBoard(cells: T[][]): void {
-    this.cells = cells;
+    return this.cells.toArray();
   }
 
   public getSize(): number {
-    return this.cells.length;
+    return this.cells.getWidth();
   }
 
   public isEmptyBoard(): boolean {
-    return !this.cells.some(row => row.some(cell => cell.value !== 0));
+    let empty = true;
+    this.cells.forEach(cell => {
+      if (cell.value !== 0) empty = false;
+    });
+    return empty;
   }
 
   public getCellsOwnedBy(playerId: number): T[] {
-    return this.cells.flat().filter(cell => cell.owner === playerId);
+    const owned: T[] = [];
+    this.cells.forEach(cell => {
+      if (cell.owner === playerId) owned.push(cell);
+    });
+    return owned;
   }
 
   public getTotalTokens(): number {
-    return this.cells.flat().reduce((acc, cell) => acc + cell.value, 0);
+    let total = 0;
+    this.cells.forEach(cell => total += cell.value);
+    return total;
   }
 
   public abstract clone(): Board<T>;
-
   public abstract isValidMove(row: number, col: number, playerId: number): boolean;
 }
