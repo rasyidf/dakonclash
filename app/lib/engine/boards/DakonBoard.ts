@@ -28,19 +28,24 @@ export class DakonBoard extends Board<Cell> {
         count + (cell.owner === playerId ? 1 : 0), 0), 0);
   }
 
-  public isStrategicCell(row: number, col: number): boolean {
-    return false;
-  }
-
-  public getCentralityValue(row: number, col: number): number {
-    return 0;
-  }
-
-  public getChainPotential(row: number, col: number, playerId: number): number {
-    return 0;
-  }
-
   public calculateCriticalMass(x: number, y: number, size: number): number {
     return 4;
   }
+
+  public getAdjacentCells(row: number, col: number): Cell[] {
+    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    const adjacent = [];
+
+    for (const [dx, dy] of directions) {
+      const newRow = row + dx;
+      const newCol = col + dy;
+
+      if (this.isValidCell(newRow, newCol)) {
+        adjacent.push(this.cells[newRow][newCol]);
+      }
+    }
+
+    return adjacent;
+  }
+
 }

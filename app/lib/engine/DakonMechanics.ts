@@ -9,14 +9,14 @@ export class DakonMechanics extends GameMechanicsEngine {
   }
 
 
-  public isValidMove(row: number, col: number, currentPlayerId: number): boolean {
+  public isValidMove(row: number, col: number, playerId: number): boolean {
     const cell = this.boardManager.getCellAt(row, col);
 
-    if (this.firstMoves[currentPlayerId]) {
+    if (this.firstMoves[playerId]) {
       return cell.owner === 0;
     }
 
-    return cell.owner === currentPlayerId;
+    return cell.owner === playerId;
   }
 
   private handleCellUpdate(row: number, col: number, playerId: number, delta: number): void {

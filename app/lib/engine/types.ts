@@ -1,5 +1,5 @@
 import type { BoardStateManager } from './boards/BoardStateManager';
-import type { BotEngine } from './BotEngine';
+import type { BotEngine } from './bot/BotEngine';
 import type { GameMechanicsEngine } from './abstracts/GameMechanicsEngine';
 import type { GameStateManager } from './GameStateManager';
 
@@ -15,6 +15,7 @@ export interface GameMechanicsEvents {
 
 
 export interface Cell {
+  id?: string;
   owner: number;
   value: number;
   x: number;
@@ -86,6 +87,7 @@ export interface GameHistory {
   startedAt: number;
   endedAt: number;
   winner: number | 'draw' | null;
+  moves: Move[];
   mode: GameMode;
   boardSize: number;
   players: Record<number, Player>;

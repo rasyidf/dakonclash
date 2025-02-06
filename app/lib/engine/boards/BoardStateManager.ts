@@ -2,8 +2,7 @@ import { BoardHistoryManager } from "./BoardHistoryManager";
 import { ObservableClass } from "../Observable";
 import { DakonBoard } from "./DakonBoard";
 import type { Cell } from "../types";
-
-// Define typed events for board state
+ 
 interface BoardStateEvents {
   boardUpdate: { board: Cell[][]; };
   cellUpdate: { cell: Cell; x: number; y: number; };
@@ -68,20 +67,16 @@ export class BoardStateManager extends ObservableClass<BoardStateEvents> {
     });
   }
 
+  public loadBoard(board: Cell[][]): void {
+    this.board = new DakonBoard(board.length);
+    this.notify('stateChange', {
+      type: 'load',
+      board: this.board.getBoard()
+    });
+  }
+
   public getSize(): number {
     return this.board.getSize();
-  }
-
-  public isStrategicPosition(row: number, col: number): boolean {
-    return this.board.isStrategicCell(row, col);
-  }
-
-  public getCentralityValue(row: number, col: number): number {
-    return this.board.getCentralityValue(row, col);
-  }
-
-  public getChainPotential(row: number, col: number, playerId: number): number {
-    return this.board.getChainPotential(row, col, playerId);
   }
 
   public isEmptyBoard(): boolean {
@@ -115,5 +110,9 @@ export class BoardStateManager extends ObservableClass<BoardStateEvents> {
 
   public calculateCriticalMass(row: number, col: number): number {
     return this.board.calculateCriticalMass(row, col, this.board.getSize());
+  }
+
+  public getAdjecentCells(row: number, col: number): Cell[] {
+    return this.board.getAdjacentCells(row, col);
   }
 }

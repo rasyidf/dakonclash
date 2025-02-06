@@ -1,3 +1,8 @@
+
+import { BoardStateManager } from './boards/BoardStateManager';
+import { ObservableClass } from './Observable';
+import type { BoardState, GameState, GameStats, Player, PlayerStats } from './types';
+
 interface GameStateEvents {
   stateUpdate: Partial<GameState>;
   boardUpdate: Partial<BoardState>;
@@ -5,10 +10,6 @@ interface GameStateEvents {
   gameOver: { winner: number | 'draw'; scores: Record<number, number> };
   statsUpdate: { gameStats: GameStats; playerStats: Record<Player["id"], PlayerStats> };
 }
-
-import { BoardStateManager } from './boards/BoardStateManager';
-import { ObservableClass } from './Observable';
-import type { BoardState, GameState, GameStats, Player, PlayerStats } from './types';
 
 export class GameStateManager extends ObservableClass<GameStateEvents> {
   private boardEngine: BoardStateManager;

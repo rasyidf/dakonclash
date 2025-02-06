@@ -1,9 +1,9 @@
 import type { Cell } from "../types";
 
- 
+
 export abstract class Board<T extends Cell> {
   protected cells: T[][];
-  
+
   constructor(size: number) {
     this.cells = this.generate(size);
   }
@@ -63,11 +63,7 @@ export abstract class Board<T extends Cell> {
     return this.cells.flat().reduce((acc, cell) => acc + cell.value, 0);
   }
 
-  public abstract isStrategicCell(row: number, col: number): boolean;
-
-  public abstract getCentralityValue(row: number, col: number): number;
- 
   public abstract clone(): Board<T>;
-  
+
   public abstract isValidMove(row: number, col: number, playerId: number): boolean;
 }

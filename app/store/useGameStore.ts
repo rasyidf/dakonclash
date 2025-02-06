@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { saveGameHistory } from '~/lib/storage';
 import { BoardStateManager } from '../lib/engine/boards/BoardStateManager';
-import { BotEngine } from '../lib/engine/BotEngine';
+import { BotEngine } from '../lib/engine/bot/BotEngine';
 import { DakonMechanics } from '~/lib/engine/DakonMechanics';
 import { GameStateManager } from '../lib/engine/GameStateManager';
 import type { GameHistory, GameMode, GameSettings, GameStore, ScoreAnimation } from '../lib/engine/types';
@@ -138,6 +138,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       startedAt: state.gameStartedAt,
       endedAt: Date.now(),
       winner: state.winner,
+      moves: state.boardState.getHistory(),
       mode: state.gameMode,
       boardSize: state.boardSize,
       players: state.players,
@@ -152,12 +153,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     const { mechanics, gameState, currentPlayer, scores, stats, playerStats, gameMode, isProcessing } = state;
 
-    if (gameMode === 'vs-bot' && currentPlayer.isBot) return;
     if (isProcessing || state.isGameOver) return;
+
 
     set({ isProcessing: true });
 
     try {
+
       const chainLength = await mechanics.makeMove(col, row, currentPlayer.id);
 
       delay(CHAIN_REACTION_DELAY_MS);
@@ -176,6 +178,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const winner = gameState.checkWinner(scores, playerStats);
 
       if (winner !== null) {
+        set({ winner });
         state.saveGameHistory();
       }
 
@@ -210,6 +213,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   makeBotMove: async () => {
     const state = get();
+
     if (
       state.isProcessing ||
       state.isGameOver ||
@@ -220,7 +224,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     try {
       const botMove = await state.botEngine.makeMove(state);
       if (botMove) {
-        await state.makeMove(botMove.col, botMove.row);
+        await state.makeMove(botMove.row, botMove.col);
       }
     } catch (error) {
       console.error('Bot move error:', error);
