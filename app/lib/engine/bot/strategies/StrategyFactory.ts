@@ -4,13 +4,13 @@ import { GreedyStrategy } from './GreedyStrategy';
 import { MinimaxStrategy } from './MinimaxStrategy';
 import { EvaluationWeights } from '../evaluation/EvaluationWeights';
 import type { BoardStateManager } from '../../boards/BoardStateManager';
-import type { GameMechanicsEngine } from '../../abstracts/GameMechanicsEngine';
+import type { GameMechanics } from '../../mechanics/GameMechanics';
 
 export class StrategyFactory {
   static create(
     difficulty: number,
     boardManager: BoardStateManager,
-    gameEngine: GameMechanicsEngine,
+    gameEngine: GameMechanics,
     botId: number
   ) {
     const weights = new EvaluationWeights();

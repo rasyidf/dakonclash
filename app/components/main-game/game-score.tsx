@@ -1,6 +1,5 @@
-import { useState } from "react";
-import { cn } from "~/lib/utils";
 import type { Player, PlayerStats } from "~/lib/engine/types";
+import { cn } from "~/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -62,23 +61,23 @@ function PlayerScore({ score, player, stats, isCurrentPlayer }: PlayerScoreProps
       <DialogTrigger asChild>
         <button className={cn(
           "flex items-center justify-between rounded-lg border p-2 w-full transition-colors",
-          player.color === "red" && "bg-red-100 border-red-200 hover:bg-red-200",
-          player.color === "blue" && "bg-blue-100 border-blue-200 hover:bg-blue-200",
+          player?.color === "red" && "bg-red-100 border-red-200 hover:bg-red-200",
+          player?.color === "blue" && "bg-blue-100 border-blue-200 hover:bg-blue-200",
           isCurrentPlayer && "ring-2",
-          isCurrentPlayer && player.color === "red" && "ring-red-500",
-          isCurrentPlayer && player.color === "blue" && "ring-blue-500"
+          isCurrentPlayer && player?.color === "red" && "ring-red-500",
+          isCurrentPlayer && player?.color === "blue" && "ring-blue-500"
         )}>
           <span className={cn(
             "text-md font-medium",
-            player.color === "red" && "text-red-700",
-            player.color === "blue" && "text-blue-700"
+            player?.color === "red" && "text-red-700",
+            player?.color === "blue" && "text-blue-700"
           )}>
-            {player.name}
+            {player?.name}
           </span>
           <span className={cn(
             "text-lg font-bold rounded-full w-20 bg-white",
-            player.color === "red" && "text-red-700",
-            player.color === "blue" && "text-blue-700"
+            player?.color === "red" && "text-red-700",
+            player?.color === "blue" && "text-blue-700"
           )}>
             {score}
           </span>

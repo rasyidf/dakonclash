@@ -1,7 +1,7 @@
 import type { Cell } from "../types";
 import { Matrix } from "../utils/Matrix";
 
-export abstract class Board<T extends Cell> {
+export abstract class BoardMatrix<T extends Cell> {
   protected cells: Matrix<T>;
 
   constructor(size: number) {
@@ -25,15 +25,14 @@ export abstract class Board<T extends Cell> {
     this.cells.set(row, col, cell);
   }
 
-  public ensureValidCell(row: number, col: number): T {
+  public ensureValidCell(row: number, col: number) {
     if (!this.isValidCell(row, col)) {
       throw new Error("Invalid cell coordinates");
     }
-    return this.getCellAt(row, col);
   }
 
-  public getBoard(): T[][] {
-    return this.cells.toArray();
+  public getBoard(): Matrix<T> {
+    return this.cells;
   }
 
   public getSize(): number {
@@ -62,6 +61,6 @@ export abstract class Board<T extends Cell> {
     return total;
   }
 
-  public abstract clone(): Board<T>;
+  public abstract clone(): BoardMatrix<T>;
   public abstract isValidMove(row: number, col: number, playerId: number): boolean;
 }

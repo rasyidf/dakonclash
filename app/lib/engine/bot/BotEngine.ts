@@ -1,19 +1,17 @@
 // BotEngine.ts
 import { BoardStateManager } from '../boards/BoardStateManager';
-import { GameMechanicsEngine } from '../abstracts/GameMechanicsEngine';
+import { GameMechanics } from '../mechanics/GameMechanics';
 import { StrategyFactory } from './strategies/StrategyFactory';
 import type { Cell, GameState } from '../types';
 
 export class BotEngine {
   constructor(
     private boardManager: BoardStateManager,
-    private gameEngine: GameMechanicsEngine,
+    private gameEngine: GameMechanics,
     private difficulty: number = 2
   ) { }
 
-  public async makeMove(state: GameState): Promise<{ row: number; col: number; }> {
-    const botId = state.currentPlayer.id;
-
+  public async makeMove(botId: number): Promise<{ row: number; col: number; }> {
     if (this.gameEngine.isFirstMove(botId)) {
       return this.getOpeningMove(botId);
     }
@@ -89,23 +87,5 @@ export class BotEngine {
     });
   }
 
-  private findRandomValidMove(botId: number): { row: number; col: number; } {
-    const size = this.boardManager.getSize();
-    const validMoves = [];
-
-    for (let row = 0; row < size; row++) {
-      for (let col = 0; col < size; col++) {
-        if (this.gameEngine.isValidMove(row, col, botId)) {
-          validMoves.push({ row, col });
-        }
-      }
-    }
-
-    if (validMoves.length === 0) {
-      throw new Error('No valid moves available');
-    }
-
-    return validMoves[Math.floor(Math.random() * validMoves.length)];
-  }
 
 }

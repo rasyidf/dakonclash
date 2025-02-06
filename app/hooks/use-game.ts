@@ -1,17 +1,21 @@
-import { useGameStore } from "~/store/useGameStore";
+import { useGameState } from "~/store/GameStateManager";
 
-export function useGame() {
-  const state = useGameStore((state) => state);
+export function useChainReaction() {
+  const gameManager = useGameState();
+  const { currentPlayer, players, isProcessing } = gameManager.getState();
 
-  const currentPlayer = state.players[state.currentPlayer.id];
-
-  const handleStartGame = () => {
-    state.showGameStartModal(true);
+  const handleCellClick = (row: number, col: number) => {
+    if (!isProcessing) {
+      console.log('Making move at:', row, col);
+      gameManager.handleCellClick(row, col);
+    }
   };
 
   return {
-    ...state,
+    board: gameManager.getBoard(),
     currentPlayer,
-    handleStartGame
+    players,
+    isProcessing,
+    handleCellClick
   };
 }

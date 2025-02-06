@@ -19,7 +19,7 @@ export class Matrix<T> {
   set(row: number, col: number, value: T): void {
     if (!this.isValid(row, col)) {
       throw new Error(`Invalid coordinates: ${row},${col}`);
-    }
+    } 
     this.data[row * this.width + col] = value;
   }
 
@@ -78,10 +78,12 @@ export class Matrix<T> {
     return false;
   }
 
-  map<U>(callback: (value: T, row: number, col: number) => U): U[][] {
-    return Array.from({ length: this.height }, (_, row) =>
-      Array.from({ length: this.width }, (_, col) => callback(this.get(row, col), row, col))
-    );
+  map<U>(callback: (value: T, row: number, col: number) => U): Matrix<U> {
+    const newMatrix = new Matrix<U>(this.height, this.width, callback(this.data[0], 0, 0));
+    this.forEach((value, row, col) => {
+      newMatrix.set(row, col, callback(value, row, col));
+    });
+    return newMatrix;
   }
 
   filter(predicate: (value: T, row: number, col: number) => boolean): T[] {
@@ -94,5 +96,25 @@ export class Matrix<T> {
       }
     }
     return result;
+  }
+
+  *[Symbol.iterator]() {
+    for (let row = 0; row < this.height; row++) {
+      for (let col = 0; col < this.width; col++) {
+        yield [this.get(row, col), row, col] as [T, number, number];
+      }
+    }
+  }
+
+  reduce<U>(callback: (acc: U, value: T, row: number, col: number) => U, initial: U): U {
+    let result = initial;
+    this.forEach((value, row, col) => {
+      result = callback(result, value, row, col);
+    });
+    return result;
+  }
+
+  fill(value: T): void {
+    this.data.fill(value);
   }
 }

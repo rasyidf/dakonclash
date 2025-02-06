@@ -1,106 +1,83 @@
 // utilities/BoardAnalyzer.ts
-import type { BoardStateManager } from './BoardStateManager';
 import type { Cell } from '../types';
+import type { BoardMatrix } from './Board';
 
 export class BoardAnalyzer {
-  private cache: Map<string, any> = new Map();
-
-  constructor(private boardManager: BoardStateManager) {}
-
-  getAdjacentCells(row: number, col: number): Cell[] {
-    try {
-      return this.boardManager.getAdjecentCells(row, col);
-    } catch (error) {
-      console.error('Failed to get adjacent cells:', error);
-      return [];
-    }
+  public static getAdjacentCells<T extends Cell>(board: BoardMatrix<T>, row: number, col: number): T[] {
+    const DIRECTIONS = Object.freeze([[-1, 0], [1, 0], [0, -1], [0, 1]]);
+    return DIRECTIONS.reduce((adjacent: T[], [dx, dy]) => {
+      const newRow = row + dx, newCol = col + dy;
+      if (board.isValidCell(newRow, newCol)) {
+        adjacent.push(board.getCellAt(newRow, newCol));
+      }
+      return adjacent;
+    }, []);
   }
 
-  getCellsInTerritory(playerId: number): Cell[] {
-    const size = this.boardManager.getSize();
-    const cells: Cell[] = [];
+  public static getCellsInTerritory<T extends Cell>(board: BoardMatrix<T>, playerId: number): T[] {
+    const size = board.getSize();
+    const cells: T[] = [];
     const startRow = playerId === 1 ? 0 : Math.floor(size / 2);
     const endRow = playerId === 1 ? Math.floor(size / 2) : size;
 
     for (let row = startRow; row < endRow; row++) {
       for (let col = 0; col < size; col++) {
-        cells.push(this.boardManager.getCellAt(row, col));
+        const cell = board.getCellAt(row, col);
+        if (cell.owner === playerId) {
+          cells.push(cell);
+        }
       }
     }
-
     return cells;
   }
 
-  isStrategicCell(row: number, col: number): boolean {
-    const size = this.boardManager.getSize();
-    // Consider corner and center positions strategic
+  public static isStrategicCell(board: BoardMatrix<Cell>, row: number, col: number): boolean {
+    const size = board.getSize();
     return (row === 0 && (col === 0 || col === size - 1)) ||
-           (row === size - 1 && (col === 0 || col === size - 1)) ||
-           (row === Math.floor(size / 2) && col === Math.floor(size / 2));
+      (row === size - 1 && (col === 0 || col === size - 1)) ||
+      (row === Math.floor(size / 2) && col === Math.floor(size / 2));
   }
 
-  getCentralityValue(row: number, col: number): number {
-    const size = this.boardManager.getSize();
+  public static getCentralityValue(board: BoardMatrix<Cell>, row: number, col: number): number {
+    const size = board.getSize();
     const centerRow = Math.floor(size / 2);
     const centerCol = Math.floor(size / 2);
     return Math.max(0, 5 - (Math.abs(row - centerRow) + Math.abs(col - centerCol)));
   }
 
-  getChainPotential(row: number, col: number, playerId: number): number {
-    const adjacent = this.getAdjacentCells(row, col);
-    return adjacent.reduce((sum, cell) => 
+  public static getChainPotential<T extends Cell>(board: BoardMatrix<T>, row: number, col: number, playerId: number): number {
+    const adjacent = BoardAnalyzer.getAdjacentCells(board, row, col);
+    return adjacent.reduce((sum, cell) =>
       sum + (cell.owner === playerId ? cell.value : 0), 0);
   }
 
-  calculateTotalControl(playerId: number): number {
-    const size = this.boardManager.getSize();
-    let total = 0;
-    
-    for (let row = 0; row < size; row++) {
-      for (let col = 0; col < size; col++) {
-        const cell = this.boardManager.getCellAt(row, col);
-        if (cell.owner === playerId) {
-          total += cell.value;
-        }
-      }
-    }
-    
-    return total;
+  public static calculateTotalControl<T extends Cell>(board: BoardMatrix<T>, playerId: number): number {
+    return board.getCellsOwnedBy(playerId)
+      .reduce((sum, cell) => sum + cell.value, 0);
   }
 
-  private getCacheKey(method: string, ...args: any[]): string {
-    return `${method}:${args.join(':')}`;
+  public static calculateTerritoryControl<T extends Cell>(board: BoardMatrix<T>, playerId: number): number {
+    return BoardAnalyzer.getCellsInTerritory(board, playerId)
+      .reduce((sum, cell) => sum + (cell.owner === playerId ? cell.value : 0), 0);
   }
 
-  public calculateTerritoryControl(playerId: number): number {
-    const cacheKey = this.getCacheKey('territoryControl', playerId);
-    if (this.cache.has(cacheKey)) {
-      return this.cache.get(cacheKey);
-    }
-    const result = this.getCellsInTerritory(playerId).reduce((sum, cell) => 
-      sum + (cell.owner === playerId ? cell.value : 0), 0);
-    this.cache.set(cacheKey, result);
-    return result;
+  public static evaluatePosition<T extends Cell>(board: BoardMatrix<T>, playerId: number): number {
+    return BoardAnalyzer.calculateTerritoryControl(board, playerId) +
+      BoardAnalyzer.calculateTotalControl(board, playerId) * 0.5 +
+      BoardAnalyzer.getCellsInTerritory(board, playerId)
+        .filter((_, i) => BoardAnalyzer.isStrategicCell(
+          board,
+          Math.floor(i / board.getSize()),
+          i % board.getSize()
+        ))
+        .length * 2;
   }
 
-  public clearCache(): void {
-    this.cache.clear();
+  public static getPlayerCellCount<T extends Cell>(board: BoardMatrix<T>, playerId: number): number {
+    return board.getCellsOwnedBy(playerId).length;
   }
 
-  public evaluatePosition(playerId: number): number {
-    return this.calculateTerritoryControl(playerId) +
-           this.calculateTotalControl(playerId) * 0.5 +
-           this.getCellsInTerritory(playerId)
-               .filter((_, i) => this.isStrategicCell(
-                 Math.floor(i / this.boardManager.getSize()),
-                 i % this.boardManager.getSize()
-               ))
-               .length * 2;
-  }
-
-  calculateTerritoryScore(playerId: number): number {
-    const territoryCells = this.getCellsInTerritory(playerId);
-    return territoryCells.reduce((sum, cell) => 
-      sum + (cell.owner === playerId ? cell.value : 0), 0);
+  public static calculateCriticalMass(x: number, y: number, size: number): number {
+    return 4;
   }
 }

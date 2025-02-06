@@ -1,10 +1,12 @@
 import type { BoardStateManager } from './boards/BoardStateManager';
 import type { BotEngine } from './bot/BotEngine';
-import type { GameMechanicsEngine } from './abstracts/GameMechanicsEngine';
+import type { GameMechanics } from './mechanics/GameMechanics';
 import type { GameStateManager } from './GameStateManager';
 
 export type TailwindColor = "red" | "blue" | "green" | "yellow" | "purple" | "pink" | "orange" | "teal";
-export type GameMode = 'online' | 'local' | 'vs-bot';
+
+export type GameMode = 'local' | 'online' | 'vs-bot' | 'timed' | string;
+export type VictoryCondition = 'elimination' | 'score' | 'time';
 
 export interface GameMechanicsEvents {
   processing: { isProcessing: boolean; };
@@ -13,17 +15,39 @@ export interface GameMechanicsEvents {
   score: { row: number; col: number; score: number; playerId: number; };
 }
 
+export interface GameRules {
+  victoryCondition: VictoryCondition;
+  timeLimit?: number;
+  maxTurns?: number;
+  handicap?: HandicapSettings;
+  botDifficulty?: number;
+  botPlayFirst?: boolean;
+}
 
 export interface Cell {
   owner: number;
   value: number;
 }
 
+export interface Point {
+  x: number;
+  y: number;
+}
+
+export interface MoveResult {
+  chainLength: number;
+}
+
+export interface GameConfig {
+  size: number;
+  mode: GameMode;
+  rules: GameRules;
+}
+
 export interface BoardState {
   board: Cell[][];
   timestamp: Date;
 }
-
 
 export interface Player {
   id: number;
@@ -69,7 +93,7 @@ export interface HandicapSettings {
   amount: number;
   type: 'stones' | 'moves' | 'time';
   position: 'fixed' | 'custom';
-  advantagePlayer: 'player1' | 'player2';  // Specify which player gets the advantage
+  advantagePlayer: number;
 }
 
 export interface Timer {
@@ -112,11 +136,10 @@ export type GameState = {
 
   // Players
   players: Record<Player["id"], Player>; // Player 1 and Player 2 (or Bot)
-  currentPlayer: Player; // The player whose turn it is
+  currentPlayer: Player; // Ensure currentPlayer is defined
 
-  // Board and Moves
-  board: Cell[][]; // The game board (2D array of cells)
   moves: number; // Total number of moves made in the game
+  pendingBotMove?: number; // Coordinates for the bot's next move
 
   // Scores and Stats
   scores: Record<Player["id"], number>; // Scores for Player 1 and Player 2
@@ -131,7 +154,7 @@ export type GameState = {
   isGameStartModalOpen: boolean; // Whether to show the game start modal 
 
   boardState: BoardStateManager; // Manages the board state
-  mechanics: GameMechanicsEngine; // Handles game logic
+  mechanics: GameMechanics; // Handles game logic
   gameState: GameStateManager; // Manages game flow and stats
 
   isProcessing: boolean;
@@ -140,26 +163,41 @@ export type GameState = {
   timer: Timer;
 
   gameStartedAt: number;
+
+  rules: GameRules;
 };
+
+export interface GameModeHandler {
+  initialize(mechanics: GameMechanics, boardManager: BoardStateManager, config: GameConfig): GameModeHandler;
+  initializePlayers(rules: GameRules): Record<number, Player>;
+  handleTurnStart(state: GameState): void;
+  handleMove(position: Point, playerId: number): Promise<number>;
+  handleTurnEnd(state: GameState): void;
+  checkVictoryCondition(state: GameState): { winner: number | 'draw' | null; reason: string; };
+}
+
+export interface TimerManager {
+  start(): void;
+  stop(): void;
+  tick(): void;
+  getRemainingTime(): Record<number, number>;
+}
 
 export type GameSettings = {
   timer?: number;
-  handicap?: number;
+  handicap?: HandicapSettings;
   botDifficulty?: number;
   botAsFirst?: boolean;
 };
 
 export type GameStore = GameState & {
-  startGame: (mode: GameMode, size: number,
-    settings: GameSettings) => void;
+  startGame: (mode: GameMode, size: number, settings: GameSettings) => void;
   makeMove: (row: number, col: number) => Promise<void>;
   switchPlayer: () => void;
   showWinnerModal: (show: boolean) => void;
   showGameStartModal: (show: boolean) => void;
   changeBoardSize: (size: number) => void;
   saveGameHistory: () => void;
-  setTimer: (seconds: number) => void;
-  tickTimer: () => void;
   makeBotMove: () => Promise<void>;
   botEngine: BotEngine;
 };
@@ -173,3 +211,11 @@ export interface BoardUpdate {
     y?: number;
   };
 }
+
+
+export interface GameStateEvents {
+  stateUpdate: Partial<GameState>;
+  gameOver: { winner: number | 'draw'; reason: string; };
+  timerUpdate: { remainingTime: Record<number, number>; };
+}
+

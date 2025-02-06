@@ -2,11 +2,11 @@ export const CHAIN_REACTION_DELAY_MS = 200;
 export const FIRST_MOVE_VALUE = 3;
 
 import { BoardStateManager } from '../boards/BoardStateManager';
-import { ObservableClass } from '../Observable';
-import type { GameMechanicsEvents, Player } from '../types';
+import { ObservableClass } from '../utils/Observable';
+import type { GameMechanicsEvents, Player, Point } from '../types';
 
 
-export abstract class GameMechanicsEngine extends ObservableClass<GameMechanicsEvents> {
+export abstract class GameMechanics extends ObservableClass<GameMechanicsEvents> {
   protected boardManager: BoardStateManager;
   protected isProcessing: boolean = false;
   protected firstMoves: Record<Player["id"], boolean> = { 1: true, 2: true };
@@ -29,8 +29,8 @@ export abstract class GameMechanicsEngine extends ObservableClass<GameMechanicsE
     this.firstMoves[playerId] = value;
   }
 
-  public abstract makeMove(row: number, col: number, playerId: number): Promise<number>;
-  public abstract isValidMove(row: number, col: number, playerId: number): boolean;
+  public abstract makeMove(position: Point, playerId: number): Promise<number>;
+  public abstract isValidMove(position: Point, playerId: number): boolean;
   public abstract isGameOver(): boolean;
 
 }

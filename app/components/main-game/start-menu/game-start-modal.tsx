@@ -1,19 +1,23 @@
-import { QRCodeSVG } from 'qrcode.react';
-import { useState } from "react";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "~/components/ui/accordion";
+import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
-import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Slider } from "~/components/ui/slider";
 import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { useGame } from "~/hooks/use-game";
+import { useGameState } from "~/store/GameStateManager";
+import { useSettingsStore } from "~/store/useSettingsStore";
+import { useUIStore } from "~/store/useUIStore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { AdvancedSettings } from "./advanced-section";
+import { OnlineGameShare } from "./online-game-section";
 
 export function GameStartModal() {
-  const { startGame, setTimer, isGameStartModalOpen, showGameStartModal, changeBoardSize, gameId, boardSize } = useGame();
+  const settings = useSettingsStore();
+  const gameManager = useGameState();
+  const { isGameStartModalOpen, setGameStartModal: showGameStartModal } = useUIStore();
+  const [gameId, setGameId] = useState<string | null>(null);
   const [selectedMode, setSelectedMode] = useState<'local' | 'vs-bot' | 'online'>('local');
   const [showQR, setShowQR] = useState(false);
   const [botAsFirst, setBotAsFirst] = useState(false);
@@ -24,26 +28,23 @@ export function GameStartModal() {
   const [enableHandicap, setEnableHandicap] = useState(false);
   const [handicapAmount, setHandicapAmount] = useState(2);
   const [botDifficulty, setBotDifficulty] = useState(3);
+  // Update settings store when mode changes
+  useEffect(() => {
+    settings.setGameMode(selectedMode);
+  }, [selectedMode]);
 
   const handleStartGame = () => {
-    const gameConfig = {
+    gameManager.initializeGame({
       mode: selectedMode,
-      boardSize,
-      settings: {
-        timer: enableTimer ? timeLimit : undefined,
-        handicap: enableHandicap ? handicapAmount : undefined,
+      size: settings.boardSize,
+      rules: {
+        victoryCondition: 'elimination',
+        timeLimit,
+        handicap: settings.handicap,
         botDifficulty,
-        botAsFirst: selectedMode === 'vs-bot' ? botAsFirst : undefined,
+        botPlayFirst: botAsFirst
       }
-    };
-
-    console.log('Starting game with config:', gameConfig);
-    startGame(gameConfig.mode, gameConfig.boardSize, gameConfig.settings);
-
-    if (gameConfig.settings.timer) {
-      setTimer(gameConfig.settings.timer);
-    }
-
+    });
     showGameStartModal(false);
   };
 
@@ -70,7 +71,7 @@ export function GameStartModal() {
                 <CardDescription>Configure a game for two players on this device</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <BasicSettings boardSize={boardSize} onBoardSizeChange={changeBoardSize} />
+                <BasicSettings boardSize={settings.boardSize} onBoardSizeChange={settings.changeBoardSize} />
                 <AdvancedSettings
                   enableTimer={enableTimer}
                   setEnableTimer={setEnableTimer}
@@ -93,7 +94,7 @@ export function GameStartModal() {
                 <CardDescription>Configure your game against the AI</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <BasicSettings boardSize={boardSize} onBoardSizeChange={changeBoardSize} />
+                <BasicSettings boardSize={settings.boardSize} onBoardSizeChange={settings.changeBoardSize} />
                 <div className="space-y-2">
                   <Label>Bot Difficulty</Label>
                   <Select value={botDifficulty.toString()} onValueChange={(v) => setBotDifficulty(parseInt(v))}>
@@ -140,7 +141,7 @@ export function GameStartModal() {
                 <CardDescription>Play with others online</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <BasicSettings boardSize={boardSize} onBoardSizeChange={changeBoardSize} />
+                <BasicSettings boardSize={settings.boardSize} onBoardSizeChange={settings.changeBoardSize} />
                 <Button
                   className="w-full"
                   onClick={() => {
@@ -172,6 +173,12 @@ export function GameStartModal() {
 }
 
 export function BasicSettings({ boardSize, onBoardSizeChange }: { boardSize: number, onBoardSizeChange: (size: number) => void; }) {
+  const settings = useSettingsStore();
+
+  useEffect(() => {
+    settings.changeBoardSize(boardSize);
+  }, [boardSize]);
+
   return (
     <div className="space-y-4">
       <Label>Board Size</Label>
@@ -189,173 +196,3 @@ export function BasicSettings({ boardSize, onBoardSizeChange }: { boardSize: num
   );
 }
 
-export function AdvancedSettings({
-  enableTimer, setEnableTimer,
-  timeLimit, setTimeLimit,
-  enableHandicap, setEnableHandicap,
-  handicapAmount, setHandicapAmount
-}: any) {
-  const [handicapType, setHandicapType] = useState<'stones' | 'moves' | 'time'>('stones');
-  const [handicapPosition, setHandicapPosition] = useState<'fixed' | 'custom'>('fixed');
-  const [advantagePlayer, setAdvantagePlayer] = useState<'player1' | 'player2'>('player2');
-
-  return (
-    <Accordion type="single" collapsible>
-      <AccordionItem value="advanced">
-        <AccordionTrigger>Advanced Settings</AccordionTrigger>
-        <AccordionContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Enable Timer</Label>
-            <Switch
-              checked={enableTimer}
-              onCheckedChange={setEnableTimer}
-            />
-          </div>
-          {enableTimer && (
-            <div className="space-y-3">
-              <Label>Time Limit (minutes)</Label>
-              <Slider
-                value={[timeLimit / 60]}
-                onValueChange={(value) => setTimeLimit(value[0] * 60)}
-                min={1}
-                max={30}
-                step={1}
-              />
-              <span className="text-sm text-muted-foreground">
-                {timeLimit / 60} minutes
-              </span>
-            </div>
-          )}
-          <div className="flex items-center justify-between">
-            <Label>Enable Handicap</Label>
-            <Switch
-              checked={enableHandicap}
-              onCheckedChange={setEnableHandicap}
-            />
-          </div>
-
-          {enableHandicap && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Advantage For</Label>
-                <Select value={advantagePlayer} onValueChange={(v) => setAdvantagePlayer(v as typeof advantagePlayer)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select player" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="player1">Player 1 (Red)</SelectItem>
-                    <SelectItem value="player2">Player 2 (Blue)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground">
-                  Select which player needs the advantage
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Handicap Type</Label>
-                <Select value={handicapType} onValueChange={(v) => setHandicapType(v as typeof handicapType)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select handicap type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="stones">Initial Stones</SelectItem>
-                    <SelectItem value="moves">Extra Moves</SelectItem>
-                    <SelectItem value="time">Time Advantage</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {handicapType === 'stones' && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Stone Placement</Label>
-                    <Select value={handicapPosition} onValueChange={(v) => setHandicapPosition(v as typeof handicapPosition)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select stone placement" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="fixed">Fixed Positions</SelectItem>
-                        <SelectItem value="custom">Custom Placement</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Number of Handicap Stones</Label>
-                    <Slider
-                      value={[handicapAmount]}
-                      onValueChange={(value) => setHandicapAmount(value[0])}
-                      min={2}
-                      max={9}
-                      step={1}
-                    />
-                    <span className="text-sm text-muted-foreground">
-                      {handicapAmount} stones
-                    </span>
-                  </div>
-                </>
-              )}
-
-              {handicapType === 'moves' && (
-                <div className="space-y-2">
-                  <Label>Extra Moves</Label>
-                  <Slider
-                    value={[handicapAmount]}
-                    onValueChange={(value) => setHandicapAmount(value[0])}
-                    min={1}
-                    max={5}
-                    step={1}
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    {handicapAmount} additional moves
-                  </span>
-                </div>
-              )}
-
-              {handicapType === 'time' && (
-                <div className="space-y-2">
-                  <Label>Time Advantage (minutes)</Label>
-                  <Slider
-                    value={[handicapAmount]}
-                    onValueChange={(value) => setHandicapAmount(value[0])}
-                    min={1}
-                    max={10}
-                    step={1}
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    {handicapAmount} minutes extra
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
-  );
-}
-
-export function OnlineGameShare({ gameId }: { gameId: string; }) {
-  const gameUrl = `${window.location.origin}?id=${gameId}`;
-
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-center">
-        <QRCodeSVG value={gameUrl} size={200} />
-      </div>
-      <div className="space-y-2">
-        <Label>Game Link</Label>
-        <div className="flex gap-2">
-          <Input value={gameUrl} readOnly onClick={(e) => e.currentTarget.select()} />
-          <Button
-            variant="outline"
-            onClick={() => navigator.clipboard.writeText(gameUrl)}
-          >
-            Copy
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}

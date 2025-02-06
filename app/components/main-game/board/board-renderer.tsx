@@ -1,43 +1,31 @@
-import { memo, useMemo } from "react";
+import { memo, useMemo, type ReactNode } from "react";
 import type { Cell } from "~/lib/engine/types";
 import { GameCell } from "../game-cell";
-import { useCellUpdates } from "~/hooks/use-cell-updates";
+import type { Matrix } from "~/lib/engine/utils/Matrix";
 
 interface BoardRendererProps {
-  board: Cell[][];
+  board: Matrix<Cell>;
   isPreview?: boolean;
 }
 
-export const BoardRenderer = memo(function BoardRenderer({
+export const BoardRenderer = function BoardRenderer({
   board,
   isPreview
 }: BoardRendererProps) {
-  const updates = useCellUpdates();
-
-  const cells = useMemo(() =>
-    board.map((row, x) =>
-      row.map((cell, y) => {
-        const key = `${x}-${y}`;
-        const updatedCell = !isPreview ? updates.get(key) ?? cell : cell;
-
-        return (
-          <div
-            key={key}
-            className="relative bg-white rounded-md shadow-sm transition-all duration-200 hover:shadow-md"
-       
-          >
-            <GameCell
-              cell={updatedCell}
-              isPreview={isPreview}
-            />
-          </div>
-        );
-      })
-    ).flat()
-    , [board, updates, isPreview]);
+  const cells = useMemo(() => {
+    const elements: ReactNode[] = [];
+    for (const [cell, row, col] of board) {
+      elements.push(
+        <GameCell
+          key={`${row}-${col}`}
+          cell={cell}
+          position={{ x: row, y: col }}
+          isPreview={isPreview}
+        />
+      );
+    }
+    return elements;
+  }, [board, isPreview]);
 
   return <>{cells}</>;
-}, (prevProps, nextProps) => {
-  return JSON.stringify(prevProps.board) === JSON.stringify(nextProps.board) &&
-    prevProps.isPreview === nextProps.isPreview;
-});
+};

@@ -9,20 +9,17 @@ import {
   SidebarMenuButton,
   SidebarRail
 } from "~/components/ui/sidebar";
-import { useGameStore } from "~/store/useGameStore";
+import { useGameState } from "~/store/GameStateManager";
+import { useUIStore } from "~/store/useUIStore";
 import { AboutModal } from "./about-modal";
 import { GameScore } from "./game-score";
 
 export function AppSidebar() {
   const [showAboutModal, setShowAboutModal] = useState(false);
-  const
-    showGameStartModal
-      = useGameStore(state => state.showGameStartModal);
+  const showGameStartModal = useUIStore(state => state.setGameStartModal);
 
-  const players = useGameStore(state => state.players);
-  const playerStats = useGameStore(state => state.playerStats);
-  const currentPlayer = useGameStore(state => state.currentPlayer);
-  const scores = useGameStore(state => state.scores);
+  const { players, playerStats, currentPlayer, scores } = useGameState().getState();
+
 
   return (
     <Sidebar variant="floating" collapsible="offcanvas" >
@@ -49,7 +46,7 @@ export function AppSidebar() {
           </SidebarMenuButton>
         </SidebarGroup>
         <SidebarGroup>
-          <GameScore score={scores} players={players} playerStats={playerStats} currentPlayerId={currentPlayer.id} />
+          <GameScore score={scores} players={players} playerStats={playerStats} currentPlayerId={currentPlayer?.id ?? 0} />
         </SidebarGroup>
       </SidebarContent>
 

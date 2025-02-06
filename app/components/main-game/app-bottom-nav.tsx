@@ -1,13 +1,13 @@
 import { History, Info, Plus, RotateCcw, Undo } from "lucide-react";
 import { useState } from "react";
 import { cn } from "~/lib/utils";
-import { useGameStore } from "~/store/useGameStore";
 import { Button } from "../ui/button";
 import { AboutModal } from "./about-modal";
+import { useUIStore } from "~/store/useUIStore";
 
 export function AppBottomNav() {
   const [showAboutModal, setShowAboutModal] = useState(false);
-  const showGameStartModal = useGameStore(state => state.showGameStartModal);
+  const setGameStartModal = useUIStore((state) => state.setGameStartModal);
 
   return (
     <>
@@ -15,9 +15,9 @@ export function AppBottomNav() {
         <div className="mx-auto h-full max-w-screen-xl">
           <div className="grid h-full grid-cols-5 items-center justify-items-center">
             <Button variant="ghost"
-              onClick={() => showGameStartModal(true)}
+              onClick={() => setGameStartModal(true)}
               className={cn(
-                "flex flex-col items-center justify-center py-8 gap-1", 
+                "flex flex-col items-center justify-center py-8 gap-1",
               )}
             >
               <Plus size={24} />
@@ -26,7 +26,7 @@ export function AppBottomNav() {
 
             <Button variant="ghost"
               className={cn(
-                "flex flex-col items-center justify-center py-8 gap-1", 
+                "flex flex-col items-center justify-center py-8 gap-1",
               )}
             >
               <Undo size={24} />
@@ -35,7 +35,7 @@ export function AppBottomNav() {
 
             <Button variant="ghost"
               className={cn(
-                "flex flex-col items-center justify-center py-8 gap-1", 
+                "flex flex-col items-center justify-center py-8 gap-1",
               )}
             >
               <RotateCcw size={24} />
@@ -45,7 +45,7 @@ export function AppBottomNav() {
             <Button variant="ghost"
               disabled
               className={cn(
-                "flex flex-col items-center justify-center py-8 gap-1", 
+                "flex flex-col items-center justify-center py-8 gap-1",
               )}
             >
               <History size={24} />
@@ -55,7 +55,7 @@ export function AppBottomNav() {
             <Button variant="ghost"
               onClick={() => setShowAboutModal(true)}
               className={cn(
-                "flex flex-col items-center justify-center py-8 gap-1", 
+                "flex flex-col items-center justify-center py-8 gap-1",
               )}
             >
               <Info size={24} />

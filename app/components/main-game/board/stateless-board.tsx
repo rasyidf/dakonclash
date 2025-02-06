@@ -2,17 +2,19 @@ import { cn } from "~/lib/utils";
 import type { Cell } from "~/lib/engine/types";
 import { BoardLabels } from "./board-labels";
 import { BoardRenderer } from "./board-renderer";
+import type { Matrix } from "~/lib/engine/utils/Matrix";
 
-interface StatelessBoardProps {
-  board: Cell[][];
+
+interface BoardProps {
+  size?: 5 | 7 | 9 | 11;
+  board: Matrix<Cell>;
   isPreview?: boolean;
   className?: string;
 }
 
-interface BoardProps {
-  size?: 5 | 7 | 9 | 11;
-  board: Cell[][];
-  isPreview?: boolean;
+interface LabeledBoardProps {
+  board: Matrix<Cell>;
+  onCellClick?: (x: number, y: number) => void;
   className?: string;
 }
 
@@ -21,7 +23,7 @@ const StatelessBoard = ({
   isPreview = false,
   className
 }: BoardProps) => {
-  const boardSize = board.length;
+  const boardSize = board.getWidth();
 
   return (
     <div
@@ -46,16 +48,16 @@ const StatelessBoard = ({
   );
 };
 
-export function LabeledBoard({ board, isPreview = false, className }: StatelessBoardProps) {
+export function LabeledBoard({ board, onCellClick, className = "" }: LabeledBoardProps) {
 
   return (
     <div className="relative mt-4 w-full max-w-[min(90vw,90vh)] mx-auto">
       <div className="absolute inset-0 pointer-events-none">
-        <BoardLabels size={board.length} />
+        <BoardLabels size={board.getWidth()} />
       </div>
       <StatelessBoard
         board={board}
-        isPreview={isPreview}
+        isPreview={false}
         className={className}
       />
     </div>

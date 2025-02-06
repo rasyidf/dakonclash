@@ -1,13 +1,12 @@
 // evaluation/MoveEvaluator.ts
-import type { BoardAnalyzer } from '../../boards/BoardAnalyzer';
+import { BoardAnalyzer } from '../../boards/BoardAnalyzer';
 import type { BoardStateManager } from '../../boards/BoardStateManager';
 import { EvaluationWeights } from './EvaluationWeights';
 
 export class MoveEvaluator {
   constructor(
     private boardManager: BoardStateManager,
-    private weights: EvaluationWeights,
-    private analyzer: BoardAnalyzer
+    private weights: EvaluationWeights
   ) { }
 
   evaluateMove(row: number, col: number, botId: number): number {
@@ -23,7 +22,7 @@ export class MoveEvaluator {
       }
 
       // Evaluate position control
-      const centralityBonus = this.analyzer.getCentralityValue(row, col);
+      const centralityBonus = BoardAnalyzer.getCentralityValue(this.boardManager.getBoard(), row, col);
       score += centralityBonus * this.weights.getWeight(1, 'centrality');
 
       // Consider defensive moves
@@ -31,7 +30,7 @@ export class MoveEvaluator {
       score += opponentThreats * this.weights.getWeight(1, 'disruption') * 2;
 
       // Value chain potential
-      const chainPotential = this.analyzer.getChainPotential(row, col, botId);
+      const chainPotential = BoardAnalyzer.getChainPotential(this.boardManager.getBoard(), row, col, botId);
       score += chainPotential * this.weights.getWeight(1, 'chainPotential') * 3;
 
       return score;
@@ -44,13 +43,13 @@ export class MoveEvaluator {
   evaluateBoard(botId: number): number {
     try {
       const opponentId = botId === 1 ? 2 : 1;
-      
-      const botControl = this.analyzer.calculateTotalControl(botId);
-      const opponentControl = this.analyzer.calculateTotalControl(opponentId);
-      
-      const botTerritory = this.analyzer.calculateTerritoryScore(botId);
-      const opponentTerritory = this.analyzer.calculateTerritoryScore(opponentId);
-      
+
+      const botControl = BoardAnalyzer.calculateTotalControl(this.boardManager.getBoard(), botId);
+      const opponentControl = BoardAnalyzer.calculateTotalControl(this.boardManager.getBoard(), opponentId);
+
+      const botTerritory = BoardAnalyzer.calculateTerritoryControl(this.boardManager.getBoard(), botId);
+      const opponentTerritory = BoardAnalyzer.calculateTerritoryControl(this.boardManager.getBoard(), opponentId);
+
       return (
         (botControl - opponentControl) * this.weights.getWeight(1, 'control') +
         (botTerritory - opponentTerritory) * this.weights.getWeight(1, 'territory')

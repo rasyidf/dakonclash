@@ -1,6 +1,6 @@
 import type { Cell, Move } from "../types";
 
-export class BoardHistoryManager {
+export class BoardHistory {
   private moves: Move[] = [];
   private readonly COLUMNS = 'ABCDEFGHIJKLMNO';
 
@@ -45,10 +45,11 @@ export class BoardHistoryManager {
   public loadFromNotation(notation: string): void {
     this.clear();
     for (let i = 0; i < notation.length; i += 2) {
-      const moveNotation = notation.substr(i, 2);
+      const moveNotation = notation.substring(i, i + 2);
       this.moves.push(this.notationToMove(moveNotation));
     }
   }
+
 
   public getMove(index: number): Move | undefined {
     return this.moves[index];

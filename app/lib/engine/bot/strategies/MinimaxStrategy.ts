@@ -1,4 +1,4 @@
-import type { GameMechanicsEngine } from "../../abstracts/GameMechanicsEngine";
+import type { GameMechanics } from "../../mechanics/GameMechanics";
 import type { BoardStateManager } from "../../boards/BoardStateManager";
 import type { EvaluationWeights } from "../evaluation/EvaluationWeights";
 import { MoveEvaluator } from "../evaluation/MoveEvaluator";
@@ -7,17 +7,15 @@ import type { BotStrategy } from "./BotStrategy";
 
 export class MinimaxStrategy implements BotStrategy {
   private readonly MAX_DEPTH = 3;
-  private analyzer: BoardAnalyzer;
   private evaluator: MoveEvaluator;
 
   constructor(
     private boardManager: BoardStateManager,
-    private gameEngine: GameMechanicsEngine,
+    private gameEngine: GameMechanics,
     private weights: EvaluationWeights,
     private botId: number
   ) {
-    this.analyzer = new BoardAnalyzer(boardManager);
-    this.evaluator = new MoveEvaluator(boardManager, weights, this.analyzer);
+    this.evaluator = new MoveEvaluator(boardManager, weights);
   }
 
   async makeMove(botId: number): Promise<{ row: number; col: number; }> {
@@ -27,9 +25,9 @@ export class MinimaxStrategy implements BotStrategy {
 
     for (let row = 0; row < size; row++) {
       for (let col = 0; col < size; col++) {
-        if (this.gameEngine.isValidMove(row, col, botId)) {
+        if (this.gameEngine.isValidMove({ x: row, y: col }, botId)) {
           const boardCopy = this.boardManager.clone();
-          await this.gameEngine.makeMove(row, col, botId);
+          await this.gameEngine.makeMove({ x: row, y: col }, botId);
 
           const score = this.minimax(
             this.MAX_DEPTH,
@@ -70,9 +68,9 @@ export class MinimaxStrategy implements BotStrategy {
       let maxScore = -Infinity;
       for (let row = 0; row < size; row++) {
         for (let col = 0; col < size; col++) {
-          if (this.gameEngine.isValidMove(row, col, currentPlayer)) {
+          if (this.gameEngine.isValidMove({ x: row, y: col }, currentPlayer)) {
             const boardCopy = this.boardManager.clone();
-            this.gameEngine.makeMove(row, col, currentPlayer);
+            this.gameEngine.makeMove({ x: row, y: col }, currentPlayer);
 
             const score = this.minimax(depth - 1, false, alpha, beta, botId);
 
@@ -88,9 +86,9 @@ export class MinimaxStrategy implements BotStrategy {
       let minScore = Infinity;
       for (let row = 0; row < size; row++) {
         for (let col = 0; col < size; col++) {
-          if (this.gameEngine.isValidMove(row, col, currentPlayer)) {
+          if (this.gameEngine.isValidMove({ x: row, y: col }, currentPlayer)) {
             const boardCopy = this.boardManager.clone();
-            this.gameEngine.makeMove(row, col, currentPlayer);
+            this.gameEngine.makeMove({ x: row, y: col }, currentPlayer);
 
             const score = this.minimax(depth - 1, true, alpha, beta, botId);
 

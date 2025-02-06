@@ -3,12 +3,17 @@ import Confetti from 'react-confetti';
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { cn } from "~/lib/utils";
-import { useGameStore } from "~/store/useGameStore";
+import { useGameState } from "~/store/GameStateManager";
+import { useUIStore } from "~/store/useUIStore";
 
 export function WinnerModal() {
-  const { isWinnerModalOpen, showWinnerModal, winner, players, boardSize, startGame, gameMode } = useGameStore();
+
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [isLoading, setIsLoading] = useState(true);
+  const isWinnerModalOpen = useUIStore(state => state.isWinnerModalOpen);
+  const showWinnerModal = useUIStore(state => state.setWinnerModal);
+  const { initializeGame: startGame } = useGameState();
+  const { players, winner, gameMode, boardSize } = useGameState().getState();
 
   useEffect(() => {
     if (isWinnerModalOpen) {
@@ -38,7 +43,6 @@ export function WinnerModal() {
       )}
       <Dialog open={isWinnerModalOpen} onOpenChange={() => {
         showWinnerModal(false);
-        startGame(gameMode, boardSize, {});
       }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader >
@@ -56,7 +60,13 @@ export function WinnerModal() {
           </DialogHeader>
           <div className="flex justify-center gap-4 mt-4">
             <Button onClick={() => {
-              startGame(gameMode, boardSize, {});
+              startGame({
+                mode: gameMode,
+                size: boardSize,
+                rules: {
+                  victoryCondition: 'elimination'
+                }
+              });
               showWinnerModal(false);
             }}>Play Again</Button>
             <Button variant="outline" onClick={() => showWinnerModal(false)}>Close</Button>
