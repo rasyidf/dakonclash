@@ -33,19 +33,17 @@ export class DakonBoard extends Board<Cell> {
   }
 
   public getAdjacentCells(row: number, col: number): Cell[] {
-    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-    const adjacent = [];
-
-    for (const [dx, dy] of directions) {
-      const newRow = row + dx;
-      const newCol = col + dy;
-
-      if (this.isValidCell(newRow, newCol)) {
-        adjacent.push(this.cells[newRow][newCol]);
-      }
+    if (!this.isValidCell(row, col)) {
+      return [];
     }
-
-    return adjacent;
+    const DIRECTIONS = Object.freeze([[-1, 0], [1, 0], [0, -1], [0, 1]]);
+    return DIRECTIONS.reduce((adjacent: Cell[], [dx, dy]) => {
+      const newRow = row + dx, newCol = col + dy;
+      if (this.isValidCell(newRow, newCol)) {
+        adjacent.push(this.getCellAt(newRow, newCol));
+      }
+      return adjacent;
+    }, []);
   }
 
 }
