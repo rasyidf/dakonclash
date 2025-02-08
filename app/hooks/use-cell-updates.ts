@@ -3,7 +3,7 @@ import type { Cell } from '~/lib/engine/types';
 import { useGameStore } from '~/store/useGameStore';
 
 export function useCellUpdates() {
-  const { boardState: boardManager } = useGameStore();
+  const { engines: { boardState: boardManager } } = useGameStore();
   const [updates, setUpdates] = useState<Map<string, Cell>>(new Map());
 
   useEffect(() => {

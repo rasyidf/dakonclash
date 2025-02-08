@@ -1,4 +1,4 @@
-import type { GameMechanicsEngine } from "../../abstracts/GameMechanicsEngine";
+import type { GameMechanicsEngine } from "../../mechanics/GameMechanicsEngine";
 import type { BoardStateManager } from "../../boards/BoardStateManager";
 import type { EvaluationWeights } from "../evaluation/EvaluationWeights";
 import { MoveEvaluator } from "../evaluation/MoveEvaluator";
@@ -23,7 +23,7 @@ export class MinimaxStrategy implements BotStrategy {
   async makeMove(botId: number): Promise<{ row: number; col: number; }> {
     let bestScore = -Infinity;
     let bestMove = { row: 0, col: 0 };
-    const size = this.boardManager.getSize();
+    const size = this.boardManager.boardOps.getSize();
 
     for (let row = 0; row < size; row++) {
       for (let col = 0; col < size; col++) {
@@ -39,7 +39,7 @@ export class MinimaxStrategy implements BotStrategy {
             botId
           );
 
-          this.boardManager.loadBoard(boardCopy.getBoard());
+          this.boardManager.loadBoard(boardCopy.boardOps.getBoard());
 
           if (score > bestScore) {
             bestScore = score;
@@ -63,7 +63,7 @@ export class MinimaxStrategy implements BotStrategy {
       return this.evaluator.evaluateBoard(botId);
     }
 
-    const size = this.boardManager.getSize();
+    const size = this.boardManager.boardOps.getSize();
     const currentPlayer = isMaximizing ? botId : (botId === 1 ? 2 : 1);
 
     if (isMaximizing) {
@@ -76,7 +76,7 @@ export class MinimaxStrategy implements BotStrategy {
 
             const score = this.minimax(depth - 1, false, alpha, beta, botId);
 
-            this.boardManager.loadBoard(boardCopy.getBoard());
+            this.boardManager.loadBoard(boardCopy.boardOps.getBoard());
             maxScore = Math.max(maxScore, score);
             alpha = Math.max(alpha, score);
             if (beta <= alpha) break;
@@ -94,7 +94,7 @@ export class MinimaxStrategy implements BotStrategy {
 
             const score = this.minimax(depth - 1, true, alpha, beta, botId);
 
-            this.boardManager.loadBoard(boardCopy.getBoard());
+            this.boardManager.loadBoard(boardCopy.boardOps.getBoard());
             minScore = Math.min(minScore, score);
             beta = Math.min(beta, score);
             if (beta <= alpha) break;

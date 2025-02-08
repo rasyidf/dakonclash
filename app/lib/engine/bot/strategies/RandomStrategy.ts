@@ -1,7 +1,7 @@
 // strategies/RandomStrategy.ts
 import type { BotStrategy } from './BotStrategy';
 import type { BoardStateManager } from '../../boards/BoardStateManager';
-import type { GameMechanicsEngine } from '../../abstracts/GameMechanicsEngine';
+import type { GameMechanicsEngine } from '../../mechanics/GameMechanicsEngine';
 
 export class RandomStrategy implements BotStrategy {
   constructor(
@@ -10,7 +10,7 @@ export class RandomStrategy implements BotStrategy {
   ) {}
 
   async makeMove(botId: number): Promise<{ row: number; col: number }> {
-    const size = this.boardManager.getSize();
+    const size = this.boardManager.boardOps.getSize();
     const validMoves = [];
 
     for (let row = 0; row < size; row++) {

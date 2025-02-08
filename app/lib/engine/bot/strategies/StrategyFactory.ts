@@ -4,7 +4,7 @@ import { GreedyStrategy } from './GreedyStrategy';
 import { MinimaxStrategy } from './MinimaxStrategy';
 import { EvaluationWeights } from '../evaluation/EvaluationWeights';
 import type { BoardStateManager } from '../../boards/BoardStateManager';
-import type { GameMechanicsEngine } from '../../abstracts/GameMechanicsEngine';
+import type { GameMechanicsEngine } from '../../mechanics/GameMechanicsEngine';
 
 export class StrategyFactory {
   static create(

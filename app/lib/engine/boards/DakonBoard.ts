@@ -1,12 +1,11 @@
 import type { Cell } from "../types";
-import { Board } from "../abstracts/Board";
+import { Board } from "./Board";
 
 export class DakonBoard extends Board<Cell> {
 
-
   public clone(): DakonBoard {
     const newBoard = new DakonBoard(this.getSize());
-    newBoard.cells = JSON.parse(JSON.stringify(this.cells));
+    newBoard.cells = structuredClone(this.cells);
     return newBoard;
   }
 
@@ -15,11 +14,12 @@ export class DakonBoard extends Board<Cell> {
     return cell.owner === 0 || cell.owner === playerId;
   }
 
-  public updateCell(row: number, col: number, delta: number, owner: number, cascade = false): void {
-    const cell = this.ensureValidCell(row, col);
-
+  public withCellUpdate(row: number, col: number, delta: number, owner: number): DakonBoard {
+    const newBoard = this.clone();
+    const cell = newBoard.ensureValidCell(row, col);
     cell.value += delta;
     cell.owner = owner;
+    return newBoard;
   }
 
   public getPlayerCellCount(playerId: number): number {

@@ -4,11 +4,13 @@ import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { cn } from "~/lib/utils";
 import { useGameStore } from "~/store/useGameStore";
+import { useUiStore } from "~/store/useUiStore";
 
 export function WinnerModal() {
-  const { isWinnerModalOpen, showWinnerModal, winner, players, boardSize, startGame, gameMode } = useGameStore();
+  const { winner, players, boardSize, startGame, gameMode } = useGameStore();
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [isLoading, setIsLoading] = useState(true);
+  const { isWinnerModalOpen, showWinnerModal } = useUiStore();
 
   useEffect(() => {
     if (isWinnerModalOpen) {

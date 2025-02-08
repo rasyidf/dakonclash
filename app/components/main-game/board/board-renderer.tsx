@@ -1,6 +1,6 @@
 import { memo, useMemo } from "react";
 import type { Cell } from "~/lib/engine/types";
-import { GameCell } from "../game-cell";
+import { GameCell } from "../cell/game-cell";
 import { useCellUpdates } from "~/hooks/use-cell-updates";
 
 interface BoardRendererProps {

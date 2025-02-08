@@ -1,12 +1,13 @@
 import { create } from 'zustand';
+import { DakonMechanics } from '~/lib/engine/mechanics/DakonMechanics';
+import { CHAIN_REACTION_DELAY_MS } from '~/lib/engine/mechanics/GameMechanicsEngine';
 import { saveGameHistory } from '~/lib/storage';
+import { delay } from '~/lib/utils';
 import { BoardStateManager } from '../lib/engine/boards/BoardStateManager';
 import { BotEngine } from '../lib/engine/bot/BotEngine';
-import { DakonMechanics } from '~/lib/engine/DakonMechanics';
 import { GameStateManager } from '../lib/engine/GameStateManager';
-import type { GameHistory, GameMode, GameSettings, GameStore, ScoreAnimation } from '../lib/engine/types';
-import { delay } from '~/lib/utils';
-import { CHAIN_REACTION_DELAY_MS } from '~/lib/engine/abstracts/GameMechanicsEngine';
+import type { GameHistory, GameMode, GameSettings, GameStore } from '../lib/engine/types';
+import { useUiStore } from './useUiStore';
 
 // Initialize engines first
 const boardState = new BoardStateManager(5);
@@ -15,18 +16,21 @@ const gameState = new GameStateManager(boardState);
 const botEngine = new BotEngine(boardState, mechanics);
 
 export const useGameStore = create<GameStore>((set, get) => ({
-  boardState,
-  gameState,
-  botEngine,
-  mechanics,
+  engines: {
+    boardState,
+    gameState,
+    botEngine,
+    mechanics,
+  },
   gameMode: 'local',
-  boardSize: 7,
+  boardSize: 5,
+  isProcessing: false,
   players: {
     1: { id: 1, name: "Player 1", color: "red" },
     2: { id: 2, name: "Player 2", color: "blue" },
   },
   currentPlayer: { id: 1, name: "Player 1", color: "red" },
-  board: boardState.getBoard(),
+  board: boardState.boardOps.getBoard(),
   moves: 0,
   scores: { 1: 0, 2: 0 },
   stats: {
@@ -43,10 +47,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   isGameOver: false,
   winner: null,
-  isWinnerModalOpen: false,
-  isGameStartModalOpen: true,
-  isProcessing: false,
-  scoreAnimations: [],
   timer: {
     enabled: false,
     timePerPlayer: 300,
@@ -57,28 +57,31 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setTimer: (seconds: number) => {
     set(state => ({
-      timer: {
-        ...state.timer,
-        enabled: true,
-        timePerPlayer: seconds,
-        remainingTime: { 1: seconds, 2: seconds },
-        lastTick: Date.now(),
+      gameSettings: {
+        timer: {
+          ...state.gameSettings?.timer,
+          enabled: true,
+          timePerPlayer: seconds,
+          remainingTime: { 1: seconds, 2: seconds },
+          lastTick: Date.now(),
+        },
+        ...state.gameSettings,
       }
     }));
   },
 
   tickTimer: () => {
     const state = get();
-    if (!state.timer.enabled || state.isGameOver) return;
+    if (!state.gameSettings?.timer?.enabled || state.isGameOver) return;
 
     const now = Date.now();
-    const delta = Math.floor((now - state.timer.lastTick) / 1000);
+    const delta = Math.floor((now - state.gameSettings?.timer.lastTick) / 1000);
     if (delta < 1) return;
 
     const currentPlayerId = state.currentPlayer.id;
     const newRemainingTime = {
-      ...state.timer.remainingTime,
-      [currentPlayerId]: Math.max(0, state.timer.remainingTime[currentPlayerId] - delta)
+      ...state.gameSettings?.timer.remainingTime,
+      [currentPlayerId]: Math.max(0, state.gameSettings?.timer.remainingTime[currentPlayerId] - delta)
     };
 
     // Check for time loss
@@ -86,36 +89,44 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const winner = currentPlayerId === 1 ? 2 : 1;
       set(state => ({
         timer: {
-          ...state.timer,
+          ...state.gameSettings?.timer,
           lastTick: now,
           remainingTime: newRemainingTime,
         },
         isGameOver: true,
         winner,
-        isWinnerModalOpen: true,
       }));
+      useUiStore.getState().showWinnerModal(true);
       return;
     }
 
     set(state => ({
-      timer: {
-        ...state.timer,
-        lastTick: now,
-        remainingTime: newRemainingTime,
-      }
+      gameSettings: {
+        ...state.gameSettings,
+        timer: {
+          ...state.gameSettings?.timer,
+          enabled: true,
+          lastTick: now,
+          remainingTime: newRemainingTime,
+        },
+      } as GameSettings,
+      ...state,
     }));
   },
 
   startGame: (mode: GameMode, size: number, settings: GameSettings = {}) => {
-    const { gameState, mechanics } = get();
-    const botAsFirst = settings.botAsFirst || false;
+    const { engines: { gameState, mechanics } } = get();
+    const botAsFirst = settings.bot?.AsFirstPlayer || false;
     const newState = gameState.resetGame(mode, size, botAsFirst);
     (mechanics as DakonMechanics).resetFirstMoves();
     const timePerPlayer = size > 7 ? 600 : 300;
+
+    useUiStore.getState().showGameStartModal(false);
+
     set(state => ({
       ...state,
       timer: {
-        ...state.timer,
+        ...state.gameSettings?.timer,
         enabled: size > 7,
         timePerPlayer,
         remainingTime: { 1: timePerPlayer, 2: timePerPlayer },
@@ -123,7 +134,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       },
       ...newState,
       gameStartedAt: Date.now(),
-      isGameStartModalOpen: false,
     }));
 
     if (botAsFirst && mode === 'vs-bot') {
@@ -138,7 +148,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       startedAt: state.gameStartedAt,
       endedAt: Date.now(),
       winner: state.winner,
-      moves: state.boardState.getHistory(),
+      moves: state.engines.boardState.history.history,
       mode: state.gameMode,
       boardSize: state.boardSize,
       players: state.players,
@@ -151,12 +161,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   makeMove: async (row: number, col: number) => {
     const state = get();
-    const { mechanics, gameState, currentPlayer, scores, stats, playerStats, gameMode, isProcessing } = state;
+    const uiStore = useUiStore.getState();
+    const { engines: { mechanics, gameState }, currentPlayer, scores, stats, playerStats, gameMode } = state;
 
-    if (isProcessing || state.isGameOver) return;
+    if (uiStore.isProcessing || state.isGameOver) return;
 
-
-    set({ isProcessing: true });
+    uiStore.setProcessing(true);
 
     try {
 
@@ -164,12 +174,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       delay(CHAIN_REACTION_DELAY_MS);
 
-      if (state.boardSize > 7 && state.timer.enabled) {
-        const timeBonus = Math.floor(state.timer.remainingTime[currentPlayer.id] / 60) * 10;
+      if (state.boardSize > 7 && state.gameSettings?.timer?.enabled) {
+        const timeBonus = Math.floor(state.gameSettings?.timer.remainingTime[currentPlayer.id] / 60) * 10;
         scores[currentPlayer.id] += timeBonus;
       }
 
-      const updatedBoard = boardState.getBoard();
+      const updatedBoard = boardState.boardOps.getBoard();
 
       gameState.updateScores(scores);
       gameState.updatePlayerStats(currentPlayer.id, playerStats, chainLength);
@@ -180,6 +190,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (winner !== null) {
         set({ winner });
         state.saveGameHistory();
+        uiStore.showWinnerModal(true);
       }
 
       const nextPlayer = state.players[currentPlayer.id === 1 ? 2 : 1];
@@ -193,9 +204,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         currentPlayer: nextPlayer,
         isGameOver: state.moves > 1 && winner !== null,
         winner: state.moves > 1 ? winner : null,
-        isWinnerModalOpen: state.moves > 1 && winner !== null,
-        isProcessing: false,
       });
+
+      uiStore.setProcessing(false);
 
       if (gameMode === 'vs-bot' && !state.isGameOver && nextPlayer.isBot) {
         setTimeout(() => {
@@ -206,7 +217,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }, 1000);
       }
     } catch (error) {
-      set({ isProcessing: false });
+      uiStore.setProcessing(false);
       console.error('Move error:', error);
     }
   },
@@ -222,13 +233,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     ) return;
 
     try {
-      const botMove = await state.botEngine.makeMove(state);
+      const botMove = await state.engines.botEngine.makeMove(state);
       if (botMove) {
         await state.makeMove(botMove.row, botMove.col);
       }
     } catch (error) {
       console.error('Bot move error:', error);
-      set({ isProcessing: false });
+      useUiStore.getState().setProcessing(false);
     }
   },
 
@@ -238,11 +249,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   changeBoardSize: (size: number) => {
-    const newState = { boardSize: size, board: new BoardStateManager(size).getBoard() };
+    const newState = { boardSize: size, board: new BoardStateManager(size).boardOps.getBoard() };
     set({ ...newState });
   },
-
-  showWinnerModal: (show: boolean) => set({ isWinnerModalOpen: show }),
-  showGameStartModal: (show: boolean) => set({ isGameStartModalOpen: show }),
 
 }));

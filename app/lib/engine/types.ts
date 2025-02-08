@@ -1,6 +1,6 @@
 import type { BoardStateManager } from './boards/BoardStateManager';
 import type { BotEngine } from './bot/BotEngine';
-import type { GameMechanicsEngine } from './abstracts/GameMechanicsEngine';
+import type { GameMechanicsEngine } from './mechanics/GameMechanicsEngine';
 import type { GameStateManager } from './GameStateManager';
 
 export type TailwindColor = "red" | "blue" | "green" | "yellow" | "purple" | "pink" | "orange" | "teal";
@@ -13,20 +13,29 @@ export interface GameMechanicsEvents {
   score: { row: number; col: number; score: number; playerId: number; };
 }
 
+export interface BoardUpdateEvents {
+  type: 'cell_updated' | 'board_reset' | 'state_loaded' | 'state_saved' | 'explosion';
+  payload: {
+    cell?: Cell;
+    board?: Cell[][];
+    x?: number;
+    y?: number;
+  };
+}
+
 
 export interface Cell {
   id?: string;
   owner: number;
   value: number;
-  x: number;
-  y: number;
+  x?: number;
+  y?: number;
 }
 
 export interface BoardState {
   board: Cell[][];
   timestamp: Date;
 }
-
 
 export interface Player {
   id: number;
@@ -75,6 +84,17 @@ export interface HandicapSettings {
   advantagePlayer: 'player1' | 'player2';  // Specify which player gets the advantage
 }
 
+export interface BotSettings {
+  difficulty: 'easy' | 'medium' | 'hard';
+  AsFirstPlayer: boolean;
+  playerId: number;
+}
+
+export interface GameSettings {
+  timer?: Timer;
+  handicap?: HandicapSettings;
+  bot?: BotSettings;
+}
 export interface Timer {
   enabled: boolean;
   timePerPlayer: number;
@@ -87,7 +107,7 @@ export interface GameHistory {
   startedAt: number;
   endedAt: number;
   winner: number | 'draw' | null;
-  moves: Move[];
+  moves: string[];
   mode: GameMode;
   boardSize: number;
   players: Record<number, Player>;
@@ -107,72 +127,58 @@ export interface HistorySnapshot {
   timestamp: Date;
 }
 
-export type GameState = {
-  // Game Configuration
-  gameMode: GameMode; // 'local' | 'online' | 'vs-bot'
-  boardSize: number; // Size of the board (e.g., 6x6, 8x8)
-  gameId?: string; // Optional ID for online games
-
-  // Players
-  players: Record<Player["id"], Player>; // Player 1 and Player 2 (or Bot)
-  currentPlayer: Player; // The player whose turn it is
-
-  // Board and Moves
-  board: Cell[][]; // The game board (2D array of cells)
-  moves: number; // Total number of moves made in the game
-
-  // Scores and Stats
-  scores: Record<Player["id"], number>; // Scores for Player 1 and Player 2
-  stats: GameStats; // Game-wide statistics (e.g., flip combos, longest chain)
-  playerStats: Record<Player["id"], PlayerStats>; // Player-specific stats
-
-  // Game Status 
-  isGameOver: boolean; // Whether the game has ended
-  winner: Player["id"] | 'draw' | null; // The winner of the game (1, 2, 'draw', or null)
-
-  isWinnerModalOpen: boolean; // Whether to show the winner modal
-  isGameStartModalOpen: boolean; // Whether to show the game start modal 
-
-  boardState: BoardStateManager; // Manages the board state
-  mechanics: GameMechanicsEngine; // Handles game logic
-  gameState: GameStateManager; // Manages game flow and stats
-
+// Add UiStore types
+export interface UiStore {
+  isWinnerModalOpen: boolean;
+  isGameStartModalOpen: boolean;
   isProcessing: boolean;
-
   scoreAnimations: ScoreAnimation[];
-  timer: Timer;
-
-  gameStartedAt: number;
-};
-
-export type GameSettings = {
-  timer?: number;
-  handicap?: number;
-  botDifficulty?: number;
-  botAsFirst?: boolean;
-};
-
-export type GameStore = GameState & {
-  startGame: (mode: GameMode, size: number,
-    settings: GameSettings) => void;
-  makeMove: (row: number, col: number) => Promise<void>;
-  switchPlayer: () => void;
   showWinnerModal: (show: boolean) => void;
   showGameStartModal: (show: boolean) => void;
+  setProcessing: (processing: boolean) => void;
+}
+
+export type GameState = {
+  gameSettings?: GameSettings;
+  gameMode: GameMode;
+  boardSize: number;
+  gameId?: string;
+  players: Record<Player["id"], Player>;
+  currentPlayer: Player;
+  board: Cell[][];
+  moves: number;
+  scores: Record<Player["id"], number>;
+  stats: GameStats;
+  playerStats: Record<Player["id"], PlayerStats>;
+  isGameOver: boolean;
+  winner: Player["id"] | 'draw' | null;
+  isProcessing: boolean;
+  gameStartedAt: number;
+
+};
+//#region Engine
+export interface GameEngines {
+  boardState: BoardStateManager;
+  mechanics: GameMechanicsEngine;
+  gameState: GameStateManager;
+  botEngine: BotEngine;
+}
+
+//#endregion
+
+//#region Actions
+export interface GameActions {
+  startGame: (mode: GameMode, size: number, settings: GameSettings) => void;
+  makeMove: (row: number, col: number) => Promise<void>;
+  switchPlayer: () => void;
   changeBoardSize: (size: number) => void;
   saveGameHistory: () => void;
   setTimer: (seconds: number) => void;
   tickTimer: () => void;
   makeBotMove: () => Promise<void>;
-  botEngine: BotEngine;
-};
+}
 
-export interface BoardUpdate {
-  type: 'cell_updated' | 'board_reset' | 'state_loaded' | 'state_saved' | 'explosion';
-  payload: {
-    cell?: Cell;
-    board?: Cell[][];
-    x?: number;
-    y?: number;
-  };
+
+export interface GameStore extends GameState, GameActions {
+  engines: GameEngines;
 }

@@ -1,6 +1,6 @@
 // BotEngine.ts
 import { BoardStateManager } from '../boards/BoardStateManager';
-import { GameMechanicsEngine } from '../abstracts/GameMechanicsEngine';
+import { GameMechanicsEngine } from '../mechanics/GameMechanicsEngine';
 import { StrategyFactory } from './strategies/StrategyFactory';
 import type { Cell, GameState } from '../types';
 
@@ -30,8 +30,8 @@ export class BotEngine {
 
 
   private getOpeningMove(botId: number): { row: number; col: number; } {
-    const size = this.boardManager.getSize();
-    const board = this.boardManager.getBoard();
+    const size = this.boardManager.boardOps.getSize();
+    const board = this.boardManager.boardOps.getBoard();
     const isPlayerMoved = this.hasPlayerMoved(board);
 
     if (!isPlayerMoved) {
@@ -90,7 +90,7 @@ export class BotEngine {
   }
 
   private findRandomValidMove(botId: number): { row: number; col: number; } {
-    const size = this.boardManager.getSize();
+    const size = this.boardManager.boardOps.getSize();
     const validMoves = [];
 
     for (let row = 0; row < size; row++) {

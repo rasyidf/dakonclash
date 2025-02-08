@@ -22,11 +22,15 @@ export class Observable<T extends EventMap> {
     handlers.push(callback as EventHandler<T[keyof T]>);
 
     return () => {
-      const currentHandlers = this.subscribers.get(event);
-      if (currentHandlers) {
-        this.subscribers.set(event, currentHandlers.filter(sub => sub !== callback));
-      }
+      this.unsubscribe(event, callback);
     };
+  }
+
+  public unsubscribe<K extends keyof T>(event: K, callback: EventHandler<T[K]>): void {
+    const handlers = this.subscribers.get(event);
+    if (handlers) {
+      this.subscribers.set(event, handlers.filter(sub => sub !== callback));
+    }
   }
 
   public set<K extends keyof T>(event: K, value: T[K]): void {
@@ -58,10 +62,7 @@ export class ObservableClass<T extends EventMap> {
     handlers.push(callback as EventHandler<T[keyof T]>);
 
     return () => {
-      const currentHandlers = this.subscribers.get(event);
-      if (currentHandlers) {
-        this.subscribers.set(event, currentHandlers.filter(sub => sub !== callback));
-      }
+      this.unsubscribe(event, callback);
     };
   }
 

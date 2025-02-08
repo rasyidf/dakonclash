@@ -3,7 +3,7 @@ import { MoveEvaluator } from '../evaluation/MoveEvaluator';
 import type { BoardStateManager } from '../../boards/BoardStateManager';
 import { BoardAnalyzer } from '../../boards/BoardAnalyzer';
 import type { BotStrategy } from './BotStrategy';
-import type { GameMechanicsEngine } from '../../abstracts/GameMechanicsEngine';
+import type { GameMechanicsEngine } from '../../mechanics/GameMechanicsEngine';
 import type { EvaluationWeights } from '../evaluation/EvaluationWeights';
 
 export class GreedyStrategy implements BotStrategy {
@@ -21,7 +21,7 @@ export class GreedyStrategy implements BotStrategy {
   }
 
   async makeMove(): Promise<{ row: number; col: number }> {
-    const size = this.boardManager.getSize();
+    const size = this.boardManager.boardOps.getSize();
     let bestMove = { row: 0, col: 0 };
     let bestScore = -Infinity;
 

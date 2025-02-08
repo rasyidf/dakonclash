@@ -1,6 +1,6 @@
-import { delay } from '../utils';
-import { CHAIN_REACTION_DELAY_MS, FIRST_MOVE_VALUE, GameMechanicsEngine } from './abstracts/GameMechanicsEngine';
-import type { BoardStateManager } from './boards/BoardStateManager';
+import { delay } from '../../utils';
+import { CHAIN_REACTION_DELAY_MS, FIRST_MOVE_VALUE, GameMechanicsEngine } from './GameMechanicsEngine';
+import type { BoardStateManager } from '../boards/BoardStateManager';
 
 
 export class DakonMechanics extends GameMechanicsEngine {
@@ -8,11 +8,10 @@ export class DakonMechanics extends GameMechanicsEngine {
     super(boardManager);
   }
 
-
   public isValidMove(row: number, col: number, playerId: number): boolean {
-    const cell = this.boardManager.getCellAt(row, col);
+    const cell = this.boardManager.boardOps.getCellAt(row, col);
 
-    if (this.firstMoves[playerId]) {
+    if (this.isFirstMove(playerId)) {
       return cell.owner === 0;
     }
 
@@ -26,7 +25,7 @@ export class DakonMechanics extends GameMechanicsEngine {
 
   private async processCellExplosion(row: number, col: number, playerId: number, chainLength: number): Promise<number> {
     const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-    const criticalMass = this.boardManager.calculateCriticalMass(row, col);
+    const criticalMass = this.boardManager.boardOps.calculateCriticalMass(row, col);
 
     this.handleCellUpdate(row, col, 0, -criticalMass);
 
@@ -37,11 +36,11 @@ export class DakonMechanics extends GameMechanicsEngine {
       const newRow = row + dx;
       const newCol = col + dy;
 
-      if (!this.boardManager.isValidCell(newRow, newCol)) continue;
+      if (!this.boardManager.boardOps.isValidCell(newRow, newCol)) continue;
 
       this.handleCellUpdate(newRow, newCol, playerId, 1);
 
-      if (this.boardManager.getCellAt(newRow, newCol).value >= this.boardManager.calculateCriticalMass(newRow, newCol)) {
+      if (this.boardManager.boardOps.getCellAt(newRow, newCol).value >= this.boardManager.boardOps.calculateCriticalMass(newRow, newCol)) {
         const promise = (async () => {
           this.notify('chainReaction', { row: newRow, col: newCol, chainLength, playerId });
           await delay(CHAIN_REACTION_DELAY_MS);
@@ -73,7 +72,7 @@ export class DakonMechanics extends GameMechanicsEngine {
     this.handleCellUpdate(row, col, currentPlayerId, addValue);
 
     let totalChainLength = 0;
-    if (this.boardManager.getCellAt(row, col).value >= this.boardManager.calculateCriticalMass(row, col)) {
+    if (this.boardManager.boardOps.getCellAt(row, col).value >= this.boardManager.boardOps.calculateCriticalMass(row, col)) {
       this.isProcessing = true;
       totalChainLength = await this.triggerChainReaction(row, col, currentPlayerId, 1);
     }
@@ -90,8 +89,8 @@ export class DakonMechanics extends GameMechanicsEngine {
   }
 
   public isGameOver(): boolean {
-    const count1 = this.boardManager.getPlayerCellCount(1);
-    const count2 = this.boardManager.getPlayerCellCount(2);
+    const count1 = this.boardManager.boardOps.getPlayerCellCount(1);
+    const count2 = this.boardManager.boardOps.getPlayerCellCount(2);
     return count1 === 0 || count2 === 0;
   }
 
@@ -101,7 +100,7 @@ export class DakonMechanics extends GameMechanicsEngine {
     playerId: number,
     chainLength: number = 1
   ): Promise<number> {
-    if (this.boardManager.getCellAt(row, col).value >= this.boardManager.calculateCriticalMass(row, col)) {
+    if (this.boardManager.boardOps.getCellAt(row, col).value >= this.boardManager.boardOps.calculateCriticalMass(row, col)) {
       this.isProcessing = true;
 
       this.notify('processing', { isProcessing: this.isProcessing });

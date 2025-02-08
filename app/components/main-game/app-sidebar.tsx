@@ -12,12 +12,11 @@ import {
 import { useGameStore } from "~/store/useGameStore";
 import { AboutModal } from "./about-modal";
 import { GameScore } from "./game-score";
+import { useUiStore } from "~/store/useUiStore";
 
 export function AppSidebar() {
   const [showAboutModal, setShowAboutModal] = useState(false);
-  const
-    showGameStartModal
-      = useGameStore(state => state.showGameStartModal);
+  const showGameStartModal = useUiStore(state => state.showGameStartModal);
 
   const players = useGameStore(state => state.players);
   const playerStats = useGameStore(state => state.playerStats);

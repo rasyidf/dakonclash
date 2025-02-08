@@ -13,11 +13,11 @@ export class MoveEvaluator {
   evaluateMove(row: number, col: number, botId: number): number {
     try {
       let score = 0;
-      const cell = this.boardManager.getCellAt(row, col);
+      const cell = this.boardManager.boardOps.getCellAt(row, col);
       const opponentId = botId === 1 ? 2 : 1;
 
       // Prioritize moves that lead to chain reactions
-      const criticalMass = this.boardManager.calculateCriticalMass(row, col);
+      const criticalMass = this.boardManager.boardOps.calculateCriticalMass(row, col);
       if (cell.value >= criticalMass - 1) {
         score += 100 * this.weights.getWeight(1, 'chainReaction');
       }
@@ -62,7 +62,7 @@ export class MoveEvaluator {
   }
 
   private checkOpponentThreats(row: number, col: number, opponentId: number): number {
-    const adjacent = this.boardManager.getAdjecentCells(row, col);
+    const adjacent = this.boardManager.boardOps.getAdjacentCells(row, col);
     return adjacent.filter(cell => cell.owner === opponentId && cell.value >= 2).length;
   }
 }

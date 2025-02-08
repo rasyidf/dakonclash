@@ -7,8 +7,8 @@ interface GameStateEvents {
   stateUpdate: Partial<GameState>;
   boardUpdate: Partial<BoardState>;
   scoreUpdate: Record<number, number>;
-  gameOver: { winner: number | 'draw'; scores: Record<number, number> };
-  statsUpdate: { gameStats: GameStats; playerStats: Record<Player["id"], PlayerStats> };
+  gameOver: { winner: number | 'draw'; scores: Record<number, number>; };
+  statsUpdate: { gameStats: GameStats; playerStats: Record<Player["id"], PlayerStats>; };
 }
 
 export class GameStateManager extends ObservableClass<GameStateEvents> {
@@ -44,13 +44,13 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
 
   // Calculate the total score for a player
   public calculatePlayerScore(playerId: number): number {
-    const board = this.boardEngine.getBoard();
+    const board = this.boardEngine.boardOps.getBoard();
     const baseScore = board.flat().reduce((sum, cell) => {
       return cell.owner === playerId ? sum + cell.value : sum;
     }, 0);
 
     // Additional scoring for timed games (if implemented)
-    if (this.boardEngine.getSize() > 7) {
+    if (this.boardEngine.boardOps.getSize() > 7) {
       // Add time-based bonus calculation here
       // This will be handled by the store's makeMove function
       return baseScore;
@@ -67,7 +67,7 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
   }
 
   private calculateBoardControl(): { [key: number]: number; } {
-    const board = this.boardEngine.getBoard();
+    const board = this.boardEngine.boardOps.getBoard();
     const totalBoardValue = board.flat().reduce((sum, cell) => sum + cell.value, 0);
 
     if (totalBoardValue === 0) return { 1: 0, 2: 0 };
@@ -93,7 +93,7 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
     playerStats: Record<Player["id"], PlayerStats>,
     chainLength: number = 0
   ): void {
-    const board = this.boardEngine.getBoard();
+    const board = this.boardEngine.boardOps.getBoard();
     const boardControl = this.calculateBoardControl();
 
     // Update stats for both players
@@ -129,7 +129,7 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
     scores: Record<Player["id"], number>,
     playerStats: Record<Player["id"], PlayerStats>
   ): number | 'draw' | null {
-    const board = this.boardEngine.getBoard();
+    const board = this.boardEngine.boardOps.getBoard();
 
     // Check if a player has no beads left
     const hasNoBeads = (playerId: number) =>
@@ -183,8 +183,7 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
 
     // Return the new game state
     const newState = {
-      boardEngine: this.boardEngine,
-      board: this.boardEngine.getBoard(),
+      board: this.boardEngine.boardOps.getBoard(),
       gameMode: mode,
       players,
       currentPlayer: players[1],
@@ -195,14 +194,16 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
       scores: { 1: 0, 2: 0 },
       isGameOver: false,
       winner: null,
-      timer: {
-        enabled: size > 7,
-        timePerPlayer: size > 7 ? 600 : 300,
-        remainingTime: { 1: size > 7 ? 600 : 300, 2: size > 7 ? 600 : 300 },
-        lastTick: Date.now(),
-      },
       gameStartedAt: Date.now(),
-    };
+      gameSettings: {
+        timer: {
+          enabled: size > 7,
+          timePerPlayer: size > 7 ? 600 : 300,
+          remainingTime: { 1: size > 7 ? 600 : 300, 2: size > 7 ? 600 : 300 },
+          lastTick: Date.now(),
+        },
+      }
+    } satisfies Partial<GameState>;
 
     this.notify('stateUpdate', newState);
     return newState;

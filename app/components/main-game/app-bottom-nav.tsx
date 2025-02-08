@@ -1,13 +1,13 @@
 import { History, Info, Plus, RotateCcw, Undo } from "lucide-react";
 import { useState } from "react";
 import { cn } from "~/lib/utils";
-import { useGameStore } from "~/store/useGameStore";
+import { useUiStore } from "~/store/useUiStore";
 import { Button } from "../ui/button";
 import { AboutModal } from "./about-modal";
 
 export function AppBottomNav() {
   const [showAboutModal, setShowAboutModal] = useState(false);
-  const showGameStartModal = useGameStore(state => state.showGameStartModal);
+  const showGameStartModal = useUiStore(state => state.showGameStartModal);
 
   return (
     <>
