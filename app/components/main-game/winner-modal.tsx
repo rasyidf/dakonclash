@@ -32,7 +32,7 @@ export function WinnerModal() {
           height={dimensions.height}
           style={{ zIndex: 20 }}
           colors={[
-            players[winner].color === 'red' ? '#ef4444' : '#3b82f6',
+            players?.[winner]?.color ?? "yellow",
             '#ffffff',
             '#000000'
           ]}
