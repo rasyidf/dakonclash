@@ -159,7 +159,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     saveGameHistory(gameHistory);
   },
 
-  makeMove: async (row: number, col: number) => {
+  makeMove: async (x: number, y: number) => {
     const state = get();
     const uiStore = useUiStore.getState();
     const { engines: { mechanics, gameState }, currentPlayer, scores, stats, playerStats, gameMode } = state;
@@ -170,14 +170,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     try {
 
-      const chainLength = await mechanics.makeMove(col, row, currentPlayer.id);
+      const chainLength = await mechanics.makeMove(x, y, currentPlayer.id);
 
       delay(CHAIN_REACTION_DELAY_MS);
 
-      if (state.boardSize > 7 && state.gameSettings?.timer?.enabled) {
-        const timeBonus = Math.floor(state.gameSettings?.timer.remainingTime[currentPlayer.id] / 60) * 10;
-        scores[currentPlayer.id] += timeBonus;
-      }
+      // if (state.boardSize > 7 && state.gameSettings?.timer?.enabled) {
+      //   const timeBonus = Math.floor(state.gameSettings?.timer.remainingTime[currentPlayer.id] / 60) * 10;
+      //   scores[currentPlayer.id] += timeBonus;
+      // }
 
       const updatedBoard = boardState.boardOps.getBoard();
 

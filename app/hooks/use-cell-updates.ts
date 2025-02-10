@@ -12,10 +12,9 @@ export function useCellUpdates() {
         const newUpdates = new Map(prev);
         newUpdates.set(`${x}-${y}`, cell);
 
-        // Clear updates after a short delay to trigger re-renders
         setTimeout(() => {
           setUpdates(new Map());
-        }, 100);
+        }, 1000);
 
         return newUpdates;
       });

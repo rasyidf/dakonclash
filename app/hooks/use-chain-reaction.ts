@@ -4,9 +4,9 @@ export function useChainReaction() {
   const { makeMove, currentPlayer, players, board, isProcessing } = useGameStore();
 
 
-  const handleCellClick = (row: number, col: number) => {
+  const handleCellClick = (x: number, y: number) => {
     if (!isProcessing) {
-      makeMove(row, col);
+      makeMove(x, y);
     }
   };
 

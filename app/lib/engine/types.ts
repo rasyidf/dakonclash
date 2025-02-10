@@ -8,9 +8,9 @@ export type GameMode = 'online' | 'local' | 'vs-bot';
 
 export interface GameMechanicsEvents {
   processing: { isProcessing: boolean; };
-  chainReaction: { row: number; col: number; chainLength: number; playerId: number; };
-  moveComplete: { row: number; col: number; chainLength: number; playerId: number; };
-  score: { row: number; col: number; score: number; playerId: number; };
+  chainReaction: { x: number; y: number; chainLength: number; playerId: number; };
+  moveComplete: { x: number; y: number; chainLength: number; playerId: number; };
+  score: { x: number; y: number; score: number; playerId: number; };
 }
 
 export interface BoardUpdateEvents {
@@ -169,7 +169,7 @@ export interface GameEngines {
 //#region Actions
 export interface GameActions {
   startGame: (mode: GameMode, size: number, settings: GameSettings) => void;
-  makeMove: (row: number, col: number) => Promise<void>;
+  makeMove: (x: number, y: number) => Promise<void>;
   switchPlayer: () => void;
   changeBoardSize: (size: number) => void;
   saveGameHistory: () => void;

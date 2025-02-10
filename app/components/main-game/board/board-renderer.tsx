@@ -15,8 +15,8 @@ export const BoardRenderer = memo(function BoardRenderer({
   const updates = useCellUpdates();
 
   const cells = useMemo(() =>
-    board.map((row, x) =>
-      row.map((cell, y) => {
+    board.map((cols, x) =>
+      cols.map((cell, y) => {
         const key = `${x}-${y}`;
         const updatedCell = !isPreview ? updates.get(key) ?? cell : cell;
 

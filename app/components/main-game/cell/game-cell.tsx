@@ -14,7 +14,7 @@ export function GameCell({ cell, isPreview }: { cell: Cell; isPreview?: boolean;
 
   return (
     <button
-      onClick={() => !isPreview && !isProcessing && handleCellClick(cell.x, cell.y)}
+      onClick={() => !isPreview && !isProcessing && handleCellClick(cell.x!, cell.y!)}
       className={cn(
         "aspect-square rounded-md transition-colors duration-150 w-full h-full relative bg-white",
         cell.owner === 1 && currentPlayer.id === 1 && "bg-red-200",

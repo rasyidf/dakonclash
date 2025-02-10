@@ -29,8 +29,8 @@ export abstract class GameMechanicsEngine extends ObservableClass<GameMechanicsE
     this.firstMoves[playerId] = value;
   }
 
-  public abstract makeMove(row: number, col: number, playerId: number): Promise<number>;
-  public abstract isValidMove(row: number, col: number, playerId: number): boolean;
+  public abstract makeMove(x: number, y: number, playerId: number): Promise<number>;
+  public abstract isValidMove(x: number, y: number, playerId: number): boolean;
   public abstract isGameOver(): boolean;
 
 }

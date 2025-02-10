@@ -5,9 +5,9 @@ import type { BoardStateManager } from './BoardStateManager';
 export class BoardAnalyzer {
   constructor(private boardManager: BoardStateManager) {}
 
-  getAdjacentCells(row: number, col: number): Cell[] {
+  getAdjacentCells(x: number, y: number): Cell[] {
     try {
-      return this.boardManager.boardOps.getAdjacentCells(row, col);
+      return this.boardManager.boardOps.getAdjacentCells(x, y);
     } catch (error) {
       console.error('Failed to get adjacent cells:', error);
       return [];
@@ -29,23 +29,22 @@ export class BoardAnalyzer {
     return cells;
   }
 
-  isStrategicCell(row: number, col: number): boolean {
+  isStrategicCell(x: number, y: number): boolean {
     const size = this.boardManager.boardOps.getSize();
-    // Consider corner and center positions strategic
-    return (row === 0 && (col === 0 || col === size - 1)) ||
-           (row === size - 1 && (col === 0 || col === size - 1)) ||
-           (row === Math.floor(size / 2) && col === Math.floor(size / 2));
+    return (x === 0 && (y === 0 || y === size - 1)) ||
+           (x === size - 1 && (y === 0 || y === size - 1)) ||
+           (x === Math.floor(size / 2) && y === Math.floor(size / 2));
   }
 
-  getCentralityValue(row: number, col: number): number {
+  getCentralityValue(x: number, y: number): number {
     const size = this.boardManager.boardOps.getSize();
-    const centerRow = Math.floor(size / 2);
-    const centerCol = Math.floor(size / 2);
-    return Math.max(0, 5 - (Math.abs(row - centerRow) + Math.abs(col - centerCol)));
+    const centerX = Math.floor(size / 2);
+    const centerY = Math.floor(size / 2);
+    return Math.max(0, 5 - (Math.abs(x - centerX) + Math.abs(y - centerY)));
   }
 
-  getChainPotential(row: number, col: number, playerId: number): number {
-    const adjacent = this.getAdjacentCells(row, col);
+  getChainPotential(x: number, y: number, playerId: number): number {
+    const adjacent = this.getAdjacentCells(x, y);
     return adjacent.reduce((sum, cell) => 
       sum + (cell.owner === playerId ? cell.value : 0), 0);
   }

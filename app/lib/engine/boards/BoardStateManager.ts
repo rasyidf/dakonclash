@@ -25,16 +25,16 @@ export class BoardStateManager extends ObservableClass<BoardStateEvents> {
 
   public clone(): BoardStateManager {
     const clone = new BoardStateManager(this.boardOps.getSize());
-    clone.boardOps = new BoardOperations(new DakonBoard(this.boardOps.getSize()));
+    clone.boardOps = new BoardOperations(this.boardOps.board.clone());
     return clone;
   }
 
-  public updateCellDelta(row: number, col: number, delta: number, owner: number): void {
-    this.boardOps = this.boardOps.updateCell(row, col, delta, owner);
+  public updateCellDelta(x: number, y: number, delta: number, owner: number): void {
+    this.boardOps = this.boardOps.updateCell(x, y, delta, owner);
     this.notify('cellUpdate', {
-      cell: this.boardOps.getCellAt(row, col),
-      x: row,
-      y: col
+      cell: this.boardOps.getCellAt(x, y),
+      x,
+      y
     });
   }
 
