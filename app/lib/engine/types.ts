@@ -85,16 +85,32 @@ export interface HandicapSettings {
 }
 
 export interface BotSettings {
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: number;
   AsFirstPlayer: boolean;
   playerId: number;
 }
 
 export interface GameSettings {
-  timer?: Timer;
-  handicap?: HandicapSettings;
-  bot?: BotSettings;
+  playerCount?: 2 | 3 | 4;
+  timer?: {
+    enabled: boolean;
+    timePerPlayer: number;
+    remainingTime: Record<number, number>;
+    lastTick: number;
+  };
+  handicap?: {
+    amount: number;
+    type: 'stones' | 'moves' | 'time';
+    position: 'fixed' | 'custom';
+    advantagePlayer: string;
+  };
+  bot?: {
+    difficulty: number;
+    AsFirstPlayer: boolean;
+    playerId: number;
+  };
 }
+
 export interface Timer {
   enabled: boolean;
   timePerPlayer: number;
@@ -170,7 +186,7 @@ export interface GameEngines {
 export interface GameActions {
   startGame: (mode: GameMode, size: number, settings: GameSettings) => void;
   makeMove: (x: number, y: number) => Promise<void>;
-  switchPlayer: () => void;
+  switchPlayer: (delta?: number) => Player;
   changeBoardSize: (size: number) => void;
   saveGameHistory: () => void;
   setTimer: (seconds: number) => void;

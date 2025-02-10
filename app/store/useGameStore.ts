@@ -27,16 +27,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
   isProcessing: false,
   players: {
     1: { id: 1, name: "Player 1", color: "red" },
-    2: { id: 2, name: "Player 2", color: "blue" },
+    2: { id: 2, name: "Player 2", color: "purple" },
   },
   currentPlayer: { id: 1, name: "Player 1", color: "red" },
   board: boardState.boardOps.getBoard(),
   moves: 0,
-  scores: { 1: 0, 2: 0 },
+  scores: { 1: 0, 2: 0, 3: 0, 4: 0 },
   stats: {
     startTime: Date.now(),
     elapsedTime: 0,
-    movesByPlayer: { 1: 0, 2: 0 },
+    movesByPlayer: { 1: 0, 2: 0, 3: 0, 4: 0 },
     flipCombos: 0,
     longestFlipChain: 0,
     cornerThrows: 0,
@@ -44,6 +44,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   playerStats: {
     1: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 },
     2: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 },
+    3: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 },
+    4: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 },
   },
   isGameOver: false,
   winner: null,
@@ -56,18 +58,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   gameStartedAt: Date.now(),
 
   setTimer: (seconds: number) => {
-    set(state => ({
-      gameSettings: {
-        timer: {
-          ...state.gameSettings?.timer,
-          enabled: true,
-          timePerPlayer: seconds,
-          remainingTime: { 1: seconds, 2: seconds },
-          lastTick: Date.now(),
-        },
-        ...state.gameSettings,
-      }
-    }));
+
   },
 
   tickTimer: () => {
@@ -117,7 +108,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   startGame: (mode: GameMode, size: number, settings: GameSettings = {}) => {
     const { engines: { gameState, mechanics } } = get();
     const botAsFirst = settings.bot?.AsFirstPlayer || false;
-    const newState = gameState.resetGame(mode, size, botAsFirst);
+    const playerCount = settings.playerCount || 2;
+    const newState = gameState.resetGame(mode, size, playerCount, botAsFirst);
     (mechanics as DakonMechanics).resetFirstMoves();
     const timePerPlayer = size > 7 ? 600 : 300;
 
@@ -159,6 +151,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     saveGameHistory(gameHistory);
   },
 
+  getNextPlayer: (currentPlayerId: number) => {
+    const state = get();
+    const playerIds = Object.keys(state.players).map(Number);
+    const currentIndex = playerIds.indexOf(currentPlayerId);
+    const nextIndex = (currentIndex + 1) % playerIds.length;
+    return state.players[playerIds[nextIndex]];
+  },
+
   makeMove: async (x: number, y: number) => {
     const state = get();
     const uiStore = useUiStore.getState();
@@ -169,15 +169,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     uiStore.setProcessing(true);
 
     try {
-
+      console.log('Making move:', x, y, currentPlayer.id);
       const chainLength = await mechanics.makeMove(x, y, currentPlayer.id);
 
       delay(CHAIN_REACTION_DELAY_MS);
-
-      // if (state.boardSize > 7 && state.gameSettings?.timer?.enabled) {
-      //   const timeBonus = Math.floor(state.gameSettings?.timer.remainingTime[currentPlayer.id] / 60) * 10;
-      //   scores[currentPlayer.id] += timeBonus;
-      // }
 
       const updatedBoard = boardState.boardOps.getBoard();
 
@@ -193,7 +188,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         uiStore.showWinnerModal(true);
       }
 
-      const nextPlayer = state.players[currentPlayer.id === 1 ? 2 : 1];
+      let nextPlayer = get().switchPlayer();
+
+
+      if (!state.engines.mechanics.isFirstMove(nextPlayer.id) && state.engines.boardState.boardOps.getCellsOwnedByPlayer(nextPlayer.id).length === 0) {
+        nextPlayer = get().switchPlayer(2);
+      }
 
       set({
         board: updatedBoard,
@@ -243,9 +243,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  switchPlayer: () => {
-    const { currentPlayer, players } = get();
-    set({ currentPlayer: currentPlayer.id === 1 ? players[2] : players[1] });
+  switchPlayer: (delta: number = 1) => {
+    const state = get();
+    const playerIds = Object.keys(state.players).map(Number);
+    const currentIndex = playerIds.indexOf(state.currentPlayer.id);
+    let nextIndex = (currentIndex + delta) % playerIds.length;
+    
+    // If next player can't play, recursively find the next available player
+    const nextPlayer = state.players[playerIds[nextIndex]];
+    if (!state.engines.mechanics.isFirstMove(nextPlayer.id) && 
+        state.engines.boardState.boardOps.getCellsOwnedByPlayer(nextPlayer.id).length === 0) {
+      return state.switchPlayer(delta + 1);
+    }
+    
+    return nextPlayer;
   },
 
   changeBoardSize: (size: number) => {

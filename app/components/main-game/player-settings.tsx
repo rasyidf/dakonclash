@@ -2,9 +2,8 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import type { Player, TailwindColor } from "~/lib/engine/types";
+import { COLORS } from "~/lib/utils";
 
-
-const COLORS: TailwindColor[] = ["red", "blue", "green", "yellow", "purple", "pink", "orange", "teal"];
 
 interface PlayerSettingsProps {
   player: Player;

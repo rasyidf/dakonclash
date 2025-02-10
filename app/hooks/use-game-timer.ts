@@ -11,7 +11,7 @@ export const useGameTimer = () => {
 
     const interval = setInterval(() => {
       tickTimer();
-    }, 1000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [tickTimer, isGameOver, timerEnabled]);

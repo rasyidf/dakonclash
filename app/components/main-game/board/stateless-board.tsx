@@ -2,6 +2,7 @@ import { cn } from "~/lib/utils";
 import type { Cell } from "~/lib/engine/types";
 import { BoardLabels } from "./board-labels";
 import { BoardRenderer } from "./board-renderer";
+import { useGameStore } from "~/store/useGameStore";
 
 interface StatelessBoardProps {
   board: Cell[][];
@@ -22,6 +23,7 @@ const StatelessBoard = ({
   className
 }: BoardProps) => {
   const boardSize = board.length;
+  const { currentPlayer } = useGameStore()
 
   return (
     <div
@@ -30,6 +32,7 @@ const StatelessBoard = ({
         "w-full h-full",
         "transition-all duration-300 ease-in-out",
         isPreview && "pointer-events-none",
+        currentPlayer && `ring-4 bg-${currentPlayer.color}-100 ring-${currentPlayer.color}-500`,
         className
       )}
       style={{

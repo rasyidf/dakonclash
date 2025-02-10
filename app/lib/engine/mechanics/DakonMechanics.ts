@@ -2,6 +2,12 @@ import { delay } from '../../utils';
 import { CHAIN_REACTION_DELAY_MS, FIRST_MOVE_VALUE, GameMechanicsEngine } from './GameMechanicsEngine';
 import type { BoardStateManager } from '../boards/BoardStateManager';
 
+export const SCORE_WEIGHTS = {
+  TOKENS: 0.3,
+  TURNS: 0.15,
+  CHAINS: 0.35,
+  CONTROL: 0.2
+} as const;
 
 export class DakonMechanics extends GameMechanicsEngine {
   constructor(boardManager: BoardStateManager) {

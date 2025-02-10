@@ -14,7 +14,7 @@ export function useCellUpdates() {
 
         setTimeout(() => {
           setUpdates(new Map());
-        }, 1000);
+        }, 8000);
 
         return newUpdates;
       });

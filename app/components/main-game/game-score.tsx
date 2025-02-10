@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { cn } from "~/lib/utils";
+import { cn, COLORS } from "~/lib/utils";
 import type { Player, PlayerStats } from "~/lib/engine/types";
 import {
   Dialog,
@@ -18,18 +18,22 @@ interface GameScoreProps {
 }
 
 export function GameScore({ score, players, playerStats, currentPlayerId }: GameScoreProps) {
+  const playerCount = Object.values(players).length;
+  
   return (
     <div className="container mx-auto container-sm">
       <div className="grid gap-2 grid-cols-2 landscape:grid-cols-1 ">
-        {Object.entries(score).map(([playerId, playerScore]) => (
-          <PlayerScore
-            key={playerId}
-            playerId={parseInt(playerId)}
-            score={playerScore}
-            player={players[parseInt(playerId)]}
-            stats={playerStats[parseInt(playerId)]}
-            isCurrentPlayer={currentPlayerId === parseInt(playerId)}
-          />
+        {Object.entries(score)
+          .slice(0, playerCount)
+          .map(([playerId, playerScore]) => (
+            <PlayerScore
+              key={playerId}
+              playerId={parseInt(playerId)}
+              score={playerScore}
+              player={players[parseInt(playerId)]}
+              stats={playerStats[parseInt(playerId)]}
+              isCurrentPlayer={currentPlayerId === parseInt(playerId)}
+            />
         ))}
         <Progress
           value={playerStats[1].boardControl}
@@ -57,28 +61,24 @@ interface PlayerScoreProps {
 }
 
 function PlayerScore({ score, player, stats, isCurrentPlayer }: PlayerScoreProps) {
+
   return (
     <Dialog>
       <DialogTrigger asChild>
         <button className={cn(
           "flex items-center justify-between rounded-lg border p-2 w-full transition-colors",
-          player.color === "red" && "bg-red-100 border-red-200 hover:bg-red-200",
-          player.color === "blue" && "bg-blue-100 border-blue-200 hover:bg-blue-200",
-          isCurrentPlayer && "ring-2",
-          isCurrentPlayer && player.color === "red" && "ring-red-500",
-          isCurrentPlayer && player.color === "blue" && "ring-blue-500"
+          `bg-${player.color}-100 border-${player.color}-200 hover:bg-${player.color}-200`,
+          isCurrentPlayer && `ring-2 ring-${player.color}-500`
         )}>
           <span className={cn(
             "text-md font-medium",
-            player.color === "red" && "text-red-700",
-            player.color === "blue" && "text-blue-700"
+            `text-${player.color}-700`
           )}>
             {player.name}
           </span>
           <span className={cn(
             "text-lg font-bold rounded-full w-20 bg-white",
-            player.color === "red" && "text-red-700",
-            player.color === "blue" && "text-blue-700"
+            `text-${player.color}-700`,
           )}>
             {score}
           </span>
@@ -89,8 +89,7 @@ function PlayerScore({ score, player, stats, isCurrentPlayer }: PlayerScoreProps
         <DialogHeader>
           <DialogTitle className={cn(
             "text-md font-bold",
-            player.color === "red" && "text-red-700",
-            player.color === "blue" && "text-blue-700"
+            `text-${player.color}-700`,
           )}>
             {player.name}'s Stats
           </DialogTitle>

@@ -11,12 +11,16 @@ import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useGame } from "~/hooks/use-game";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { useUiStore } from '~/store/useUiStore';
+import type { GameSettings } from '~/lib/engine/types';
 
 export function GameStartModal() {
-  const { startGame, setTimer, isGameStartModalOpen, showGameStartModal, changeBoardSize, gameId, boardSize } = useGame();
+  const { startGame, setTimer, changeBoardSize, gameId, boardSize } = useGame();
+  const { isGameStartModalOpen, showGameStartModal } = useUiStore();
   const [selectedMode, setSelectedMode] = useState<'local' | 'vs-bot' | 'online'>('local');
   const [showQR, setShowQR] = useState(false);
   const [botAsFirst, setBotAsFirst] = useState(false);
+  const [playerCount, setPlayerCount] = useState<2 | 3 | 4>(2);
 
   // Advanced settings
   const [enableTimer, setEnableTimer] = useState(false);
@@ -29,20 +33,33 @@ export function GameStartModal() {
     const gameConfig = {
       mode: selectedMode,
       boardSize,
+
       settings: {
-        timer: enableTimer ? timeLimit : undefined,
-        handicap: enableHandicap ? handicapAmount : undefined,
-        botDifficulty,
-        botAsFirst: selectedMode === 'vs-bot' ? botAsFirst : undefined,
-      }
+        playerCount,
+        timer: {
+          enabled: enableTimer,
+          timePerPlayer: timeLimit,
+          remainingTime: Object.fromEntries(
+            Array.from({ length: playerCount }, (_, i) => [i + 1, timeLimit])
+          ),
+          lastTick: Date.now(),
+        },
+        handicap: {
+          amount: handicapAmount,
+          type: 'stones', // TODO: Implement other types
+          position: 'fixed', // TODO: Implement custom placement 
+          advantagePlayer: 'player1', // TODO: Implement other players
+        },
+        bot: {
+          difficulty: botDifficulty, // TODO: Implement other difficulties
+          AsFirstPlayer: selectedMode === 'vs-bot' ? botAsFirst : false,
+          playerId: 1,
+        }
+      } satisfies GameSettings,
     };
 
     console.log('Starting game with config:', gameConfig);
     startGame(gameConfig.mode, gameConfig.boardSize, gameConfig.settings);
-
-    if (gameConfig.settings.timer) {
-      setTimer(gameConfig.settings.timer);
-    }
 
     showGameStartModal(false);
   };
@@ -70,7 +87,7 @@ export function GameStartModal() {
                 <CardDescription>Configure a game for two players on this device</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <BasicSettings boardSize={boardSize} onBoardSizeChange={changeBoardSize} />
+                <BasicSettings boardSize={boardSize} onBoardSizeChange={changeBoardSize} playerCount={playerCount} setPlayerCount={(v) => setPlayerCount(v as 2 | 3 | 4)} />
                 <AdvancedSettings
                   enableTimer={enableTimer}
                   setEnableTimer={setEnableTimer}
@@ -93,7 +110,7 @@ export function GameStartModal() {
                 <CardDescription>Configure your game against the AI</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <BasicSettings boardSize={boardSize} onBoardSizeChange={changeBoardSize} />
+                <BasicSettings boardSize={boardSize} onBoardSizeChange={changeBoardSize} playerCount={playerCount} setPlayerCount={(v) => setPlayerCount(v as 2 | 3 | 4)} />
                 <div className="space-y-2">
                   <Label>Bot Difficulty</Label>
                   <Select value={botDifficulty.toString()} onValueChange={(v) => setBotDifficulty(parseInt(v))}>
@@ -140,7 +157,7 @@ export function GameStartModal() {
                 <CardDescription>Play with others online</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <BasicSettings boardSize={boardSize} onBoardSizeChange={changeBoardSize} />
+                <BasicSettings boardSize={boardSize} onBoardSizeChange={changeBoardSize} playerCount={playerCount} setPlayerCount={(v) => setPlayerCount(v as 2 | 3 | 4)} />
                 <Button
                   className="w-full"
                   onClick={() => {
@@ -171,9 +188,28 @@ export function GameStartModal() {
   );
 }
 
-export function BasicSettings({ boardSize, onBoardSizeChange }: { boardSize: number, onBoardSizeChange: (size: number) => void; }) {
+export function BasicSettings({ boardSize, onBoardSizeChange, playerCount, setPlayerCount }: {
+  boardSize: number, onBoardSizeChange: (size: number) => void;
+  playerCount: number;
+  setPlayerCount: (count: number) => void;
+}) {
+
   return (
     <div className="space-y-4">
+      <div className="space-y-2">
+        <Label>Number of Players</Label>
+        <Select value={playerCount.toString()} onValueChange={(v) => setPlayerCount(parseInt(v))}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select player count" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="2">2 Players</SelectItem>
+            <SelectItem value="3">3 Players</SelectItem>
+            <SelectItem value="4">4 Players</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <Label>Board Size</Label>
       <Slider
         onValueChange={(value) => onBoardSizeChange(Math.max(5, value[0]))}

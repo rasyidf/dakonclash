@@ -1,7 +1,10 @@
+import type { BoardStateManager } from './boards/BoardStateManager';
+import type { GameMode, GameState, PlayerStats, Scores } from './types';
+import { SCORE_WEIGHTS } from './mechanics/DakonMechanics';
 
 import { BoardStateManager } from './boards/BoardStateManager';
 import { ObservableClass } from './Observable';
-import type { BoardState, GameState, GameStats, Player, PlayerStats } from './types';
+import type { BoardState, GameState, GameStats, Player, PlayerStats, TailwindColor } from './types';
 
 interface GameStateEvents {
   stateUpdate: Partial<GameState>;
@@ -20,7 +23,8 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
   }
 
   public checkGameOver(scores: Record<number, number>): boolean {
-    return scores[1] === 0 || scores[2] === 0;
+    // Check if any player has tokens left
+    return Object.values(scores).some(score => score === 0);
   }
 
   public initializeStats(): GameStats {
@@ -36,9 +40,12 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
 
   // Initialize player stats
   public initializePlayerStats(): Record<Player["id"], PlayerStats> {
+    // Initialize stats for up to 4 players
     return {
       1: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 },
       2: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 },
+      3: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 },
+      4: { turnCount: 0, chainCount: 0, boardControl: 0, tokenTotal: 0 },
     };
   }
 
@@ -61,8 +68,10 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
 
   // Update the scores for both players
   public updateScores(scores: Record<Player["id"], number>): void {
-    scores[1] = this.calculatePlayerScore(1);
-    scores[2] = this.calculatePlayerScore(2);
+    // Update for all players in the scores object
+    Object.keys(scores).forEach(playerId => {
+      scores[Number(playerId)] = this.calculatePlayerScore(Number(playerId));
+    });
     this.notify('scoreUpdate', scores);
   }
 
@@ -70,9 +79,9 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
     const board = this.boardEngine.boardOps.getBoard();
     const totalBoardValue = board.flat().reduce((sum, cell) => sum + cell.value, 0);
 
-    if (totalBoardValue === 0) return { 1: 0, 2: 0 };
+    if (totalBoardValue === 0) return { 1: 0, 2: 0, 3: 0, 4: 0 };
 
-    const controlByPlayer: Record<number, number> = { 1: 0, 2: 0 };
+    const controlByPlayer: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
 
     board.flat().forEach(cell => {
       if (cell.owner && cell.value > 0) {
@@ -83,7 +92,9 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
     // Convert to percentages
     return {
       1: (controlByPlayer[1] / totalBoardValue) * 100,
-      2: (controlByPlayer[2] / totalBoardValue) * 100
+      2: (controlByPlayer[2] / totalBoardValue) * 100,
+      3: (controlByPlayer[3] / totalBoardValue) * 100,
+      4: (controlByPlayer[4] / totalBoardValue) * 100
     };
   }
 
@@ -96,15 +107,16 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
     const board = this.boardEngine.boardOps.getBoard();
     const boardControl = this.calculateBoardControl();
 
-    // Update stats for both players
-    [1, 2].forEach(pid => {
-      const playerCells = board.flat().filter(cell => cell.owner === pid);
+    // Update stats for all players
+    Object.keys(playerStats).forEach(pid => {
+      const numPid = Number(pid);
+      const playerCells = board.flat().filter(cell => cell.owner === numPid);
       const playerTokenTotal = playerCells.reduce((sum, cell) => sum + cell.value, 0);
 
-      playerStats[pid] = {
-        turnCount: pid === playerId ? playerStats[pid].turnCount + 1 : playerStats[pid].turnCount,
-        chainCount: pid === playerId ? playerStats[pid].chainCount + chainLength : playerStats[pid].chainCount,
-        boardControl: boardControl[pid],
+      playerStats[numPid] = {
+        turnCount: numPid === playerId ? playerStats[numPid].turnCount + 1 : playerStats[numPid].turnCount,
+        chainCount: numPid === playerId ? playerStats[numPid].chainCount + chainLength : playerStats[numPid].chainCount,
+        boardControl: boardControl[numPid],
         tokenTotal: playerTokenTotal,
       };
     });
@@ -130,21 +142,34 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
     playerStats: Record<Player["id"], PlayerStats>
   ): number | 'draw' | null {
     const board = this.boardEngine.boardOps.getBoard();
+    const activePlayers = Object.keys(scores).map(Number);
 
-    // Check if a player has no beads left
-    const hasNoBeads = (playerId: number) =>
-      board.every(row => row.every(cell => cell.owner !== playerId || cell.value === 0));
+    // Check if only one player has beads left
+    const playersWithBeads = activePlayers.filter(playerId => {
+      return board.some(row => row.some(cell => cell.owner === playerId && cell.value > 0));
+    });
 
-    const p1NoBeads = hasNoBeads(1);
-    const p2NoBeads = hasNoBeads(2);
+    if (playersWithBeads.length <= 1) {
+      if (playersWithBeads.length === 1) {
+        // If one player has beads, they are the winner
+        const winner = playersWithBeads[0];
+        this.notify('gameOver', {
+          winner,
+          scores
+        });
+        return winner;
+      } else {
+        // If no players have beads, compare scores
+        const maxScore = Math.max(...Object.values(scores));
+        const winners = activePlayers.filter(id => scores[id] === maxScore);
 
-    if (p1NoBeads || p2NoBeads) {
-      const result = scores[1] > scores[2] ? 1 : scores[2] > scores[1] ? 2 : 'draw';
-      this.notify('gameOver', {
-        winner: result,
-        scores
-      });
-      return result;
+        const result = winners.length === 1 ? winners[0] : 'draw';
+        this.notify('gameOver', {
+          winner: result,
+          scores
+        });
+        return result;
+      }
     }
 
     return null;
@@ -154,28 +179,32 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
   public resetGame(
     mode: 'local' | 'online' | 'vs-bot',
     size: number,
+    playerCount: number = 2,
     botAsFirst: boolean = false
   ): Partial<GameState> {
     let players: Record<number, Player>;
+    const colors = ["red", "blue", "green", "purple"];
 
-    if (mode === 'vs-bot') {
-      if (botAsFirst) {
-        players = {
-          1: { id: 1, name: "Bot", color: "red", isBot: true },
-          2: { id: 2, name: "Player 1", color: "blue", isBot: false }
-        };
-      } else {
-        players = {
-          1: { id: 1, name: "Player 1", color: "red", isBot: false },
-          2: { id: 2, name: "Bot", color: "blue", isBot: true }
-        };
-      }
-    } else {
-      players = {
-        1: { id: 1, name: "Player 1", color: "red", isBot: false },
-        2: { id: 2, name: "Player 2", color: "blue", isBot: false }
+    // if (mode === 'vs-bot') {
+    //   players = {
+    //     "1": botAsFirst 
+    //       ? { id: 1, name: "Bot", color: colors[0], isBot: true }
+    //       : { id: 1, name: "Player 1", color: colors[0], isBot: false },
+    //     2: botAsFirst 
+    //       ? { id: 2, name: "Player 1", color: colors[1], isBot: false }
+    //       : { id: 2, name: "Bot", color: colors[1], isBot: true }
+    //   };
+    // } else {
+    players = {};
+    for (let i = 1; i <= playerCount; i++) {
+      players[i] = {
+        id: i,
+        name: `Player ${i}`,
+        color: colors[i - 1] as TailwindColor,
+        isBot: false
       };
     }
+    // }
 
     this.boardEngine.resetBoard(size);
     const stats = this.initializeStats();
@@ -191,7 +220,7 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
       stats,
       playerStats,
       moves: 0,
-      scores: { 1: 0, 2: 0 },
+      scores: Object.fromEntries(Object.keys(players).map(id => [id, 0])),
       isGameOver: false,
       winner: null,
       gameStartedAt: Date.now(),

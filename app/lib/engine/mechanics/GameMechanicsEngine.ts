@@ -9,7 +9,7 @@ import type { GameMechanicsEvents, Player } from '../types';
 export abstract class GameMechanicsEngine extends ObservableClass<GameMechanicsEvents> {
   protected boardManager: BoardStateManager;
   protected isProcessing: boolean = false;
-  protected firstMoves: Record<Player["id"], boolean> = { 1: true, 2: true };
+  protected firstMoves: Record<Player["id"], boolean> = { 1: true, 2: true, 3: true, 4: true };
 
   constructor(boardManager: BoardStateManager) {
     super();
@@ -17,8 +17,7 @@ export abstract class GameMechanicsEngine extends ObservableClass<GameMechanicsE
   }
 
   public resetFirstMoves(): void {
-    this.firstMoves[1] = true;
-    this.firstMoves[2] = true;
+    this.firstMoves = { 1: true, 2: true, 3: true, 4: true };
   }
 
   public isFirstMove(playerId: number): boolean {
