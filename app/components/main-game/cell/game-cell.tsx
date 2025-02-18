@@ -34,7 +34,7 @@ export function GameCell({ cell, isPreview }: { cell: Cell; isPreview?: boolean;
       {cell.value > 0 && (
         <div className={cn("cell-content",
           'transition-colors duration-150',
-          `bg-${players[cell.owner].color}-500`,
+          `bg-${players[cell.owner]?.color}-500`,
         )}>
           <div className="relative w-full h-full p-2">
             {Array.from({ length: 4 }).map((_, i) => {
