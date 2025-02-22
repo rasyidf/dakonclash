@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cn, COLORS } from "~/lib/utils";
-import type { Player, PlayerStats } from "~/lib/engine/types";
+import type { Player, PlayerStats } from "~/lib/engine/v1/types";
 import {
   Dialog,
   DialogContent,

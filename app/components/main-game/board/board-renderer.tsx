@@ -1,5 +1,5 @@
 import { memo, useMemo } from "react";
-import type { Cell } from "~/lib/engine/types";
+import type { Cell } from "~/lib/engine/v1/types";
 import { GameCell } from "../cell/game-cell";
 import { useCellUpdates } from "~/hooks/use-cell-updates";
 

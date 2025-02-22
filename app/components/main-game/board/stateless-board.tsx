@@ -1,5 +1,5 @@
 import { cn } from "~/lib/utils";
-import type { Cell } from "~/lib/engine/types";
+import type { Cell } from "~/lib/engine/v1/types";
 import { BoardLabels } from "./board-labels";
 import { BoardRenderer } from "./board-renderer";
 import { useGameStore } from "~/store/useGameStore";

@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useGame } from "~/hooks/use-game";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { useUiStore } from '~/store/useUiStore';
-import type { GameSettings } from '~/lib/engine/types';
+import type { GameSettings } from '~/lib/engine/v1/types';
 
 export function GameStartModal() {
   const { startGame, setTimer, changeBoardSize, gameId, boardSize } = useGame();

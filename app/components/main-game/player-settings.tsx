@@ -1,7 +1,7 @@
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
-import type { Player, TailwindColor } from "~/lib/engine/types";
+import type { Player, TailwindColor } from "~/lib/engine/v1/types";
 import { COLORS } from "~/lib/utils";
 
 

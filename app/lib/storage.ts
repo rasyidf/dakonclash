@@ -1,4 +1,4 @@
-import type { GameHistory } from "./engine/types";
+import type { GameHistory } from "./engine/v1/types";
 
 
 

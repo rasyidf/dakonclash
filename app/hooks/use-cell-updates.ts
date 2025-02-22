@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Cell } from '~/lib/engine/types';
+import type { Cell } from '~/lib/engine/v1/types';
 import { useGameStore } from '~/store/useGameStore';
 
 export function useCellUpdates() {

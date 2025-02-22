@@ -1,6 +1,3 @@
-import type { BoardStateManager } from './boards/BoardStateManager';
-import type { GameMode, GameState, PlayerStats, Scores } from './types';
-import { SCORE_WEIGHTS } from './mechanics/DakonMechanics';
 
 import { BoardStateManager } from './boards/BoardStateManager';
 import { ObservableClass } from './Observable';

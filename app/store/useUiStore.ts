@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { UiStore } from '~/lib/engine/types';
+import type { UiStore } from '~/lib/engine/v1/types';
 
 export const useUiStore = create<UiStore>((set) => ({
   isWinnerModalOpen: false,

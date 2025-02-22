@@ -1,12 +1,12 @@
 import { create } from 'zustand';
-import { DakonMechanics } from '~/lib/engine/mechanics/DakonMechanics';
-import { CHAIN_REACTION_DELAY_MS } from '~/lib/engine/mechanics/GameMechanicsEngine';
-import { saveGameHistory } from '~/lib/storage';
+import { BoardStateManager } from '~/lib/engine/v1/boards/BoardStateManager';
+import { DakonMechanics } from '~/lib/engine/v1/mechanics/DakonMechanics';
+import { CHAIN_REACTION_DELAY_MS } from '~/lib/engine/v1/mechanics/GameMechanicsEngine';
+import { getGameHistory, saveGameHistory } from '~/lib/storage';
 import { delay } from '~/lib/utils';
-import { BoardStateManager } from '../lib/engine/boards/BoardStateManager';
-import { BotEngine } from '../lib/engine/bot/BotEngine';
-import { GameStateManager } from '../lib/engine/GameStateManager';
-import type { GameHistory, GameMode, GameSettings, GameStore } from '../lib/engine/types';
+import { BotEngine } from '../lib/engine/v1/bot/BotEngine';
+import { GameStateManager } from '../lib/engine/v1/GameStateManager';
+import type { GameHistory, GameMode, GameSettings, GameStore } from '../lib/engine/v1/types';
 import { useUiStore } from './useUiStore';
 
 // Initialize engines first
@@ -135,20 +135,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   saveGameHistory: () => {
     const state = get();
-    const gameHistory: GameHistory = {
-      id: crypto.randomUUID(),
-      startedAt: state.gameStartedAt,
-      endedAt: Date.now(),
-      winner: state.winner,
-      moves: state.engines.boardState.history.history,
-      mode: state.gameMode,
-      boardSize: state.boardSize,
-      players: state.players,
-      finalScores: state.scores,
-      finalStats: state.stats,
-      playerStats: state.playerStats,
-    };
-    saveGameHistory(gameHistory);
+    // Check if we already have this game's history saved
+    const existingHistory = getGameHistory();
+    const alreadySaved = existingHistory.some(h => h.startedAt === state.gameStartedAt);
+
+    if (!alreadySaved) {
+      const gameHistory: GameHistory = {
+        id: crypto.randomUUID(),
+        startedAt: state.gameStartedAt,
+        endedAt: Date.now(),
+        winner: state.winner,
+        moves: state.engines.boardState.history.history,
+        mode: state.gameMode,
+        boardSize: state.boardSize,
+        players: state.players,
+        finalScores: state.scores,
+        finalStats: state.stats,
+        playerStats: state.playerStats,
+      };
+      saveGameHistory(gameHistory);
+    }
   },
 
   getNextPlayer: (currentPlayerId: number) => {
@@ -248,14 +254,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const playerIds = Object.keys(state.players).map(Number);
     const currentIndex = playerIds.indexOf(state.currentPlayer.id);
     let nextIndex = (currentIndex + delta) % playerIds.length;
-    
+
     // If next player can't play, recursively find the next available player
     const nextPlayer = state.players[playerIds[nextIndex]];
-    if (!state.engines.mechanics.isFirstMove(nextPlayer.id) && 
-        state.engines.boardState.boardOps.getCellsOwnedByPlayer(nextPlayer.id).length === 0) {
+    if (!state.engines.mechanics.isFirstMove(nextPlayer.id) &&
+      state.engines.boardState.boardOps.getCellsOwnedByPlayer(nextPlayer.id).length === 0) {
       return state.switchPlayer(delta + 1);
     }
-    
+
     return nextPlayer;
   },
 
