@@ -55,10 +55,15 @@ export interface GameConfig {
   maxValue?: number;
   winConditions?: WinCondition[];
   customPatterns?: PatternConfig[];
+  animationDelays: {
+    explosion: number;
+    chainReaction: number;
+    cellUpdate: number;
+  };
 }
 
 export interface GameStateUpdate {
-  type: 'move' | 'explosion' | 'player-change' | 'win' | 'reset' | 'chain-reaction' | 'player-eliminated' | 'setup-operation';
+  type: 'move' | 'explosion' | 'player-change' | 'win' | 'reset' | 'cell-update' | 'chain-reaction' | 'player-eliminated' | 'setup-operation';
   playerId?: number;
   position?: Position;
   deltas?: MoveDelta[];
@@ -90,9 +95,10 @@ export interface IBoard {
 export interface IGameEngine {
   getBoard(): IBoard;
   getCurrentPlayer(): number;
-  makeMove(pos: Position, playerId: number): boolean;
+  makeMove(pos: Position, playerId: number): Promise<boolean>;
   addObserver(observer: GameObserver): void;
   removeObserver(observer: GameObserver): void;
+  getPlayerManager(): IPlayerManager;
 }
 
 export interface IPlayerManager {

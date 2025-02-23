@@ -6,9 +6,9 @@ export class VolatileCellMechanics extends CellMechanics {
     description = 'A cell that can explode with amplified force.';
     mechanics = 'Volatile cells explode at a lower threshold and distribute amplified value to adjacent cells.';
 
-    validateMove(pos: Position, playerId: number): boolean {
-        const cell = this.board.getCell(pos);
-        return cell !== null;
+    validateMove(pos: Position, _: number): boolean {
+        // Volatile cells cannot be directly played on
+        return false;
     }
 
     handleExplosion(pos: Position, playerId: number): MoveDelta[] {
@@ -21,8 +21,9 @@ export class VolatileCellMechanics extends CellMechanics {
 
         const deltas: MoveDelta[] = [{
             position: pos,
-            valueDelta: -(explosionValue * 4),
-            newOwner: playerId
+            valueDelta: -cell.value, // Remove all value
+            newType: CellType.Normal, // Convert to normal cell after explosion
+            newOwner: 0 // Reset to neutral
         }];
 
         // Distribute amplified value to adjacent cells

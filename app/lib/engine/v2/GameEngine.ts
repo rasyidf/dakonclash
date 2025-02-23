@@ -4,6 +4,7 @@ import { PlayerManager } from './PlayerManager';
 import { CellMechanicsFactory } from './mechanics/CellMechanicsFactory';
 import { WinConditionFactory } from './factories/WinConditionFactory';
 import { GameMechanics } from './mechanics/GameMechanics';
+import { GameConfigFactory } from './factories/GameConfigFactory';
 import type { GameConfig, GameObserver, GameStateUpdate, IGameEngine, PatternConfig, Position, SetupModeOperation, WinCondition } from './types';
 import { DEFAULT_PATTERNS } from "./mechanics/Patterns";
 
@@ -17,16 +18,20 @@ export class GameEngine implements IGameEngine {
     private setupState: Map<string, SetupModeOperation>;
     private gameMechanics: GameMechanics;
 
-    constructor(config: GameConfig) {
+    constructor(config: Partial<GameConfig>) {
         this.observers = new Set();
+        const defaultConfig = GameConfigFactory.createDefaultConfig();
         this.config = {
-            boardSize: Math.max(5, Math.min(config.boardSize ?? 7, 12)),
-            maxPlayers: Math.max(2, Math.min(config.maxPlayers ?? 2, 16)),
-            maxValue: Math.max(2, Math.min(config.maxValue ?? 4, 8)),
-            winConditions: (config.winConditions ?? ['elimination']).map(name => 
-                typeof name === 'string' ? WinConditionFactory.getCondition(name) : name
-            ),
-            customPatterns: config.customPatterns ?? DEFAULT_PATTERNS
+            boardSize: Math.max(5, Math.min(config.boardSize ?? defaultConfig.boardSize, 12)),
+            maxPlayers: Math.max(2, Math.min(config.maxPlayers ?? defaultConfig.maxPlayers, 16)),
+            maxValue: Math.max(2, Math.min(config.maxValue ?? defaultConfig.maxValue, 8)),
+            winConditions: [],
+            customPatterns: config.customPatterns ?? DEFAULT_PATTERNS,
+            animationDelays: {
+                explosion: config.animationDelays?.explosion ?? defaultConfig.animationDelays.explosion,
+                chainReaction: config.animationDelays?.chainReaction ?? defaultConfig.animationDelays.chainReaction,
+                cellUpdate: config.animationDelays?.cellUpdate ?? defaultConfig.animationDelays.cellUpdate
+            }
         };
 
         this.board = new Board(this.config.boardSize);
@@ -35,10 +40,13 @@ export class GameEngine implements IGameEngine {
         this.isProcessing = false;
         this.setupState = new Map();
 
+
         // Initialize factories
         CellMechanicsFactory.initialize(this.board);
         WinConditionFactory.initialize();
-        
+        this.config.winConditions = WinConditionFactory.getAllConditions();
+
+        // Initialize game mechanics
         this.gameMechanics = new GameMechanics(
             this.board,
             this.playerManager,
@@ -47,7 +55,37 @@ export class GameEngine implements IGameEngine {
         );
     }
 
-    public makeMove(pos: Position, playerId: number): boolean {
+
+    
+        public reset(): void {
+            this.board = new Board(this.config.boardSize);
+            this.setupState.forEach(operation => {
+                this.board.updateCell(
+                    operation.position,
+                    operation.value,
+                    operation.owner,
+                    operation.cellType
+                );
+            });
+            this.playerManager.reset();
+            this.isProcessing = false;
+    
+            // Reset all factories
+            CellMechanicsFactory.reset(this.board);
+            WinConditionFactory.reset();
+    
+            this.gameMechanics = new GameMechanics(
+                this.board,
+                this.playerManager,
+                this.config,
+                this.notifyObservers.bind(this)
+            );
+    
+            this.notifyObservers({ type: 'reset' });
+        }
+    
+
+    public async makeMove(pos: Position, playerId: number): Promise<boolean> {
         if (this.isProcessing) {
             console.log('Game is currently processing');
             return false;
@@ -55,8 +93,8 @@ export class GameEngine implements IGameEngine {
 
         this.isProcessing = true;
         try {
-            const result = this.gameMechanics.processTurn(pos, playerId);
-            
+            const result = await this.gameMechanics.processTurn(pos, playerId);
+
             if (!result.success) {
                 return false;
             }
@@ -76,69 +114,6 @@ export class GameEngine implements IGameEngine {
         }
     }
 
-    public addWinCondition(name: string): void {
-        // No longer storing win conditions in the engine
-        // They are managed by the factory
-    }
-
-    public removeWinCondition(name: string): void {
-        // Win conditions are now managed by the factory
-    }
-
-    public validateMove(pos: Position, playerId: number): boolean {
-        return this.gameMechanics.validateMove(pos, playerId);
-    }
-
-    public getValidMoves(playerId: number): Position[] {
-        return this.gameMechanics.getValidMoves(playerId);
-    }
-
-    public getBoard(): Board {
-        return this.board;
-    }
-
-    public setBoard(board: Board): void {
-        this.board = board;
-    }
-
-    public addPlayer(): number {
-        return this.playerManager.addPlayer();
-    }
-
-    public getCurrentPlayer(): number {
-        return this.playerManager.getCurrentPlayer();
-    }
-
-    public addCustomPattern(pattern: PatternConfig): void {
-        this.patterns.push(pattern);
-    }
-
-    public reset(): void {
-        this.board = new Board(this.config.boardSize);
-        this.setupState.forEach(operation => {
-            this.board.updateCell(
-                operation.position,
-                operation.value,
-                operation.owner,
-                operation.cellType
-            );
-        });
-        this.playerManager.reset();
-        this.isProcessing = false;
-        
-        // Reset all factories
-        CellMechanicsFactory.reset(this.board);
-        WinConditionFactory.reset();
-        
-        this.gameMechanics = new GameMechanics(
-            this.board,
-            this.playerManager,
-            this.config,
-            this.notifyObservers.bind(this)
-        );
-        
-        this.notifyObservers({ type: 'reset' });
-    }
 
     public applySetupOperation(operation: SetupModeOperation): boolean {
         if (!this.board.isValidPosition(operation.position)) {
@@ -176,6 +151,36 @@ export class GameEngine implements IGameEngine {
         return Array.from(this.setupState.values());
     }
 
+
+    public validateMove(pos: Position, playerId: number): boolean {
+        return this.gameMechanics.validateMove(pos, playerId);
+    }
+
+    public getValidMoves(playerId: number): Position[] {
+        return this.gameMechanics.getValidMoves(playerId);
+    }
+
+    public getBoard(): Board {
+        return this.board;
+    }
+
+    public setBoard(board: Board): void {
+        this.board = board;
+    }
+
+    public addPlayer(): number {
+        return this.playerManager.addPlayer();
+    }
+
+    public getCurrentPlayer(): number {
+        return this.playerManager.getCurrentPlayer();
+    }
+
+    public addCustomPattern(pattern: PatternConfig): void {
+        this.patterns.push(pattern);
+    }
+
+
     public getExplosionThreshold(): number {
         return this.config.maxValue;
     }
@@ -190,5 +195,9 @@ export class GameEngine implements IGameEngine {
 
     public notifyObservers(update: GameStateUpdate): void {
         this.observers.forEach(observer => observer.onGameStateUpdate(update));
+    }
+
+    public getPlayerManager(): PlayerManager {
+        return this.playerManager;
     }
 }

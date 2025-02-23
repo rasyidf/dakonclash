@@ -10,7 +10,7 @@ export class GameMechanics {
         private playerManager: PlayerManager,
         private config: Required<GameConfig>,
         private notifyObservers: (update: GameStateUpdate) => void
-    ) {}
+    ) { }
 
     public validateMove(pos: Position, playerId: number): boolean {
         if (!this.board.isValidPosition(pos)) {
@@ -58,7 +58,7 @@ export class GameMechanics {
         return validMoves;
     }
 
-    public processTurn(pos: Position, playerId: number): { success: boolean; winResult?: WinConditionResult } {
+    public async processTurn(pos: Position, playerId: number): Promise<{ success: boolean; winResult?: WinConditionResult }> {
         // Phase 1: Move Validation
         if (!this.validateMove(pos, playerId)) {
             console.log('Invalid move:', { pos, playerId });
@@ -78,7 +78,6 @@ export class GameMechanics {
         const newValue = currentValue + addValue;
 
         this.board.updateCell(pos, newValue, playerId);
-        console.log('Updated cell:', { pos, value: newValue, owner: playerId });
 
         if (isFirstMove) {
             this.playerManager.setFirstMoveMade(playerId);
@@ -86,7 +85,7 @@ export class GameMechanics {
 
         // Phase 3: Handle Explosions
         if (newValue >= this.config.maxValue) {
-            this.handleExplosion(pos, playerId);
+            await this.handleExplosion(pos, playerId);
         }
 
         // Phase 4: Check Win Conditions (only if not in setup phase)
@@ -151,7 +150,7 @@ export class GameMechanics {
         return true;
     }
 
-    private handleExplosion(pos: Position, playerId: number): void {
+    private async handleExplosion(pos: Position, playerId: number): Promise<void> {
         const explosionQueue: Position[] = [pos];
         const processedCells = new Set<string>();
         const maxChainLength = 100; // Safety limit for chain reactions
@@ -160,7 +159,7 @@ export class GameMechanics {
         while (explosionQueue.length > 0 && chainLength < maxChainLength) {
             const currentPos = explosionQueue.shift()!;
             const posKey = `${currentPos.row},${currentPos.col}`;
-            
+
             // Skip if already processed
             if (processedCells.has(posKey)) continue;
             processedCells.add(posKey);
@@ -168,11 +167,25 @@ export class GameMechanics {
             const cell = this.board.getCell(currentPos);
             if (!cell) continue;
 
+            // Wait for explosion animation
+            await new Promise(resolve => setTimeout(resolve, this.config.animationDelays.explosion));
+
             const mechanics = CellMechanicsFactory.getMechanics(cell.type);
             const deltas = mechanics.handleExplosion(currentPos, playerId);
 
-            // Apply the deltas
-            this.board.applyDeltas(deltas);
+            // Apply the deltas with cell update delay
+            for (const delta of deltas) {
+                await new Promise(resolve => setTimeout(resolve, this.config.animationDelays.cellUpdate));
+                this.board.applyDeltas([delta]);
+
+                // Notify about each cell update
+                this.notifyObservers({
+                    type: 'cell-update',
+                    playerId,
+                    position: delta.position,
+                    deltas: [delta]
+                });
+            }
 
             // Notify about explosion
             this.notifyObservers({
@@ -184,15 +197,17 @@ export class GameMechanics {
             });
 
             // Check for chain reactions
-            deltas.forEach(delta => {
+            for (const delta of deltas) {
                 const targetCell = this.board.getCell(delta.position);
                 if (targetCell && !processedCells.has(`${delta.position.row},${delta.position.col}`)) {
                     const targetMechanics = CellMechanicsFactory.getMechanics(targetCell.type);
                     if (targetMechanics.canExplode(targetCell)) {
+                        // Wait for chain reaction delay
+                        await new Promise(resolve => setTimeout(resolve, this.config.animationDelays.chainReaction));
                         explosionQueue.push(delta.position);
                     }
                 }
-            });
+            }
 
             chainLength++;
         }

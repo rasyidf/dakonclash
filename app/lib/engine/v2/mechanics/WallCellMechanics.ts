@@ -9,34 +9,32 @@ export class WallCellMechanics extends CellMechanics {
     private explosionCount: Map<string, number> = new Map();
 
     validateMove(pos: Position, _: number): boolean {
-        const cell = this.board.getCell(pos);
-        // Walls can be targeted but require multiple hits
-        return cell !== null;
+        // Wall cells cannot be directly played on
+        return false;
     }
 
-    handleExplosion(pos: Position, playerId: number): MoveDelta[] {
+    handleExplosion(pos: Position, _: number): MoveDelta[] {
         const cell = this.board.getCell(pos);
         if (!cell) return [];
 
         const key = `${pos.row},${pos.col}`;
-        const currentCount = (this.explosionCount.get(key) || 0) + 1;
-        this.explosionCount.set(key, currentCount);
-
-        // Wall converts to normal cell after being hit value times
-        if (currentCount >= cell.value) {
+        const currentValue = cell.value - 1; // Reduce wall value by 1 when hit
+        
+        if (currentValue <= 0) {
+            // Wall is destroyed, convert to normal cell
             this.explosionCount.delete(key);
             return [{
                 position: pos,
-                valueDelta: 1, // Give it an initial value as a normal cell
-                newOwner: playerId,
-                newType: CellType.Normal
+                valueDelta: -cell.value, // Remove wall value
+                newType: CellType.Normal,
+                newOwner: 0 // Reset to neutral
             }];
         }
 
-        // Wall absorbs explosion but keeps count
+        // Wall still stands but takes damage
         return [{
             position: pos,
-            valueDelta: 0,
+            valueDelta: -1,
             newOwner: cell.owner
         }];
     }
