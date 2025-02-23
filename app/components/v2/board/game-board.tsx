@@ -1,9 +1,9 @@
 import { Board } from "~/lib/engine/v2/board/Board";
 import type { GameEngine } from "~/lib/engine/v2/GameEngine";
 import { cn } from "~/lib/utils";
-import { BoardLabels } from "../../main-game/board/board-labels";
 import { GameCell } from "./game-cell";
 import { useState } from "react";
+import { BoardLabels } from "~/components/v1/board/board-labels";
 
 interface GameBoardProps {
   board: Board;
@@ -29,7 +29,7 @@ export function GameBoard({
   const size = board.getSize();
   const cells = board.getCells();
   const playerColor = currentPlayer ? gameEngine.getPlayerManager().getPlayerColor(currentPlayer) : undefined;
-  
+
   const [highlightedCells, setHighlightedCells] = useState<{ row: number; col: number; }[] | null>(null);
 
   return (

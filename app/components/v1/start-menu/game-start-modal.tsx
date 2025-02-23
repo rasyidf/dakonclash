@@ -13,6 +13,7 @@ import { useGame } from "~/hooks/use-game";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { useUiStore } from '~/store/useUiStore';
 import type { GameSettings } from '~/lib/engine/v1/types';
+import { Link } from 'react-router';
 
 export function GameStartModal() {
   const { startGame, setTimer, changeBoardSize, gameId, boardSize } = useGame();
@@ -175,13 +176,20 @@ export function GameStartModal() {
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => showGameStartModal(false)}>
-            Cancel
+        <div className="flex justify-between gap-2">
+          <Button asChild variant="secondary">
+            <Link to="/v2">
+              Try New Version
+            </Link>
           </Button>
-          <Button onClick={handleStartGame}>
-            Start Game
-          </Button>
+          <div className="flex justify-end">
+            <Button variant="ghost" onClick={() => showGameStartModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleStartGame}>
+              Start Game
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

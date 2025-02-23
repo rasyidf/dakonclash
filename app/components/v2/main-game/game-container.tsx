@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { GameEngine } from "~/lib/engine/v2/GameEngine";
+import { Board } from "~/lib/engine/v2/board/Board";
 import { BoardHistory } from "~/lib/engine/v2/board/BoardHistory";
+import { CellType, type Position, type SetupModeOperation } from "~/lib/engine/v2/types";
 import { GameBoard } from "../board/game-board";
 import { GameSidebar, type GameSettings } from "./game-sidebar";
-import { Board } from "~/lib/engine/v2/board/Board";
-import { CellType, type Position, type SetupModeOperation } from "~/lib/engine/v2/types";
 
 export function GameContainer() {
   const [gameEngine, setGameEngine] = useState(() => new GameEngine({ boardSize: 7, maxPlayers: 2, maxValue: 4 }));

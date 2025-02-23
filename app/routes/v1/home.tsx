@@ -1,10 +1,10 @@
 import { cx } from "class-variance-authority";
-import { GameScore } from "~/components/main-game/game-score";
-import { GameStartModal } from "~/components/main-game/start-menu/game-start-modal";
-import { WinnerModal } from "~/components/main-game/winner-modal";
 import { useGameStore } from "~/store/useGameStore";
-import { GameBoard } from "../../components/main-game/board/game-board";
 import type { Route } from "./+types/home";
+import { GameBoard } from "~/components/v1/board/game-board";
+import { GameScore } from "~/components/v1/game-score";
+import { GameStartModal } from "~/components/v1/start-menu/game-start-modal";
+import { WinnerModal } from "~/components/v1/winner-modal";
 
 export function meta({ }: Route.MetaArgs) {
   return [

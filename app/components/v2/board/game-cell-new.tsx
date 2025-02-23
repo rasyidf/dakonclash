@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import type { GameEngine } from "~/lib/engine/v2/GameEngine";
 import { CellType } from "~/lib/engine/v2/types";
 import { cn } from "~/lib/utils";

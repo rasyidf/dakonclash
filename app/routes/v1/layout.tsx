@@ -1,7 +1,7 @@
 import { Outlet } from "react-router";
-import { AppBottomNav } from "../../components/main-game/app-bottom-nav";
-import { AppSidebar } from "../../components/main-game/app-sidebar";
-import { SidebarInset, SidebarProvider } from "../../components/ui/sidebar";
+import { SidebarProvider } from "~/components/ui/sidebar";
+import { AppBottomNav } from "~/components/v1/app-bottom-nav";
+import { AppSidebar } from "~/components/v1/app-sidebar";
 
 
 export default function SidebarLayout() {
