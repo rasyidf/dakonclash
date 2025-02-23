@@ -4,7 +4,7 @@ import { BoardHistory } from "~/lib/engine/v2/board/BoardHistory";
 import { GameBoard } from "../board/game-board";
 import { GameSidebar, type GameSettings } from "./game-sidebar";
 import { Board } from "~/lib/engine/v2/board/Board";
-import type { Position } from "~/lib/engine/v2/types";
+import { CellType, type Position, type SetupModeOperation } from "~/lib/engine/v2/types";
 
 export function GameContainer() {
   const [gameEngine, setGameEngine] = useState(() => new GameEngine({ boardSize: 7, maxPlayers: 2, maxValue: 4 }));
@@ -12,6 +12,8 @@ export function GameContainer() {
   const [currentPlayer, setCurrentPlayer] = useState(1);
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
   const [isSetupMode, setIsSetupMode] = useState(false);
+  const [selectedCellType, setSelectedCellType] = useState<CellType>(CellType.Normal);
+  const [selectedValue, setSelectedValue] = useState(1);
   const [board, setBoard] = useState(() => new Board(7));
 
   const syncBoardWithEngine = useCallback(() => {
@@ -22,7 +24,12 @@ export function GameContainer() {
     for (let r = 0; r < size; r++) {
       for (let c = 0; c < size; c++) {
         const pos: Position = { row: r, col: c };
-        newBoard.updateCell(pos, engineBoard.getCellValue(pos), engineBoard.getCellOwner(pos));
+        const cell = engineBoard.getCell(pos);
+        newBoard.updateCell(pos, 
+          engineBoard.getCellValue(pos), 
+          engineBoard.getCellOwner(pos),
+          cell?.type || CellType.Normal
+        );
       }
     }
     setBoard(newBoard);
@@ -35,25 +42,32 @@ export function GameContainer() {
 
   const handleCellClick = useCallback((row: number, col: number) => {
     if (isSetupMode) {
-      // Save current board state to history before modification
-      history.pushState(board);
+      const position = { row, col };
+      const setupOp: SetupModeOperation = {
+        position,
+        value: selectedValue,
+        owner: currentPlayer,
+        cellType: selectedCellType
+      };
 
-      // Update through game engine
-      gameEngine.makeMove({ row, col }, currentPlayer);
+      if (board.getCellValue(position) === 0) {
+        // Apply new setup operation
+        gameEngine.applySetupOperation(setupOp);
+      } else {
+        // Clear existing setup operation
+        gameEngine.clearSetupOperation(position);
+      }
       syncBoardWithEngine();
       return;
     }
 
-    const success = gameEngine.makeMove({ row, col }, currentPlayer);
-    if (success) {
-      // Save current board state to history
-      history.pushState(board);
-      syncBoardWithEngine();
-
+    // Regular game move handling
+    if (gameEngine.makeMove({ row, col }, currentPlayer)) {
       setMoveHistory(prev => [...prev, `Player ${currentPlayer} moved to (${row}, ${col})`]);
+      syncBoardWithEngine();
       setCurrentPlayer(gameEngine.getCurrentPlayer());
     }
-  }, [gameEngine, currentPlayer, isSetupMode, history, board, syncBoardWithEngine]);
+  }, [gameEngine, currentPlayer, isSetupMode, history, board, syncBoardWithEngine, selectedCellType, selectedValue]);
 
   const handleUndo = useCallback(() => {
     const previousBoard = history.undo();
@@ -82,16 +96,14 @@ export function GameContainer() {
     setCurrentPlayer(1);
     setMoveHistory([]);
     history.clear();
-    setIsSetupMode(false);
   }, [history]);
 
   const handleReset = useCallback(() => {
-    gameEngine.reset();
-    setBoard(new Board(gameEngine.getBoard().getSize()));
+    gameEngine.reset(); // This will preserve setup operations
+    history.clear();
+    syncBoardWithEngine();
     setCurrentPlayer(1);
     setMoveHistory([]);
-    history.clear();
-    setIsSetupMode(false);
   }, [gameEngine, history]);
 
   const toggleSetupMode = useCallback(() => {
@@ -109,13 +121,18 @@ export function GameContainer() {
 
   return (
     <div className="flex gap-4 p-4">
-      <GameBoard
-        board={board}
-        gameEngine={gameEngine}
-        currentPlayer={currentPlayer}
-        onCellClick={handleCellClick}
-        isSetupMode={isSetupMode}
-      />
+      {/* Game board section */}
+      <div className="flex-1">
+        <GameBoard
+          board={board}
+          onCellClick={handleCellClick}
+          currentPlayer={currentPlayer}
+          isSetupMode={isSetupMode}
+          gameEngine={gameEngine}
+        />
+      </div>
+
+      {/* Sidebar section */}
       <GameSidebar
         gameEngine={gameEngine}
         history={moveHistory}
@@ -126,9 +143,13 @@ export function GameContainer() {
         canUndo={history.canUndo()}
         canRedo={history.canRedo()}
         onNewGame={handleNewGame}
-        onToggleSetupMode={toggleSetupMode}
-        onSwitchPlayer={handleSwitchPlayer}
+        onToggleSetupMode={() => setIsSetupMode(!isSetupMode)}
         isSetupMode={isSetupMode}
+        onSwitchPlayer={handleSwitchPlayer}
+        selectedCellType={selectedCellType}
+        onSelectCellType={setSelectedCellType}
+        selectedValue={selectedValue}
+        onSelectValue={setSelectedValue}
       />
     </div>
   );

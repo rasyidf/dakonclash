@@ -1,3 +1,4 @@
+
 export const PlayerColors = [
   "red", "blue", "green", "yellow", "purple", "pink", "orange", "teal"
 ]
@@ -80,9 +81,10 @@ export class PlayerManager {
   public reset(): void {
     this.currentPlayerIndex = 0;
     this.eliminatedPlayers.clear();
-    // Reset first moves
+    // Reset first moves but preserve setup state
+    const setupState = this.isSetupPhase();
     for (const playerId of this.players) {
-      this.firstMoves[playerId] = true;
+      this.firstMoves[playerId] = setupState;
     }
   }
 
@@ -98,6 +100,7 @@ export class PlayerManager {
   }
 
   public isSetupPhase(): boolean {
-    return this.getPlayers().some(playerId => this.isFirstMove(playerId));
+    // Setup phase is when all players still have their first move
+    return this.getPlayers().every(playerId => this.isFirstMove(playerId));
   }
 }

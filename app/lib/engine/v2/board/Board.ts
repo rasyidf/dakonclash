@@ -1,8 +1,10 @@
 import type { Cell, IBoard, Position } from '../types';
+import { CellType } from '../types';
 
 export interface BoardEventListener {
   onCellValueChanged: (pos: Position, oldValue: number, newValue: number) => void;
-  onCellOwnerChanged: (pos: Position, oldOwner: number, newOwner: number) => void; 
+  onCellOwnerChanged: (pos: Position, oldOwner: number, newOwner: number) => void;
+  onCellTypeChanged: (pos: Position, oldType: CellType, newType: CellType) => void;
 }
 
 export class Board implements IBoard {
@@ -12,9 +14,11 @@ export class Board implements IBoard {
   private pendingNotifications: {
     valueChanges: Array<{ pos: Position; oldValue: number; newValue: number; }>;
     ownerChanges: Array<{ pos: Position; oldOwner: number; newOwner: number; }>;
+    typeChanges: Array<{ pos: Position; oldType: CellType; newType: CellType; }>;
   } = {
     valueChanges: [],
-    ownerChanges: []
+    ownerChanges: [],
+    typeChanges: []
   };
 
   constructor(size: number) {
@@ -22,7 +26,8 @@ export class Board implements IBoard {
     this.cells = Array(size).fill(null).map(() =>
       Array(size).fill(null).map(() => ({
         value: 0,
-        owner: 0
+        owner: 0,
+        type: CellType.Normal
       }))
     );
   }
@@ -58,7 +63,7 @@ export class Board implements IBoard {
     return newBoard;
   }
 
-  public updateCell(pos: Position, value: number, owner: number): void {
+  public updateCell(pos: Position, value: number, owner: number, type: CellType = CellType.Normal): void {
     if (!this.isValidPosition(pos)) return;
     const oldCell = this.cells[pos.row][pos.col];
     
@@ -68,8 +73,11 @@ export class Board implements IBoard {
     if (oldCell.owner !== owner) {
       this.pendingNotifications.ownerChanges.push({ pos, oldOwner: oldCell.owner, newOwner: owner });
     }
+    if (oldCell.type !== type) {
+      this.pendingNotifications.typeChanges.push({ pos, oldType: oldCell.type, newType: type });
+    }
     
-    this.cells[pos.row][pos.col] = { value, owner };
+    this.cells[pos.row][pos.col] = { value, owner, type };
   }
 
   public applyDeltas(deltas: { position: Position; valueDelta: number; newOwner: number }[]): void {
@@ -95,9 +103,15 @@ export class Board implements IBoard {
       this.notifyOwnerChanged(change.pos, change.oldOwner, change.newOwner);
     });
 
+    // Add type change notifications
+    this.pendingNotifications.typeChanges.forEach(change => {
+      this.notifyCellTypeChanged(change.pos, change.oldType, change.newType);
+    });
+
     // Clear pending notifications
     this.pendingNotifications.valueChanges = [];
     this.pendingNotifications.ownerChanges = [];
+    this.pendingNotifications.typeChanges = [];
   }
 
   public getCell(pos: Position): Cell | null {
@@ -105,36 +119,39 @@ export class Board implements IBoard {
     return this.cells[pos.row][pos.col];
   }
 
-  public getState(): { size: number; cells: Uint8Array; owners: Uint8Array } {
+  public getState(): { size: number; cells: Uint8Array; owners: Uint8Array; types: Uint8Array } {
     const cells = new Uint8Array(this.size * this.size);
     const owners = new Uint8Array(this.size * this.size);
+    const types = new Uint8Array(this.size * this.size);
     
     for (let i = 0; i < this.size; i++) {
       for (let j = 0; j < this.size; j++) {
         const idx = i * this.size + j;
         cells[idx] = this.cells[i][j].value;
         owners[idx] = this.cells[i][j].owner;
+        types[idx] = Object.values(CellType).indexOf(this.cells[i][j].type);
       }
     }
     
-    return { size: this.size, cells, owners };
+    return { size: this.size, cells, owners, types };
   }
 
-  public static fromState({ size, cells, owners }: { size: number; cells: Uint8Array; owners: Uint8Array }): Board {
+  public static fromState({ size, cells, owners, types }: { size: number; cells: Uint8Array; owners: Uint8Array; types: Uint8Array }): Board {
     const board = new Board(size);
     for (let i = 0; i < size; i++) {
       for (let j = 0; j < size; j++) {
         const idx = i * size + j;
         board.cells[i][j] = {
           value: cells[idx],
-          owner: owners[idx]
+          owner: owners[idx],
+          type: Object.values(CellType)[types[idx]] || CellType.Normal
         };
       }
     }
     return board;
   }
 
-  public updateFromState(state: { size: number; cells: Uint8Array; owners: Uint8Array }): void {
+  public updateFromState(state: { size: number; cells: Uint8Array; owners: Uint8Array; types: Uint8Array }): void {
     if (state.size !== this.size) {
       throw new Error('Cannot update board with different size');
     }
@@ -145,6 +162,7 @@ export class Board implements IBoard {
         const oldCell = this.cells[i][j];
         const newValue = state.cells[idx];
         const newOwner = state.owners[idx];
+        const newType = Object.values(CellType)[state.types[idx]] || CellType.Normal;
         
         if (oldCell.value !== newValue) {
           this.notifyValueChanged({ row: i, col: j }, oldCell.value, newValue);
@@ -152,10 +170,14 @@ export class Board implements IBoard {
         if (oldCell.owner !== newOwner) {
           this.notifyOwnerChanged({ row: i, col: j }, oldCell.owner, newOwner);
         }
+        if (oldCell.type !== newType) {
+          this.notifyCellTypeChanged({ row: i, col: j }, oldCell.type, newType);
+        }
         
         this.cells[i][j] = {
           value: newValue,
-          owner: newOwner
+          owner: newOwner,
+          type: newType
         };
       }
     }
@@ -181,6 +203,12 @@ export class Board implements IBoard {
   private notifyOwnerChanged(pos: Position, oldOwner: number, newOwner: number): void {
     this.listeners.forEach(listener => {
       listener.onCellOwnerChanged(pos, oldOwner, newOwner);
+    });
+  }
+
+  private notifyCellTypeChanged(pos: Position, oldType: CellType, newType: CellType): void {
+    this.listeners.forEach(listener => {
+      listener.onCellTypeChanged?.(pos, oldType, newType);
     });
   }
 

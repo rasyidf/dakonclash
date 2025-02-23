@@ -1,5 +1,18 @@
 import type { PlayerManager } from "./PlayerManager";
 
+export enum CellType {
+  Normal = 'normal',
+  Dead = 'dead',
+  Volatile = 'volatile',
+}
+
+export interface SetupModeOperation {
+  position: Position;
+  value: number;
+  owner: number;
+  cellType: CellType;
+}
+
 export interface Position {
   row: number;
   col: number;
@@ -8,6 +21,7 @@ export interface Position {
 export interface Cell {
   value: number;
   owner: number;
+  type: CellType;  // Add type field
 }
 
 export interface MoveDelta {
@@ -42,12 +56,15 @@ export interface GameConfig {
 }
 
 export interface GameStateUpdate {
-  type: 'move' | 'explosion' | 'player-change' | 'win' | 'reset' | 'chain-reaction' | 'player-eliminated';
+  type: 'move' | 'explosion' | 'player-change' | 'win' | 'reset' | 'chain-reaction' | 'player-eliminated' | 'setup-operation';
   playerId?: number;
   position?: Position;
   deltas?: MoveDelta[];
   affectedPositions?: Position[];
   reason?: string;
+  cellType?: CellType;
+  value?: number;
+  owner?: number;
 }
 
 export interface GameObserver {
@@ -87,6 +104,7 @@ export interface BoardState {
   size: number;
   cells: Uint8Array;
   owners: Uint8Array;
+  types: Uint8Array;  // Add types array
 }
 
 export interface MoveOperation {

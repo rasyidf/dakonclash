@@ -73,6 +73,7 @@ export function GameBoard({
                 <GameCell
                   value={cell.value}
                   owner={cell.owner}
+                  type={cell.type}
                   isHighlighted={isHighlighted}
                   onClick={() => onCellClick(i, j)}
                   gameEngine={gameEngine}

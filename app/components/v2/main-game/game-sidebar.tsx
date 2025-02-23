@@ -1,12 +1,13 @@
-import type { GameEngine } from "~/lib/engine/v2/GameEngine";
+import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
-import { ScrollArea } from "~/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { useState } from "react";
+import { ScrollArea } from "~/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Slider } from "~/components/ui/slider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import type { GameEngine } from "~/lib/engine/v2/GameEngine";
+import { CellType } from "~/lib/engine/v2/types";
 
 interface GameSidebarProps {
   gameEngine: GameEngine;
@@ -21,6 +22,10 @@ interface GameSidebarProps {
   onToggleSetupMode?: () => void;
   isSetupMode?: boolean;
   onSwitchPlayer?: () => void;
+  selectedCellType?: CellType;
+  onSelectCellType?: (type: CellType) => void;
+  selectedValue?: number;
+  onSelectValue?: (value: number) => void;
 }
 
 export interface GameSettings {
@@ -41,7 +46,11 @@ export function GameSidebar({
   onNewGame,
   onToggleSetupMode,
   isSetupMode = false,
-  onSwitchPlayer
+  onSwitchPlayer,
+  selectedCellType = CellType.Normal,
+  onSelectCellType,
+  selectedValue = 1,
+  onSelectValue,
 }: GameSidebarProps) {
   const [settings, setSettings] = useState<GameSettings>({
     boardSize: 7,
@@ -65,6 +74,9 @@ export function GameSidebar({
         <TabsList className="w-full">
           <TabsTrigger value="controls" className="flex-1">Controls</TabsTrigger>
           <TabsTrigger value="settings" className="flex-1">Settings</TabsTrigger>
+          {isSetupMode && (
+            <TabsTrigger value="setup" className="flex-1">Setup</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="controls">
@@ -163,6 +175,60 @@ export function GameSidebar({
                 className="w-full"
               >
                 New Game
+              </Button>
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="setup">
+          <Card className="p-4">
+            <h3 className="font-semibold mb-3">Setup Tools</h3>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Cell Type</Label>
+                <Select
+                  value={selectedCellType}
+                  onValueChange={(value) => onSelectCellType?.(value as CellType)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select cell type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={CellType.Normal}>Normal</SelectItem>
+                    <SelectItem value={CellType.Dead}>Dead</SelectItem>
+                    <SelectItem value={CellType.Volatile}>Volatile</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Cell Value ({selectedValue})</Label>
+                <Slider
+                  value={[selectedValue]}
+                  onValueChange={([value]) => onSelectValue?.(value)}
+                  min={1}
+                  max={gameEngine.getExplosionThreshold()}
+                  step={1}
+                />
+              </div>
+
+              <div className="flex gap-2 items-center justify-between mb-2 p-2 bg-gray-50 rounded">
+                <span className="text-sm">Current Player: {currentPlayer}</span>
+                <Button
+                  size="sm"
+                  onClick={onSwitchPlayer}
+                  variant="secondary"
+                >
+                  Switch Player
+                </Button>
+              </div>
+              
+              <Button
+                variant="outline"
+                onClick={onReset}
+                className="w-full"
+              >
+                Reset Board
               </Button>
             </div>
           </Card>

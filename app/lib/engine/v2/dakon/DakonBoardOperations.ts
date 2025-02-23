@@ -2,6 +2,7 @@ import type { Position, MoveDelta, CellTransform } from '../types';
 import { BoardOperations } from '../board/BoardOperations';
 import { BoardPatternMatcher } from '../board/BoardPatternMatcher';
 import { Board } from '../board/Board';
+import { CellType } from '../GameEngine';  // Add CellType import
 
 export class DakonBoardOperations extends BoardOperations {
   private readonly CRITICAL_MASS = 4;
@@ -46,6 +47,9 @@ export class DakonBoardOperations extends BoardOperations {
   }
 
   public validateMove(pos: Position, playerId: number): boolean {
+    const cell = this.board.getCell(pos);
+    // Prevent moves on dead cells
+    if (cell?.type === CellType.Dead) return false;
     return super.validateMove(pos, playerId);
   }
 
@@ -54,6 +58,9 @@ export class DakonBoardOperations extends BoardOperations {
     const targetCell = this.board.getCell(target);
     
     if (!sourceCell || !targetCell) return null;
+
+    // Skip dead cells
+    if (targetCell.type === CellType.Dead) return null;
 
     // During setup phase
     if (this.isSetupPhase()) {
@@ -68,9 +75,11 @@ export class DakonBoardOperations extends BoardOperations {
     // During gameplay - explosion mechanics
     if (sourceCell.value >= this.CRITICAL_MASS) {
       const explosionValue = Math.floor(sourceCell.value / 4);
+      // Apply multiplier for volatile cells
+      const actualValue = sourceCell.type === CellType.Volatile ? explosionValue * 2 : explosionValue;
       return {
         position: target,
-        valueDelta: explosionValue,
+        valueDelta: actualValue,
         newOwner: playerId
       };
     }

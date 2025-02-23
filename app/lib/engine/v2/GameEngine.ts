@@ -1,8 +1,10 @@
-import type { IGameEngine, Position, IBoard, GameConfig, PatternConfig, WinConditionResult, GameObserver, GameStateUpdate } from './types';
+import { CellType } from "~/lib/engine/v2/types";
 import { Board } from './board/Board';
-import { PlayerManager } from './PlayerManager';
-import { WinConditions } from './dakon/WinConditions';
 import { BoardPatternMatcher } from './board/BoardPatternMatcher';
+import { WinConditions } from './dakon/WinConditions';
+import { PlayerManager } from './PlayerManager';
+import type { GameConfig, GameObserver, GameStateUpdate, IBoard, IGameEngine, PatternConfig, Position, SetupModeOperation, WinConditionResult } from './types';
+
 
 const DEFAULT_PATTERNS: PatternConfig[] = [
     {
@@ -62,6 +64,7 @@ export class GameEngine implements IGameEngine {
     private winConditions: typeof WinConditions.ELIMINATION[];
     private observers: Set<GameObserver>;
     private isProcessing: boolean;
+    private setupState: Map<string, SetupModeOperation>;
 
     constructor(config: GameConfig) {
         this.observers = new Set();
@@ -79,6 +82,7 @@ export class GameEngine implements IGameEngine {
         this.patterns = this.config.customPatterns;
         this.winConditions = [WinConditions.ELIMINATION];
         this.isProcessing = false;
+        this.setupState = new Map();
     }
 
     //#region Win Condition Management
@@ -181,12 +185,21 @@ export class GameEngine implements IGameEngine {
     }
 
     private handleExplosion(pos: Position, playerId: number): void {
-        const currentValue = this.board.getCellValue(pos);
+        const cell = this.board.getCell(pos);
+        if (!cell || cell.type === CellType.Dead) {
+            return;
+        }
+
+        const currentValue = cell.value;
         const distributedValue = Math.floor(currentValue / 4);
+
+        // Add explosion logic for volatile cells
+        const explosionMultiplier = cell.type === CellType.Volatile ? 2 : 1;
+        const actualDistributedValue = distributedValue * explosionMultiplier;
 
         const deltas = [{
             position: pos,
-            valueDelta: -(distributedValue * 4),
+            valueDelta: -(actualDistributedValue * 4),
             newOwner: playerId
         }];
 
@@ -197,7 +210,7 @@ export class GameEngine implements IGameEngine {
             if (this.board.isValidPosition(targetPos)) {
                 deltas.push({
                     position: targetPos,
-                    valueDelta: distributedValue,
+                    valueDelta: actualDistributedValue,
                     newOwner: playerId
                 });
             }
@@ -308,6 +321,15 @@ export class GameEngine implements IGameEngine {
 
     public reset(): void {
         this.board = new Board(this.config.boardSize);
+        // Reapply setup operations after reset
+        this.setupState.forEach(operation => {
+            this.board.updateCell(
+                operation.position,
+                operation.value,
+                operation.owner,
+                operation.cellType
+            );
+        });
         this.playerManager.reset();
         this.isProcessing = false;
         this.notifyObservers({ type: 'reset' });
@@ -315,6 +337,47 @@ export class GameEngine implements IGameEngine {
 
     public getPlayerManager(): PlayerManager {
         return this.playerManager;
+    }
+
+    // Add this new method for setup mode operations
+    public applySetupOperation(operation: SetupModeOperation): boolean {
+        if (!this.board.isValidPosition(operation.position)) {
+            return false;
+        }
+
+        const key = `${operation.position.row},${operation.position.col}`;
+        this.setupState.set(key, operation);
+
+        this.board.updateCell(
+            operation.position,
+            operation.value,
+            operation.owner,
+            operation.cellType
+        );
+
+        this.notifyObservers({
+            type: 'setup-operation',
+            position: operation.position,
+            cellType: operation.cellType,
+            value: operation.value,
+            owner: operation.owner
+        });
+
+        return true;
+    }
+
+    public clearSetupOperation(pos: Position): void {
+        const key = `${pos.row},${pos.col}`;
+        this.setupState.delete(key);
+        this.board.updateCell(pos, 0, 0, CellType.Normal);
+    }
+
+    public getSetupOperations(): SetupModeOperation[] {
+        return Array.from(this.setupState.values());
+    }
+
+    public getExplosionThreshold(): number {
+        return this.config.maxValue;
     }
     //#endregion
 

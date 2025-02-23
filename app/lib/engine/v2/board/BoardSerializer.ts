@@ -6,7 +6,7 @@ export class BoardSerializer {
 
     public static serialize(state: BoardState): string {
         // Use a more efficient binary format
-        const buffer = new ArrayBuffer(this.HEADER_SIZE * 4 + Math.ceil((state.size * state.size * 9) / 8));
+        const buffer = new ArrayBuffer(this.HEADER_SIZE * 4 + Math.ceil((state.size * state.size * 11) / 8)); // Added 2 bits for cell type
         const view = new DataView(buffer);
         
         // Write header with version and size
@@ -17,18 +17,18 @@ export class BoardSerializer {
         let bitOffset = 0;
         let currentByte = 0;
         
-        // Pack cell values and owners into bits
+        // Pack cell values (4 bits), owners (2 bits), and types (2 bits)
         for (let i = 0; i < state.cells.length; i++) {
-            // Pack cell value (4 bits) and owner (2 bits) together
-            const value = state.cells[i];
-            const owner = state.owners[i];
-            
-            // Write value (4 bits)
-            currentByte |= (value & 0xF) << bitOffset;
+            // Pack cell value (4 bits)
+            currentByte |= (state.cells[i] & 0xF) << bitOffset;
             bitOffset += 4;
             
-            // Write owner (2 bits)
-            currentByte |= (owner & 0x3) << bitOffset;
+            // Pack owner (2 bits)
+            currentByte |= (state.owners[i] & 0x3) << bitOffset;
+            bitOffset += 2;
+            
+            // Pack cell type (2 bits)
+            currentByte |= (state.types[i] & 0x3) << bitOffset;
             bitOffset += 2;
             
             // Write byte when full
@@ -68,13 +68,14 @@ export class BoardSerializer {
         
         const cells = new Uint8Array(cellCount);
         const owners = new Uint8Array(cellCount);
+        const types = new Uint8Array(cellCount);
         
         let offset = this.HEADER_SIZE * 4;
         let bitOffset = 0;
         let currentByte = view.getUint8(offset);
         let cellIndex = 0;
         
-        // Unpack bits into cells and owners
+        // Unpack bits into cells, owners, and types
         while (cellIndex < cellCount) {
             if (bitOffset >= 8) {
                 offset++;
@@ -96,25 +97,31 @@ export class BoardSerializer {
             owners[cellIndex] = (currentByte >> bitOffset) & 0x3;
             bitOffset += 2;
             
+            // Read type (2 bits)
+            types[cellIndex] = (currentByte >> bitOffset) & 0x3;
+            bitOffset += 2;
+            
             cellIndex++;
         }
         
-        return { size, cells, owners };
+        return { size, cells, owners, types };
     }
 
     public static compressState(state: BoardState): string {
         // Enhanced RLE compression for game states
-        const runs: { value: number; owner: number; count: number; }[] = [];
+        const runs: { value: number; owner: number; type: number; count: number; }[] = [];
         let currentRun = {
             value: state.cells[0],
             owner: state.owners[0],
+            type: state.types[0],
             count: 1
         };
         
         // Find runs with pattern recognition
         for (let i = 1; i < state.cells.length; i++) {
             if (state.cells[i] === currentRun.value && 
-                state.owners[i] === currentRun.owner) {
+                state.owners[i] === currentRun.owner &&
+                state.types[i] === currentRun.type) {
                 currentRun.count++;
             } else {
                 if (currentRun.count > 0) {
@@ -123,6 +130,7 @@ export class BoardSerializer {
                 currentRun = {
                     value: state.cells[i],
                     owner: state.owners[i],
+                    type: state.types[i],
                     count: 1
                 };
             }
@@ -141,7 +149,7 @@ export class BoardSerializer {
         return JSON.stringify(compressed);
     }
 
-    private static optimizeRuns(runs: { value: number; owner: number; count: number; }[]): any[] {
+    private static optimizeRuns(runs: { value: number; owner: number; type: number; count: number; }[]): any[] {
         // Combine small adjacent runs if beneficial
         const optimized = [];
         let i = 0;
@@ -157,8 +165,8 @@ export class BoardSerializer {
                 optimized.push({
                     type: 'group',
                     cells: [
-                        { v: current.value, o: current.owner },
-                        { v: runs[i + 1].value, o: runs[i + 1].owner }
+                        { v: current.value, o: current.owner, t: current.type },
+                        { v: runs[i + 1].value, o: runs[i + 1].owner, t: runs[i + 1].type }
                     ]
                 });
                 i += 2;
@@ -180,6 +188,7 @@ export class BoardSerializer {
         const size = data.size;
         const cells = new Uint8Array(size * size);
         const owners = new Uint8Array(size * size);
+        const types = new Uint8Array(size * size);
         
         let index = 0;
         for (const run of data.runs) {
@@ -188,6 +197,7 @@ export class BoardSerializer {
                 for (const cell of run.cells) {
                     cells[index] = cell.v;
                     owners[index] = cell.o;
+                    types[index] = cell.t;
                     index++;
                 }
             } else {
@@ -195,11 +205,12 @@ export class BoardSerializer {
                 for (let i = 0; i < run.count; i++) {
                     cells[index] = run.value;
                     owners[index] = run.owner;
+                    types[index] = run.type;
                     index++;
                 }
             }
         }
 
-        return { size, cells, owners };
+        return { size, cells, owners, types };
     }
 }
