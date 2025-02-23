@@ -25,6 +25,7 @@ export class PlayerManager {
   public addPlayer(): number {
     const playerId = this.players.size + 1;
     if (playerId <= this.playerColors.length) {
+      this.firstMoves[playerId] = true;
       this.players.add(playerId);
       return playerId;
     }
@@ -42,7 +43,7 @@ export class PlayerManager {
     while (attempts < totalPlayers) {
       this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.size;
       const nextPlayer = this.getCurrentPlayer();
-      
+
       if (!this.eliminatedPlayers.has(nextPlayer)) {
         return nextPlayer;
       }
@@ -81,10 +82,9 @@ export class PlayerManager {
   public reset(): void {
     this.currentPlayerIndex = 0;
     this.eliminatedPlayers.clear();
-    // Reset first moves but preserve setup state
-    const setupState = this.isSetupPhase();
+
     for (const playerId of this.players) {
-      this.firstMoves[playerId] = setupState;
+      this.firstMoves[playerId] = true;
     }
   }
 
@@ -92,7 +92,7 @@ export class PlayerManager {
     return Array.from(this.players);
   }
 
-  public getPlayerColor(playerId: number): string { 
+  public getPlayerColor(playerId: number): string {
     if (playerId < 1 || playerId > this.playerColors.length) {
       return 'gray';
     }
@@ -100,7 +100,7 @@ export class PlayerManager {
   }
 
   public isSetupPhase(): boolean {
-    // Setup phase is when all players still have their first move
-    return this.getPlayers().every(playerId => this.isFirstMove(playerId));
+    const allPlayersMoved = this.getPlayers().every(playerId => !this.isFirstMove(playerId));
+    return !allPlayersMoved;
   }
 }

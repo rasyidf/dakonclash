@@ -197,6 +197,7 @@ export function GameSidebar({
                     <SelectItem value={CellType.Normal}>Normal</SelectItem>
                     <SelectItem value={CellType.Dead}>Dead</SelectItem>
                     <SelectItem value={CellType.Volatile}>Volatile</SelectItem>
+                    <SelectItem value={CellType.Wall}>Wall</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -207,9 +208,15 @@ export function GameSidebar({
                   value={[selectedValue]}
                   onValueChange={([value]) => onSelectValue?.(value)}
                   min={1}
-                  max={gameEngine.getExplosionThreshold()}
+                  max={selectedCellType === CellType.Wall ? 5 : gameEngine.getExplosionThreshold()}
                   step={1}
                 />
+                <span className="text-xs text-gray-500">
+                  {selectedCellType === CellType.Wall 
+                    ? "Wall durability (hits needed to break)"
+                    : "Cell value (explodes at threshold)"
+                  }
+                </span>
               </div>
 
               <div className="flex gap-2 items-center justify-between mb-2 p-2 bg-gray-50 rounded">

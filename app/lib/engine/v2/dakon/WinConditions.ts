@@ -14,7 +14,7 @@ export class WinConditions {
       const cells = board.getCells();
       const playerCells = new Map<number, number>();
       const activePlayers = new Set(playerManager.getPlayers());
-      
+
       // Count cells owned by each player
       for (let row = 0; row < size; row++) {
         for (let col = 0; col < size; col++) {

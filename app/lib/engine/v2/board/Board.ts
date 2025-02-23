@@ -7,6 +7,13 @@ export interface BoardEventListener {
   onCellTypeChanged: (pos: Position, oldType: CellType, newType: CellType) => void;
 }
 
+export interface MoveDelta {
+  position: Position;
+  valueDelta: number;
+  newOwner?: number;
+  newType?: CellType;  // Add support for cell type changes
+}
+
 export class Board implements IBoard {
   private cells: Cell[][];
   private size: number;
@@ -80,14 +87,17 @@ export class Board implements IBoard {
     this.cells[pos.row][pos.col] = { value, owner, type };
   }
 
-  public applyDeltas(deltas: { position: Position; valueDelta: number; newOwner: number }[]): void {
+  public applyDeltas(deltas: MoveDelta[]): void {
     for (const delta of deltas) {
-      const { position, valueDelta, newOwner } = delta;
+      const { position, valueDelta, newOwner, newType } = delta;
       if (!this.isValidPosition(position)) continue;
       
       const currentCell = this.cells[position.row][position.col];
       const newValue = Math.max(0, currentCell.value + valueDelta);
-      this.updateCell(position, newValue, newOwner);
+      
+      // Handle cell type changes during transitions
+      const finalType = newType || currentCell.type;
+      this.updateCell(position, newValue, newOwner || currentCell.owner, finalType);
     }
     this.flushNotifications();
   }

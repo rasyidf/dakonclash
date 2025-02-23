@@ -4,6 +4,7 @@ export enum CellType {
   Normal = 'normal',
   Dead = 'dead',
   Volatile = 'volatile',
+  Wall = 'wall'
 }
 
 export interface SetupModeOperation {
@@ -28,6 +29,7 @@ export interface MoveDelta {
   position: Position;
   valueDelta: number;
   newOwner?: number;
+  newType?: CellType;  // Add support for cell type changes
 }
 
 export interface BoardOperation {

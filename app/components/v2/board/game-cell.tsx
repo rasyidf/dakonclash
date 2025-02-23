@@ -115,6 +115,8 @@ export function GameCell({
         return "bg-gray-800 opacity-50";
       case CellType.Volatile:
         return "bg-gradient-to-br from-yellow-400 to-red-500";
+      case CellType.Wall:
+        return "bg-gradient-to-br from-stone-700 to-stone-900 border-2 border-stone-500";
       default:
         return "";
     }

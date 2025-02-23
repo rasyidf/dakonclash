@@ -1,6 +1,6 @@
 import { Board, type BoardEventListener } from '../board/Board';
 import { BoardHistory } from '../board/BoardHistory';
-import type { GameObserver, GameStateUpdate, Position } from '../types';
+import type { CellType, GameObserver, GameStateUpdate, Position } from '../types';
 import { DakonBoardOperations } from './DakonBoardOperations';
 
 export interface DakonGameState {
@@ -35,6 +35,14 @@ export class DakonStateManager implements GameObserver, BoardEventListener {
     this.onCellValueChanged = this.onCellValueChanged.bind(this);
     this.onCellOwnerChanged = this.onCellOwnerChanged.bind(this);
   }
+
+  public onCellTypeChanged (pos: Position, oldType: CellType, newType: CellType){
+    // this.notifyObservers({
+    //   type: 'setup-operation',
+    //   position: pos,
+    //   cellType: newType
+    // });
+  };
 
   // Board event handlers
   public onCellValueChanged(pos: Position, oldValue: number, newValue: number): void {

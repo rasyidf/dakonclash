@@ -1,8 +1,8 @@
-import type { Position, MoveDelta, CellTransform } from '../types';
+import type { Position, MoveDelta, CellTransform, CellType } from '../types';
 import { BoardOperations } from '../board/BoardOperations';
 import { BoardPatternMatcher } from '../board/BoardPatternMatcher';
 import { Board } from '../board/Board';
-import { CellType } from '../GameEngine';  // Add CellType import
+import { CellMechanicsFactory } from '../mechanics/CellMechanicsFactory';
 
 export class DakonBoardOperations extends BoardOperations {
   private readonly CRITICAL_MASS = 4;
@@ -48,8 +48,11 @@ export class DakonBoardOperations extends BoardOperations {
 
   public validateMove(pos: Position, playerId: number): boolean {
     const cell = this.board.getCell(pos);
-    // Prevent moves on dead cells
-    if (cell?.type === CellType.Dead) return false;
+    if (!cell) return false;
+    
+    const mechanics = CellMechanicsFactory.getMechanics(cell.type);
+    if (!mechanics.validateMove(pos, playerId)) return false;
+    
     return super.validateMove(pos, playerId);
   }
 
@@ -59,8 +62,8 @@ export class DakonBoardOperations extends BoardOperations {
     
     if (!sourceCell || !targetCell) return null;
 
-    // Skip dead cells
-    if (targetCell.type === CellType.Dead) return null;
+    const sourceMechanics = CellMechanicsFactory.getMechanics(sourceCell.type);
+    const targetMechanics = CellMechanicsFactory.getMechanics(targetCell.type);
 
     // During setup phase
     if (this.isSetupPhase()) {
@@ -73,13 +76,13 @@ export class DakonBoardOperations extends BoardOperations {
     }
 
     // During gameplay - explosion mechanics
-    if (sourceCell.value >= this.CRITICAL_MASS) {
+    if (sourceMechanics.canExplode(sourceCell)) {
       const explosionValue = Math.floor(sourceCell.value / 4);
-      // Apply multiplier for volatile cells
-      const actualValue = sourceCell.type === CellType.Volatile ? explosionValue * 2 : explosionValue;
+      const transformedValue = targetMechanics.transformValue(explosionValue);
+      
       return {
         position: target,
-        valueDelta: actualValue,
+        valueDelta: transformedValue,
         newOwner: playerId
       };
     }
@@ -90,36 +93,16 @@ export class DakonBoardOperations extends BoardOperations {
   public simulateExplosion(pos: Position): MoveDelta[] {
     const cacheKey = `${pos.row},${pos.col}`;
     if (this.explosionCache.has(cacheKey)) {
-        return [...this.explosionCache.get(cacheKey)!];
+      return [...this.explosionCache.get(cacheKey)!];
     }
 
     const cell = this.board.getCell(pos);
-    if (!cell || cell.value < this.CRITICAL_MASS) return [];
+    if (!cell) return [];
 
-    const deltas: MoveDelta[] = [];
-    const explosionValue = Math.floor(cell.value / 4);
+    const mechanics = CellMechanicsFactory.getMechanics(cell.type);
+    if (!mechanics.canExplode(cell)) return [];
 
-    // Pre-calculate all positions and values in one pass
-    const transforms = this.getCellTransforms(pos);
-    const validTransforms = transforms.filter(p => this.board.isValidPosition(p));
-
-    if (validTransforms.length === 0) return [];
-
-    // Add source cell delta
-    deltas.push({
-        position: pos,
-        valueDelta: -(explosionValue * validTransforms.length),
-        newOwner: cell.owner
-    });
-
-    // Add target cell deltas
-    validTransforms.forEach(target => {
-        deltas.push({
-            position: target,
-            valueDelta: explosionValue,
-            newOwner: cell.owner
-        });
-    });
+    const deltas = mechanics.handleExplosion(pos, cell.owner);
 
     // Cache the result
     this.manageExplosionCache();
