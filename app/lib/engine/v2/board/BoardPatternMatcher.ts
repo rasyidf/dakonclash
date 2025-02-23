@@ -1,11 +1,30 @@
 import type { IBoard, Position } from '../types';
 
 export class BoardPatternMatcher {
+  private static patternCache: Map<string, boolean> = new Map();
+  private static readonly CACHE_SIZE_LIMIT = 1000;
+
   static getCardinalTransform(): number[][] {
     return [
       [1, 0], [-1, 0], // vertical
       [0, 1], [0, -1], // horizontal
     ];
+  }
+
+  private static getCacheKey(board: IBoard, pattern: number[][], center: Position, transform?: number[][]): string {
+    const boardState = board.getCells().flat().join(',');
+    const patternStr = pattern.flat().join(',');
+    const transformStr = transform ? transform.flat().join(',') : '';
+    return `${boardState}|${patternStr}|${center.row},${center.col}|${transformStr}`;
+  }
+
+  private static cleanCache(): void {
+    if (this.patternCache.size > this.CACHE_SIZE_LIMIT) {
+      // Remove oldest 20% of entries when cache is full
+      const entriesToRemove = Math.floor(this.CACHE_SIZE_LIMIT * 0.2);
+      const entries = Array.from(this.patternCache.keys());
+      entries.slice(0, entriesToRemove).forEach(key => this.patternCache.delete(key));
+    }
   }
 
   static matchPattern(
@@ -14,9 +33,16 @@ export class BoardPatternMatcher {
     center: Position,
     transform?: number[][]
   ): boolean {
+    const cacheKey = this.getCacheKey(board, pattern, center, transform);
+    
+    if (this.patternCache.has(cacheKey)) {
+      return this.patternCache.get(cacheKey)!;
+    }
+
     const patternSize = pattern.length;
     const halfSize = Math.floor(patternSize / 2);
-    
+    let result = false;
+
     const checkPattern = (offsetX: number, offsetY: number): boolean => {
       for (let i = 0; i < patternSize; i++) {
         for (let j = 0; j < patternSize; j++) {
@@ -36,16 +62,21 @@ export class BoardPatternMatcher {
       return true;
     };
 
-    // Check base pattern
-    if (checkPattern(1, 1)) return true;
+    // Check base pattern first
+    result = checkPattern(1, 1);
 
-    // Check transformed patterns if any
-    if (transform) {
-      for (const [dx, dy] of transform) {
-        if (checkPattern(dx, dy)) return true;
-      }
+    // If base pattern doesn't match and transforms are provided, check transformed patterns
+    if (!result && transform) {
+      result = transform.some(([dx, dy]) => checkPattern(dx, dy));
     }
 
-    return false;
+    this.patternCache.set(cacheKey, result);
+    this.cleanCache();
+
+    return result;
+  }
+
+  static clearCache(): void {
+    this.patternCache.clear();
   }
 }

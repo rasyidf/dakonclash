@@ -4,26 +4,54 @@ import { PlayerManager } from './PlayerManager';
 import { WinConditions } from './dakon/WinConditions';
 import { BoardPatternMatcher } from './board/BoardPatternMatcher';
 
-const DEFAULT_PATTERNS: PatternConfig[] = [{
-    name: 'attack_chain',
-    pattern: [
-        [0, 3, 0],
-        [3, 0, 3],
-        [0, 3, 0]
-    ],
-    transform: BoardPatternMatcher.getCardinalTransform(),
-    validator: (board: IBoard, pos: Position): boolean => {
-        const diagonalDirections = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
-        const diagonals = diagonalDirections.map(([dr, dc]) => ({
-            row: pos.row + dr,
-            col: pos.col + dc
-        }));
-        return diagonals.every(dPos =>
-            board.isValidPosition(dPos) &&
-            board.getCellValue(dPos) === 2
-        );
+const DEFAULT_PATTERNS: PatternConfig[] = [
+    {
+        name: 'attack_chain',
+        pattern: [
+            [0, 3, 0],
+            [3, 0, 3],
+            [0, 3, 0]
+        ],
+        transform: BoardPatternMatcher.getCardinalTransform(),
+        validator: (board: IBoard, pos: Position): boolean => {
+            const diagonalDirections = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+            const diagonals = diagonalDirections.map(([dr, dc]) => ({
+                row: pos.row + dr,
+                col: pos.col + dc
+            }));
+            return diagonals.every(dPos =>
+                board.isValidPosition(dPos) &&
+                board.getCellValue(dPos) === 2
+            );
+        }
+    },
+    {
+        name: 'cross_chain',
+        pattern: [
+            [2, 3, 2],
+            [3, 0, 3],
+            [2, 3, 2]
+        ],
+        transform: BoardPatternMatcher.getCardinalTransform(),
+    },
+    {
+        name: 'diagonal_chain',
+        pattern: [
+            [3, 2, 0],
+            [2, 0, 2],
+            [0, 2, 3]
+        ],
+        transform: BoardPatternMatcher.getCardinalTransform(),
+    },
+    {
+        name: 'corner_trap',
+        pattern: [
+            [3, 2],
+            [0, 3]
+        ],
+        transform: BoardPatternMatcher.getCardinalTransform(),
     }
-}];
+];
 
 //#region Game Engine Core
 export class GameEngine implements IGameEngine {
@@ -81,7 +109,6 @@ export class GameEngine implements IGameEngine {
             return false;
         }
 
-        console.log('Making move:', { pos, playerId });
         this.isProcessing = true;
 
         // Notify about move start
@@ -93,7 +120,6 @@ export class GameEngine implements IGameEngine {
 
         // Handle move logic
         const currentValue = this.board.getCellValue(pos);
-        console.log('Current cell value:', currentValue);
 
         const isFirstMove = this.playerManager.isFirstMove(playerId);
         const addValue = isFirstMove ? 3 : 1;
@@ -132,7 +158,7 @@ export class GameEngine implements IGameEngine {
 
         // Find next valid player
         const nextPlayer = this.playerManager.nextPlayer();
-        
+
         // If the next player has no valid moves, they are eliminated
         if (this.getValidMoves(nextPlayer).length === 0 && !this.playerManager.isFirstMove(nextPlayer)) {
             this.playerManager.eliminatePlayer(nextPlayer);

@@ -6,6 +6,8 @@ import { Board } from '../board/Board';
 export class DakonBoardOperations extends BoardOperations {
   private readonly CRITICAL_MASS = 4;
   private readonly INITIAL_BEADS = 3;
+  private explosionCache: Map<string, MoveDelta[]> = new Map();
+  private readonly EXPLOSION_CACHE_SIZE = 100;
 
   constructor(board: Board) {
     super(board);
@@ -77,57 +79,88 @@ export class DakonBoardOperations extends BoardOperations {
   }
 
   public simulateExplosion(pos: Position): MoveDelta[] {
+    const cacheKey = `${pos.row},${pos.col}`;
+    if (this.explosionCache.has(cacheKey)) {
+        return [...this.explosionCache.get(cacheKey)!];
+    }
+
     const cell = this.board.getCell(pos);
     if (!cell || cell.value < this.CRITICAL_MASS) return [];
 
     const deltas: MoveDelta[] = [];
     const explosionValue = Math.floor(cell.value / 4);
 
-    // Add source cell delta (reducing by distributed value)
+    // Pre-calculate all positions and values in one pass
+    const transforms = this.getCellTransforms(pos);
+    const validTransforms = transforms.filter(p => this.board.isValidPosition(p));
+
+    if (validTransforms.length === 0) return [];
+
+    // Add source cell delta
     deltas.push({
-      position: pos,
-      valueDelta: -(explosionValue * 4),
-      newOwner: cell.owner
+        position: pos,
+        valueDelta: -(explosionValue * validTransforms.length),
+        newOwner: cell.owner
     });
 
     // Add target cell deltas
-    const transforms = this.getCellTransforms(pos);
-    for (const target of transforms) {
-      deltas.push({
-        position: target,
-        valueDelta: explosionValue,
-        newOwner: cell.owner
-      });
-    }
+    validTransforms.forEach(target => {
+        deltas.push({
+            position: target,
+            valueDelta: explosionValue,
+            newOwner: cell.owner
+        });
+    });
+
+    // Cache the result
+    this.manageExplosionCache();
+    this.explosionCache.set(cacheKey, [...deltas]);
 
     return deltas;
+  }
+
+  private manageExplosionCache(): void {
+    if (this.explosionCache.size >= this.EXPLOSION_CACHE_SIZE) {
+        const keys = Array.from(this.explosionCache.keys());
+        const keysToRemove = keys.slice(0, Math.floor(this.EXPLOSION_CACHE_SIZE * 0.2));
+        keysToRemove.forEach(key => this.explosionCache.delete(key));
+    }
   }
 
   public getChainReaction(initialPos: Position): MoveDelta[] {
     const deltas: MoveDelta[] = [];
     const processedCells = new Set<string>();
-    const cellsToProcess: Position[] = [initialPos];
+    const cellsToProcess = new Map<string, Position>();
+    
+    // Initialize with first position
+    cellsToProcess.set(`${initialPos.row},${initialPos.col}`, initialPos);
 
-    while (cellsToProcess.length > 0) {
-      const pos = cellsToProcess.shift()!;
-      const key = `${pos.row},${pos.col}`;
-      
-      if (processedCells.has(key)) continue;
-      processedCells.add(key);
-
-      const explosionDeltas = this.simulateExplosion(pos);
-      if (explosionDeltas.length > 0) {
-        deltas.push(...explosionDeltas);
+    while (cellsToProcess.size > 0) {
+        const nextEntry = cellsToProcess.entries().next().value;
+        if (!nextEntry) continue;
+        const [key, pos] = nextEntry;
+        cellsToProcess.delete(key);
         
-        // Check adjacent cells for chain reactions
-        const transforms = this.getCellTransforms(pos);
-        for (const target of transforms) {
-          const targetCell = this.board.getCell(target);
-          if (targetCell && targetCell.value + 1 >= this.CRITICAL_MASS) {
-            cellsToProcess.push(target);
-          }
+        if (processedCells.has(key)) continue;
+        processedCells.add(key);
+
+        const explosionDeltas = this.simulateExplosion(pos);
+        if (explosionDeltas.length > 0) {
+            deltas.push(...explosionDeltas);
+            
+            // Efficiently identify potential chain reactions
+            explosionDeltas
+                .filter(delta => delta.position !== pos)
+                .forEach(delta => {
+                    const targetCell = this.board.getCell(delta.position);
+                    if (targetCell && targetCell.value + delta.valueDelta >= this.CRITICAL_MASS) {
+                        const newKey = `${delta.position.row},${delta.position.col}`;
+                        if (!processedCells.has(newKey)) {
+                            cellsToProcess.set(newKey, delta.position);
+                        }
+                    }
+                });
         }
-      }
     }
 
     return deltas;
@@ -184,5 +217,10 @@ export class DakonBoardOperations extends BoardOperations {
 
   public getInitialBeadsCount(): number {
     return this.INITIAL_BEADS;
+  }
+
+  public clearCache(): void {
+    super.clearCache();
+    this.explosionCache.clear();
   }
 }

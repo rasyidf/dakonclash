@@ -1,14 +1,19 @@
 import { useEffect, useState } from "react";
 import type { GameEngine } from "~/lib/engine/v2/GameEngine";
+import { BoardPatternMatcher } from "~/lib/engine/v2/board/BoardPatternMatcher";
 import { cn } from "~/lib/utils";
 
 interface GameCellProps {
   value: number;
   owner: number;
-  onClick: () => void;
-  isSetupMode?: boolean;
+  gameEngine: GameEngine;
   currentPlayer: number;
-  gameEngine: GameEngine
+  isHighlighted?: boolean;
+  row?: number;
+  col?: number;
+  isSetupMode?: boolean;
+  onClick: () => void;
+  onHoverPattern?: (positions: { row: number, col: number }[] | null) => void;
 }
 
 function getBeadPosition(index: number, total: number) {
@@ -33,7 +38,18 @@ function getBeadPosition(index: number, total: number) {
   return positions[Math.min(total, 4) as keyof typeof positions]?.[index] || { x: 50, y: 50 };
 }
 
-export function GameCell({ value, owner, onClick, gameEngine, isSetupMode, currentPlayer }: GameCellProps) {
+export function GameCell({ 
+  value, 
+  owner, 
+  onClick, 
+  gameEngine, 
+  isSetupMode, 
+  isHighlighted,
+  currentPlayer,
+  row,
+  col,
+  onHoverPattern 
+}: GameCellProps) {
   const [mounted, setMounted] = useState(false);
   const [prevValue, setPrevValue] = useState(value);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -53,6 +69,51 @@ export function GameCell({ value, owner, onClick, gameEngine, isSetupMode, curre
     }
   }, [value, prevValue]);
 
+  const handleMouseEnter = () => {
+    if (row === undefined || col === undefined || !onHoverPattern) return;
+    
+    const board = gameEngine.getBoard();
+    const positions: { row: number; col: number; }[] = [];
+    
+    // Check all possible rotations (top-right, bottom-right, bottom-left, top-left)
+    const rotations = [
+      { cardinal: { row: -1, col: 0 }, diagonal: { row: -1, col: 1 } }, // top-right
+      { cardinal: { row: 0, col: 1 }, diagonal: { row: 1, col: 1 } },   // bottom-right
+      { cardinal: { row: 1, col: 0 }, diagonal: { row: 1, col: -1 } },  // bottom-left
+      { cardinal: { row: 0, col: -1 }, diagonal: { row: -1, col: -1 } } // top-left
+    ];
+
+    for (const rotation of rotations) {
+      const cardinalPos = {
+        row: row + rotation.cardinal.row,
+        col: col + rotation.cardinal.col
+      };
+      const diagonalPos = {
+        row: row + rotation.diagonal.row,
+        col: col + rotation.diagonal.col
+      };
+
+      if (!board.isValidPosition(cardinalPos) || !board.isValidPosition(diagonalPos)) {
+        continue;
+      }
+
+      if (board.getCellValue(cardinalPos) === 3 && board.getCellValue(diagonalPos) === 2) {
+        positions.push(cardinalPos, diagonalPos);
+      }
+    }
+
+    if (positions.length > 0) {
+      onHoverPattern(positions);
+    } else {
+      onHoverPattern(null);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (onHoverPattern) {
+      onHoverPattern(null);
+    }
+  };
 
   const ownerColor = gameEngine.getPlayerManager().getPlayerColor(owner);
 
@@ -64,10 +125,13 @@ export function GameCell({ value, owner, onClick, gameEngine, isSetupMode, curre
         isAnimating && "scale-110",
         owner === 0 && "bg-white hover:bg-gray-100",
         owner === currentPlayer && `bg-${ownerColor}-200 hover:bg-${ownerColor}-300`,
+        isHighlighted && "bg-yellow-200",
         !isSetupMode && owner === 0 && "cursor-pointer",
         isSetupMode && "cursor-pointer hover:ring-2 hover:ring-offset-2 hover:ring-blue-500"
       )}
       onClick={onClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       role="button"
       tabIndex={0}
       aria-label={`Cell at value ${value}, owned by player ${owner}`}

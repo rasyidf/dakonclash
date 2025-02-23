@@ -7,6 +7,8 @@ export class DakonBoardAnalyzer extends BoardAnalyzer {
   private readonly directionVectors = [[-1, 0], [1, 0], [0, -1], [0, 1]];
   private readonly centralityCache: Map<string, number> = new Map();
   private readonly chainReactionCache: Map<string, number> = new Map();
+  private readonly chainScoreCache: Map<string, number> = new Map();
+  private readonly CACHE_LIMIT = 500;
 
   constructor(board: Board) {
     super(board);
@@ -14,50 +16,62 @@ export class DakonBoardAnalyzer extends BoardAnalyzer {
 
   public getChainReactionScore(pos: Position): number {
     const key = `${pos.row},${pos.col}`;
-    if (this.chainReactionCache.has(key)) {
-      return this.chainReactionCache.get(key)!;
+    if (this.chainScoreCache.has(key)) {
+      return this.chainScoreCache.get(key)!;
     }
 
     const affectedCells = this.getChainReactionSpread(pos);
-    let score = 0;
-    
-    for (const cell of affectedCells) {
-      // Weight by centrality and potential cascades
+    const score = affectedCells.reduce((total, cell) => {
       const centralityScore = this.getCellCentrality(cell) * 2;
       const cascadeBonus = this.couldTriggerCascade(cell) ? 1.5 : 0;
-      score += centralityScore + cascadeBonus;
-    }
+      return total + centralityScore + cascadeBonus;
+    }, 0);
 
-    this.chainReactionCache.set(key, score);
+    this.manageCache();
+    this.chainScoreCache.set(key, score);
     return score;
+  }
+
+  private manageCache(): void {
+    if (this.chainScoreCache.size >= this.CACHE_LIMIT) {
+      const keys = Array.from(this.chainScoreCache.keys());
+      const toRemove = keys.slice(0, Math.floor(this.CACHE_LIMIT * 0.2));
+      toRemove.forEach(key => this.chainScoreCache.delete(key));
+    }
   }
 
   private getChainReactionSpread(pos: Position): Position[] {
     const affected = new Set<string>();
-    const toProcess: [Position, number][] = [[pos, 0]];
-    const maxDepth = 3; // Limit chain reaction depth for performance
-    
-    while (toProcess.length > 0) {
-      const [current, depth] = toProcess.shift()!;
-      const key = `${current.row},${current.col}`;
-      
-      if (affected.has(key) || depth >= maxDepth) continue;
+    const toProcess = new Set<string>();
+    const maxSpreadDepth = 3;
+
+    toProcess.add(`${pos.row},${pos.col},0`);
+
+    while (toProcess.size > 0) {
+      const [current] = toProcess;
+      toProcess.delete(current);
+      const [row, col, depth] = current.split(',').map(Number);
+
+      if (depth >= maxSpreadDepth) continue;
+
+      const key = `${row},${col}`;
+      if (affected.has(key)) continue;
       affected.add(key);
-      
-      // Check adjacent positions efficiently
-      for (const [dx, dy] of this.directionVectors) {
-        const nextPos = { 
-          row: current.row + dx, 
-          col: current.col + dy 
-        };
-        
-        const cell = this.board.getCell(nextPos);
-        if (cell && cell.value + 1 >= this.CRITICAL_MASS) {
-          toProcess.push([nextPos, depth + 1]);
+
+      this.directionVectors.forEach(([dx, dy]) => {
+        const newRow = row + dx;
+        const newCol = col + dy;
+        const newPos = { row: newRow, col: newCol };
+
+        if (this.board.isValidPosition(newPos)) {
+          const cell = this.board.getCell(newPos);
+          if (cell && cell.value + 1 >= this.CRITICAL_MASS) {
+            toProcess.add(`${newRow},${newCol},${depth + 1}`);
+          }
         }
-      }
+      });
     }
-    
+
     return Array.from(affected).map(key => {
       const [row, col] = key.split(',').map(Number);
       return { row, col };
@@ -83,19 +97,15 @@ export class DakonBoardAnalyzer extends BoardAnalyzer {
   }
 
   public calculateBoardMetrics(playerId: number): BoardMetrics {
-    const baseMetrics = super.calculateBoardMetrics(playerId);
+    const metrics = super.calculateBoardMetrics(playerId);
     const explosiveCells = this.getExplosiveCells(playerId);
-    
-    // Calculate chain reaction potential more efficiently
-    const chainPotential = explosiveCells.reduce((sum, pos) => {
-      const score = this.getChainReactionScore(pos);
-      return sum + score;
-    }, 0);
-    
+    const chainPotential = explosiveCells.reduce((sum, pos) => 
+      sum + this.getChainReactionScore(pos), 0);
+
     return {
-      ...baseMetrics,
+      ...metrics,
       mobilityScore: this.calculateMobilityScore(playerId),
-      materialScore: this.calculateAdjustedMaterialScore(baseMetrics.materialScore, chainPotential)
+      materialScore: metrics.materialScore + (chainPotential * 0.5)
     };
   }
 
@@ -179,7 +189,7 @@ export class DakonBoardAnalyzer extends BoardAnalyzer {
   }
 
   public clearCache(): void {
-    this.centralityCache.clear();
-    this.chainReactionCache.clear();
+    this.chainScoreCache.clear();
+    super.clearCache();
   }
 }

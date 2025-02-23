@@ -29,10 +29,10 @@ export interface GameSettings {
   maxValue: number;
 }
 
-export function GameSidebar({ 
-  gameEngine, 
-  history, 
-  onReset, 
+export function GameSidebar({
+  gameEngine,
+  history,
+  onReset,
   currentPlayer,
   onUndo,
   onRedo,
@@ -71,6 +71,39 @@ export function GameSidebar({
           <Card className="p-4">
             <h3 className="font-semibold mb-3">Game Controls</h3>
             <div className="flex flex-col gap-2">
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={onUndo}
+                  disabled={!canUndo}
+                  className="flex-1"
+                >
+                  Undo
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={onRedo}
+                  disabled={!canRedo}
+                  className="flex-1"
+                >
+                  Redo
+                </Button>
+              </div>
+              <Button
+                variant="outline"
+                onClick={onReset}
+                className="w-full"
+              >
+                Reset Game
+              </Button>
+              <Button
+                variant={isSetupMode ? "default" : "outline"}
+                onClick={onToggleSetupMode}
+                className="w-full"
+              >
+                {isSetupMode ? "Exit Setup Mode" : "Enter Setup Mode"}
+              </Button>
               {isSetupMode && (
                 <div className="flex gap-2 items-center justify-between mb-2 p-2 bg-gray-50 rounded">
                   <span className="text-sm">Current Player: {currentPlayer}</span>
@@ -83,45 +116,6 @@ export function GameSidebar({
                   </Button>
                 </div>
               )}
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={onUndo}
-                  disabled={!canUndo}
-                  className="flex-1"
-                >
-                  Undo
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={onRedo}
-                  disabled={!canRedo}
-                  className="flex-1"
-                >
-                  Redo
-                </Button>
-              </div>
-              <Button 
-                variant="outline" 
-                onClick={onReset}
-                className="w-full"
-              >
-                Reset Game
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleNewGame}
-                className="w-full"
-              >
-                New Game
-              </Button>
-              <Button
-                variant={isSetupMode ? "default" : "outline"}
-                onClick={onToggleSetupMode}
-                className="w-full"
-              >
-                {isSetupMode ? "Exit Setup Mode" : "Enter Setup Mode"}
-              </Button>
             </div>
           </Card>
         </TabsContent>
@@ -140,9 +134,9 @@ export function GameSidebar({
                   step={1}
                 />
               </div>
-              
+
               <div className="space-y-2">
-                <Label>Max Players ({settings.maxPlayers})</Label>
+                <Label>Players ({settings.maxPlayers})</Label>
                 <Slider
                   value={[settings.maxPlayers]}
                   onValueChange={([value]) => handleSettingChange('maxPlayers', value)}
@@ -151,7 +145,7 @@ export function GameSidebar({
                   step={1}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label>Critical Mass ({settings.maxValue})</Label>
                 <Slider
@@ -162,6 +156,14 @@ export function GameSidebar({
                   step={1}
                 />
               </div>
+              
+              <Button
+                variant="outline"
+                onClick={handleNewGame}
+                className="w-full"
+              >
+                New Game
+              </Button>
             </div>
           </Card>
         </TabsContent>
@@ -173,8 +175,8 @@ export function GameSidebar({
           <ScrollArea className="h-[400px]">
             <div className="space-y-2">
               {history.map((entry, i) => (
-                <div 
-                  key={i} 
+                <div
+                  key={i}
                   className="text-sm p-2 rounded bg-gray-50"
                 >
                   {entry}

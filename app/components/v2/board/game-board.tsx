@@ -3,6 +3,7 @@ import type { GameEngine } from "~/lib/engine/v2/GameEngine";
 import { cn } from "~/lib/utils";
 import { BoardLabels } from "../../main-game/board/board-labels";
 import { GameCell } from "./game-cell";
+import { useState } from "react";
 
 interface GameBoardProps {
   board: Board;
@@ -28,6 +29,8 @@ export function GameBoard({
   const size = board.getSize();
   const cells = board.getCells();
   const playerColor = currentPlayer ? gameEngine.getPlayerManager().getPlayerColor(currentPlayer) : undefined;
+  
+  const [highlightedCells, setHighlightedCells] = useState<{ row: number; col: number; }[] | null>(null);
 
   return (
     <div className="relative mt-4 w-full max-w-[min(90vw,90vh)] mx-auto">
@@ -56,16 +59,30 @@ export function GameBoard({
         {cells.map((row, i) =>
           row.map((cell, j) => {
             const key = `${i}-${j} ${cell.value} ${cell.owner}`;
+            const isHighlighted = highlightedCells?.some(
+              pos => pos.row === i && pos.col === j
+            );
             return (
-              <GameCell
+              <div
                 key={key}
-                value={cell.value}
-                owner={cell.owner}
-                onClick={() => onCellClick(i, j)}
-                gameEngine={gameEngine}
-                isSetupMode={isSetupMode}
-                currentPlayer={currentPlayer}
-              />
+                className={cn(
+                  'relative',
+                  isHighlighted && 'ring-2 ring-yellow-400 rounded-lg'
+                )}
+              >
+                <GameCell
+                  value={cell.value}
+                  owner={cell.owner}
+                  isHighlighted={isHighlighted}
+                  onClick={() => onCellClick(i, j)}
+                  gameEngine={gameEngine}
+                  isSetupMode={isSetupMode}
+                  currentPlayer={currentPlayer}
+                  row={i}
+                  col={j}
+                  onHoverPattern={setHighlightedCells}
+                />
+              </div>
             );
           })
         )}

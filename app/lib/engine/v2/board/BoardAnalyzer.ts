@@ -114,4 +114,8 @@ export abstract class BoardAnalyzer {
     return this.board.getCellsByOwner(playerId)
       .reduce((sum: number, cell: Cell) => sum + cell.value, 0);
   }
+
+  public clearCache(): void {
+    this.centralityMatrix = this.initializeCentralityMatrix();
+  }
 }

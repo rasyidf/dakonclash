@@ -9,6 +9,13 @@ export class Board implements IBoard {
   private cells: Cell[][];
   private size: number;
   private listeners: BoardEventListener[] = [];
+  private pendingNotifications: {
+    valueChanges: Array<{ pos: Position; oldValue: number; newValue: number; }>;
+    ownerChanges: Array<{ pos: Position; oldOwner: number; newOwner: number; }>;
+  } = {
+    valueChanges: [],
+    ownerChanges: []
+  };
 
   constructor(size: number) {
     this.size = size;
@@ -54,12 +61,14 @@ export class Board implements IBoard {
   public updateCell(pos: Position, value: number, owner: number): void {
     if (!this.isValidPosition(pos)) return;
     const oldCell = this.cells[pos.row][pos.col];
+    
     if (oldCell.value !== value) {
-      this.notifyValueChanged(pos, oldCell.value, value);
+      this.pendingNotifications.valueChanges.push({ pos, oldValue: oldCell.value, newValue: value });
     }
     if (oldCell.owner !== owner) {
-      this.notifyOwnerChanged(pos, oldCell.owner, owner);
+      this.pendingNotifications.ownerChanges.push({ pos, oldOwner: oldCell.owner, newOwner: owner });
     }
+    
     this.cells[pos.row][pos.col] = { value, owner };
   }
 
@@ -72,6 +81,23 @@ export class Board implements IBoard {
       const newValue = Math.max(0, currentCell.value + valueDelta);
       this.updateCell(position, newValue, newOwner);
     }
+    this.flushNotifications();
+  }
+
+  private flushNotifications(): void {
+    // Batch process value changes
+    this.pendingNotifications.valueChanges.forEach(change => {
+      this.notifyValueChanged(change.pos, change.oldValue, change.newValue);
+    });
+
+    // Batch process owner changes
+    this.pendingNotifications.ownerChanges.forEach(change => {
+      this.notifyOwnerChanged(change.pos, change.oldOwner, change.newOwner);
+    });
+
+    // Clear pending notifications
+    this.pendingNotifications.valueChanges = [];
+    this.pendingNotifications.ownerChanges = [];
   }
 
   public getCell(pos: Position): Cell | null {
