@@ -164,33 +164,33 @@ export class GameMechanics {
             // Process current batch of explosions
             const currentBatch = [...explosionQueue]; // Copy current queue
             explosionQueue.length = 0; // Clear the queue for next batch
-            
+
             // Keep track of all deltas for this batch
             const allBatchDeltas: MoveDelta[] = [];
 
             // Process each position in the current batch
             for (const currentPos of currentBatch) {
                 const posKey = `${currentPos.row},${currentPos.col}`;
-                
+
                 // Skip already processed cells
                 if (processedCells.has(posKey)) continue;
                 processedCells.add(posKey);
-                
+
                 const cell = this.board.getCell(currentPos);
                 if (!cell) continue;
 
                 const mechanics = CellMechanicsFactory.getMechanics(cell.type);
-                
+
                 // Check if this cell can explode
                 if (!mechanics.canExplode(cell)) continue;
-                
+
                 // Notify about the explosion
                 this.notifyObservers({
                     type: 'explosion',
                     playerId,
-                    position: currentPos
+                    affectedPositions: [currentPos]
                 });
-                
+
                 // Get explosion deltas for this cell
                 const cellDeltas = mechanics.handleExplosion(currentPos, playerId);
                 allBatchDeltas.push(...cellDeltas);
@@ -199,7 +199,7 @@ export class GameMechanics {
             // Apply all deltas from this batch at once
             if (allBatchDeltas.length > 0) {
                 this.board.applyDeltas(allBatchDeltas);
-                
+
                 // Notify about all cell updates in this batch
                 this.notifyObservers({
                     type: 'cell-update',
@@ -207,21 +207,21 @@ export class GameMechanics {
                     position: pos, // Original position
                     deltas: allBatchDeltas
                 });
-                
+
                 // Wait for animation
                 await new Promise(resolve => setTimeout(resolve, this.ANIMATION_TIMINGS.EXPLOSION));
-                
+
                 // Look for cells that should explode next
                 for (const delta of allBatchDeltas) {
                     const targetPos = delta.position;
                     const targetPosKey = `${targetPos.row},${targetPos.col}`;
-                    
+
                     // Skip cells we've already processed
                     if (processedCells.has(targetPosKey)) continue;
-                    
+
                     const updatedCell = this.board.getCell(targetPos);
                     if (!updatedCell) continue;
-                    
+
                     const updatedMechanics = CellMechanicsFactory.getMechanics(updatedCell.type);
                     if (updatedMechanics.canExplode(updatedCell)) {
                         explosionQueue.push(targetPos);
@@ -245,7 +245,7 @@ export class GameMechanics {
             });
         }
     }
-    
+
     private hasValidMoves(playerId: number): boolean {
         return this.getValidMoves(playerId).length > 0 || this.playerManager.isFirstMove(playerId);
     }

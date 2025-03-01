@@ -4,6 +4,7 @@ import { NormalCellMechanics } from './NormalCellMechanics';
 import { DeadCellMechanics } from './DeadCellMechanics';
 import { VolatileCellMechanics } from './VolatileCellMechanics';
 import { WallCellMechanics } from './WallCellMechanics';
+import { ReflectorCellMechanics } from './ReflectorCellMechanics';
 import type { CellMechanics } from './CellMechanics';
 
 export class CellMechanicsFactory {
@@ -14,6 +15,7 @@ export class CellMechanicsFactory {
     this.instances.set(CellType.Dead, new DeadCellMechanics(board));
     this.instances.set(CellType.Volatile, new VolatileCellMechanics(board));
     this.instances.set(CellType.Wall, new WallCellMechanics(board));
+    this.instances.set(CellType.Reflector, new ReflectorCellMechanics(board));
   }
 
   static getMechanics(type: CellType): CellMechanics {

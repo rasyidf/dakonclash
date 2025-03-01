@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { GameEngine } from "~/lib/engine/v2/GameEngine";
 import { Board } from "~/lib/engine/v2/board/Board";
-import { BoardHistory } from "~/lib/engine/v2/board/BoardHistory";
 import { CellType, type GameStateUpdate, type Position, type SetupModeOperation } from "~/lib/engine/v2/types";
 import { GameBoard } from "../board/game-board";
 import { GameBoardV2 } from "../board/game-board-v2";
@@ -9,6 +8,7 @@ import { GameSidebar, type GameSettings } from "./game-sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useUiStore } from "~/store/useUiStore";
 import { toast } from "sonner";
+import { autoSaveGame, deserializeBoard, loadAutoSave, loadGame, saveGame } from "~/lib/storage";
 
 export function GameContainer() {
   const [gameEngine, setGameEngine] = useState(() => new GameEngine({ 
@@ -21,48 +21,36 @@ export function GameContainer() {
       chainReaction: 200
     }
   }));
-  const [history] = useState(() => new BoardHistory(50));
   const [currentPlayer, setCurrentPlayer] = useState(1);
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
   const [isSetupMode, setIsSetupMode] = useState(false);
   const [selectedCellType, setSelectedCellType] = useState<CellType>(CellType.Normal);
   const [selectedValue, setSelectedValue] = useState(1);
-  const [board, setBoard] = useState(() => new Board(7));
+  const [board, setBoard] = useState(() => gameEngine.getBoard());
   const [version, setVersion] = useState<'v1' | 'v2'>('v2');
+  const [hasAutoSave, setHasAutoSave] = useState(false);
 
   const { setProcessing, handleGameUpdate } = useUiStore();
 
   const syncBoardWithEngine = useCallback(() => {
-    const engineBoard = gameEngine.getBoard();
-    const size = engineBoard.getSize();
-    const newBoard = new Board(size);
-    
-    for (let r = 0; r < size; r++) {
-      for (let c = 0; c < size; c++) {
-        const pos: Position = { row: r, col: c };
-        const cell = engineBoard.getCell(pos);
-        newBoard.updateCell(pos, 
-          engineBoard.getCellValue(pos), 
-          engineBoard.getCellOwner(pos),
-          cell?.type || CellType.Normal
-        );
-      }
-    }
-    setBoard(newBoard);
+    setBoard(gameEngine.getBoard());
   }, [gameEngine]);
 
   useEffect(() => {
-    // Initial sync board state with game engine
     syncBoardWithEngine();
   }, [gameEngine, syncBoardWithEngine]);
 
-  // Subscribe to game engine events
+  // Check for autosave on mount
+  useEffect(() => {
+    const autoSave = loadAutoSave();
+    setHasAutoSave(!!autoSave);
+  }, []);
+
   useEffect(() => {
     const observer = {
       onGameStateUpdate: (update: GameStateUpdate) => {
         handleGameUpdate(update);
         
-        // Show appropriate toast notifications
         switch (update.type) {
           case 'explosion':
             toast.info("Chain reaction!", {
@@ -83,12 +71,19 @@ export function GameContainer() {
             });
             break;
         }
+
+        if (['move', 'explosion', 'player-eliminated'].includes(update.type)) {
+          autoSaveGame(gameEngine, currentPlayer);
+          setHasAutoSave(true);
+        }
+
+        syncBoardWithEngine();
       }
     };
     
     gameEngine.addObserver(observer);
     return () => gameEngine.removeObserver(observer);
-  }, [gameEngine, handleGameUpdate]);
+  }, [gameEngine, handleGameUpdate, currentPlayer, syncBoardWithEngine]);
 
   const handleCellClick = useCallback(async (row: number, col: number) => {
     setProcessing(true);
@@ -113,7 +108,6 @@ export function GameContainer() {
         return;
       }
 
-      // Regular game move handling
       const success = await gameEngine.makeMove({ row, col }, currentPlayer);
       if (success) {
         setMoveHistory(prev => [...prev, `Player ${currentPlayer} moved to (${row}, ${col})`]);
@@ -128,41 +122,82 @@ export function GameContainer() {
   }, [gameEngine, currentPlayer, isSetupMode, board, syncBoardWithEngine, selectedCellType, selectedValue, setProcessing]);
 
   const handleUndo = useCallback(() => {
-    const previousBoard = history.undo();
+    if (!gameEngine.canUndo()) return;
+    
+    const previousBoard = gameEngine.undo();
     if (previousBoard) {
       setBoard(previousBoard);
-      gameEngine.setBoard(previousBoard);  // Sync engine with board state
-      setCurrentPlayer(prev => prev === 1 ? 2 : 1);
+      setCurrentPlayer(prev => prev === 1 ? gameEngine.getPlayerManager().getPlayers().length : prev - 1);
       setMoveHistory(prev => [...prev, "Move undone"]);
+      autoSaveGame(gameEngine, currentPlayer);
     }
-  }, [history, gameEngine]);
+  }, [gameEngine, currentPlayer]);
 
   const handleRedo = useCallback(() => {
-    const nextBoard = history.redo();
+    if (!gameEngine.canRedo()) return;
+    
+    const nextBoard = gameEngine.redo();
     if (nextBoard) {
       setBoard(nextBoard);
-      gameEngine.setBoard(nextBoard);  // Sync engine with board state
-      setCurrentPlayer(prev => prev === 1 ? 2 : 1);
+      setCurrentPlayer(prev => prev === gameEngine.getPlayerManager().getPlayers().length ? 1 : prev + 1);
       setMoveHistory(prev => [...prev, "Move redone"]);
+      autoSaveGame(gameEngine, currentPlayer);
     }
-  }, [history, gameEngine]);
+  }, [gameEngine, currentPlayer]);
 
   const handleNewGame = useCallback((settings: GameSettings) => {
     const newEngine = new GameEngine(settings);
     setGameEngine(newEngine);
-    setBoard(new Board(settings.boardSize));
+    setBoard(newEngine.getBoard());
     setCurrentPlayer(1);
     setMoveHistory([]);
-    history.clear();
-  }, [history]);
+    autoSaveGame(newEngine, 1);
+  }, []);
 
   const handleReset = useCallback(() => {
-    gameEngine.reset(); // This will preserve setup operations
-    history.clear();
+    gameEngine.reset();
     syncBoardWithEngine();
     setCurrentPlayer(1);
     setMoveHistory([]);
-  }, [gameEngine, history]);
+    autoSaveGame(gameEngine, 1);
+  }, [gameEngine, syncBoardWithEngine]);
+
+  const handleSaveGame = useCallback((name?: string) => {
+    const saveId = saveGame(gameEngine, currentPlayer, name ? `custom_${Date.now()}` : undefined);
+    toast.success("Game saved successfully!");
+    return saveId;
+  }, [gameEngine, currentPlayer]);
+
+  const handleLoadGame = useCallback((saveId: string) => {
+    const savedState = loadGame(saveId);
+    if (!savedState) {
+      toast.error("Failed to load game");
+      return;
+    }
+
+    const newEngine = new GameEngine(savedState.settings);
+    const board = deserializeBoard(savedState.boardState);
+    newEngine.setBoard(board);
+
+    // Restore history if available
+    if (savedState.history && savedState.historyIndex !== undefined) {
+      const historyBoards = savedState.history.map(state => deserializeBoard(state));
+      newEngine.restoreHistory(historyBoards, savedState.historyIndex);
+    }
+
+    setGameEngine(newEngine);
+    setBoard(board);
+    setCurrentPlayer(savedState.currentPlayer);
+    setMoveHistory([]);
+    toast.success("Game loaded successfully!");
+  }, []);
+
+  const handleLoadAutoSave = useCallback(() => {
+    const autoSave = loadAutoSave();
+    if (autoSave) {
+      handleLoadGame(`${autoSave.timestamp}`);
+    }
+  }, [handleLoadGame]);
 
   const toggleSetupMode = useCallback(() => {
     setIsSetupMode(prev => !prev);
@@ -213,8 +248,8 @@ export function GameContainer() {
         currentPlayer={currentPlayer}
         onUndo={handleUndo}
         onRedo={handleRedo}
-        canUndo={history.canUndo()}
-        canRedo={history.canRedo()}
+        canUndo={gameEngine.canUndo()}
+        canRedo={gameEngine.canRedo()}
         onNewGame={handleNewGame}
         onToggleSetupMode={toggleSetupMode}
         isSetupMode={isSetupMode}
@@ -223,6 +258,10 @@ export function GameContainer() {
         onSelectCellType={setSelectedCellType}
         selectedValue={selectedValue}
         onSelectValue={setSelectedValue}
+        onSaveGame={handleSaveGame}
+        onLoadGame={handleLoadGame}
+        onLoadAutoSave={handleLoadAutoSave}
+        hasAutoSave={hasAutoSave}
       />
     </div>
   );

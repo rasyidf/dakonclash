@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import type { GameEngine } from "~/lib/engine/v2/GameEngine";
 import { CellType } from "~/lib/engine/v2/types";
 import { cn } from "~/lib/utils";
-import styles from './game-cell-v2.module.css';
+import styles from "./game-cell-v2.module.css";
+import { CellMechanicsFactory } from "~/lib/engine/v2/mechanics/CellMechanicsFactory";
 
 interface GameCellV2Props {
   value: number;
@@ -120,6 +121,8 @@ export function GameCellV2({
 
   const ownerColor = gameEngine.getPlayerManager().getPlayerColor(owner);
   const isCurrentPlayer = owner === currentPlayer;
+  const mechanics = CellMechanicsFactory.getMechanics(type);
+  const renderProps = mechanics.renderProperties;
 
   const getCellTypeStyle = () => {
     switch (type) {
@@ -129,6 +132,8 @@ export function GameCellV2({
         return styles.volatileCell;
       case CellType.Wall:
         return styles.wallCell;
+      case CellType.Reflector:
+        return styles.reflectorCell;
       default:
         return '';
     }
@@ -185,33 +190,35 @@ export function GameCellV2({
     <div
       className={cn(
         styles.cell,
-        value >= 4 && "animate-pulse",
+        value >= mechanics.getExplosionThreshold() && "animate-pulse",
         isAnimating && "scale-110",
         !isSetupMode && owner === 0 && "cursor-pointer",
         isSetupMode && "cursor-pointer hover:ring-2 hover:ring-offset-2 hover:ring-blue-500",
+        renderProps.baseStyle,
         getCellTypeStyle(),
         isExploding && styles.exploding,
         {
-          "bg-white hover:bg-gray-100": owner === 0 && type === CellType.Normal,
+          "bg-white hover:bg-gray-100 ": owner === 0 && type === CellType.Normal,
           [`bg-${ownerColor}-200 hover:bg-${ownerColor}-300`]: isCurrentPlayer && type === CellType.Normal,
           "bg-yellow-200": isHighlighted,
           "opacity-90": !isCurrentPlayer && !isSetupMode && type === CellType.Normal,
-        }
+        },
+        renderProps.animation
       )}
       onClick={onClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={() => onHoverPattern?.(null)}
       role="button"
       tabIndex={0}
-      aria-label={`Cell at value ${value}, owned by player ${owner}, type ${type}`}
+      aria-label={`${mechanics.name} at value ${value}, owned by player ${owner}`}
     >
       {value > 0 && (
         <div className={cn(
           styles.cellContent,
           isEntering && styles.entering,
           isExiting && styles.exiting,
-          'transition-colors duration-150',
-          type === CellType.Normal ? `bg-${ownerColor}-500` : ''
+          'transition-colors duration-150 rounded-full',
+          type === CellType.Normal ? `bg-${ownerColor}-500` : renderProps.contentColor
         )}>
           <div className="relative w-full h-full p-2">
             {renderBeads()}
@@ -219,13 +226,22 @@ export function GameCellV2({
         </div>
       )}
       
-      {isSetupMode && owner > 0 && (
-        <div className={cn(
-          "absolute top-0 right-0 text-xs bg-white text-gray-800 rounded-full w-4 h-4 flex items-center justify-center",
-          isEntering && styles.entering
-        )}>
-          {owner}
-        </div>
+      {isSetupMode && (
+        <>
+          {owner > 0 && (
+            <div className={cn(
+              "absolute top-0 right-0 text-xs bg-white text-gray-800 rounded-full w-4 h-4 flex items-center justify-center",
+              isEntering && styles.entering
+            )}>
+              {owner}
+            </div>
+          )}
+          {renderProps.icon && (
+            <div className="absolute bottom-0 right-0 text-xs">
+              {renderProps.icon}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

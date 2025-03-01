@@ -7,6 +7,13 @@ export class VolatileCellMechanics extends CellMechanics {
     name = 'Volatile Cell';
     description = 'A cell that can explode with amplified force.';
     mechanics = 'Volatile cells explode at a lower threshold and distribute amplified value to adjacent cells.';
+    renderProperties = {
+        baseStyle: 'bg-red-100 hover:bg-red-200',
+        beadColor: 'bg-red-400',
+        contentColor: 'bg-red-500',
+        animation: 'animate-pulse',
+        icon: '💥'
+    };
 
     validateMove(pos: Position, _: number): boolean {
         // Volatile cells cannot be directly played on

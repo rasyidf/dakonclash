@@ -1,6 +1,7 @@
 import { CellType } from "~/lib/engine/v2/types";
 import { Board } from './board/Board';
 import { PlayerManager } from './PlayerManager';
+import { BoardHistory } from './board/BoardHistory';
 import { CellMechanicsFactory } from './mechanics/CellMechanicsFactory';
 import { WinConditionFactory } from './factories/WinConditionFactory';
 import { GameMechanics } from './mechanics/GameMechanics';
@@ -11,6 +12,7 @@ import { DEFAULT_PATTERNS } from "./mechanics/Patterns";
 export class GameEngine implements IGameEngine {
     private board: Board;
     private playerManager: PlayerManager;
+    private boardHistory: BoardHistory;
     private config: Required<GameConfig>;
     private patterns: PatternConfig[];
     private observers: Set<GameObserver>;
@@ -36,10 +38,10 @@ export class GameEngine implements IGameEngine {
 
         this.board = new Board(this.config.boardSize);
         this.playerManager = new PlayerManager(this.config.maxPlayers);
+        this.boardHistory = new BoardHistory(50); // Keep last 50 moves
         this.patterns = this.config.customPatterns;
         this.isProcessing = false;
         this.setupState = new Map();
-
 
         // Initialize factories
         CellMechanicsFactory.initialize(this.board);
@@ -55,35 +57,33 @@ export class GameEngine implements IGameEngine {
         );
     }
 
-
-    
-        public reset(): void {
-            this.board = new Board(this.config.boardSize);
-            this.setupState.forEach(operation => {
-                this.board.updateCell(
-                    operation.position,
-                    operation.value,
-                    operation.owner,
-                    operation.cellType
-                );
-            });
-            this.playerManager.reset();
-            this.isProcessing = false;
-    
-            // Reset all factories
-            CellMechanicsFactory.reset(this.board);
-            WinConditionFactory.reset();
-    
-            this.gameMechanics = new GameMechanics(
-                this.board,
-                this.playerManager,
-                this.config,
-                this.notifyObservers.bind(this)
+    public reset(): void {
+        this.board = new Board(this.config.boardSize);
+        this.setupState.forEach(operation => {
+            this.board.updateCell(
+                operation.position,
+                operation.value,
+                operation.owner,
+                operation.cellType
             );
-    
-            this.notifyObservers({ type: 'reset' });
-        }
-    
+        });
+        this.playerManager.reset();
+        this.boardHistory.clear();
+        this.isProcessing = false;
+
+        // Reset all factories
+        CellMechanicsFactory.reset(this.board);
+        WinConditionFactory.reset();
+
+        this.gameMechanics = new GameMechanics(
+            this.board,
+            this.playerManager,
+            this.config,
+            this.notifyObservers.bind(this)
+        );
+
+        this.notifyObservers({ type: 'reset' });
+    }
 
     public async makeMove(pos: Position, playerId: number): Promise<boolean> {
         if (this.isProcessing) {
@@ -91,11 +91,15 @@ export class GameEngine implements IGameEngine {
             return false;
         }
 
+        // Save current state before the move
+        this.boardHistory.pushState(this.board);
+
         this.isProcessing = true;
         try {
             const result = await this.gameMechanics.processTurn(pos, playerId);
 
             if (!result.success) {
+                this.boardHistory.undo(); // Remove the saved state if move failed
                 return false;
             }
 
@@ -104,7 +108,7 @@ export class GameEngine implements IGameEngine {
                 this.notifyObservers({
                     type: 'win',
                     playerId: result.winResult.winner,
-                    reason: result.winResult.reason
+                    reason: result.winResult.reason || 'Game Over' // Provide default reason
                 });
             }
 
@@ -113,7 +117,6 @@ export class GameEngine implements IGameEngine {
             this.isProcessing = false;
         }
     }
-
 
     public applySetupOperation(operation: SetupModeOperation): boolean {
         if (!this.board.isValidPosition(operation.position)) {
@@ -134,8 +137,6 @@ export class GameEngine implements IGameEngine {
             type: 'setup-operation',
             position: operation.position,
             cellType: operation.cellType,
-            value: operation.value,
-            owner: operation.owner
         });
 
         return true;
@@ -150,7 +151,6 @@ export class GameEngine implements IGameEngine {
     public getSetupOperations(): SetupModeOperation[] {
         return Array.from(this.setupState.values());
     }
-
 
     public validateMove(pos: Position, playerId: number): boolean {
         return this.gameMechanics.validateMove(pos, playerId);
@@ -180,7 +180,6 @@ export class GameEngine implements IGameEngine {
         this.patterns.push(pattern);
     }
 
-
     public getExplosionThreshold(): number {
         return this.config.maxValue;
     }
@@ -199,5 +198,54 @@ export class GameEngine implements IGameEngine {
 
     public getPlayerManager(): PlayerManager {
         return this.playerManager;
+    }
+
+    // Add new methods for history management
+    public getBoardHistory(): Board[] {
+        const states = [];
+        const historySize = this.boardHistory.getHistorySize();
+        for (let i = 0; i < historySize; i++) {
+            const state = this.boardHistory.getCurrentState();
+            if (state) states.push(state);
+        }
+        return states;
+    }
+
+    public getBoardHistoryIndex(): number {
+        return this.boardHistory.getCurrentIndex();
+    }
+
+    public canUndo(): boolean {
+        return this.boardHistory.canUndo();
+    }
+
+    public canRedo(): boolean {
+        return this.boardHistory.canRedo();
+    }
+
+    public undo(): Board | null {
+        const previousBoard = this.boardHistory.undo();
+        if (previousBoard) {
+            this.board = previousBoard;
+            this.notifyObservers({ type: 'undo' });
+        }
+        return previousBoard;
+    }
+
+    public redo(): Board | null {
+        const nextBoard = this.boardHistory.redo();
+        if (nextBoard) {
+            this.board = nextBoard;
+            this.notifyObservers({ type: 'redo' });
+        }
+        return nextBoard;
+    }
+
+    public restoreHistory(states: Board[], currentIndex: number): void {
+        this.boardHistory.clear();
+        states.forEach(state => this.boardHistory.pushState(state));
+        while (this.boardHistory.getCurrentIndex() > currentIndex) {
+            this.boardHistory.undo();
+        }
     }
 }

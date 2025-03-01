@@ -8,6 +8,13 @@ import { Slider } from "~/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { GameEngine } from "~/lib/engine/v2/GameEngine";
 import { CellType } from "~/lib/engine/v2/types";
+import { CellMechanicsFactory } from "~/lib/engine/v2/mechanics/CellMechanicsFactory";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "~/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "~/components/ui/dialog";
+import { Input } from "~/components/ui/input";
+import { deleteSave, getSavesList, type SaveMetadata } from "~/lib/storage";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "~/components/ui/alert-dialog";
+import { format } from "date-fns";
 
 interface GameSidebarProps {
   gameEngine: GameEngine;
@@ -26,6 +33,10 @@ interface GameSidebarProps {
   onSelectCellType?: (type: CellType) => void;
   selectedValue?: number;
   onSelectValue?: (value: number) => void;
+  onSaveGame?: (name?: string) => void;
+  onLoadGame?: (saveId: string) => void;
+  onLoadAutoSave?: () => void;
+  hasAutoSave?: boolean;
 }
 
 export interface GameSettings {
@@ -51,12 +62,19 @@ export function GameSidebar({
   onSelectCellType,
   selectedValue = 1,
   onSelectValue,
+  onSaveGame,
+  onLoadGame,
+  onLoadAutoSave,
+  hasAutoSave = false,
 }: GameSidebarProps) {
   const [settings, setSettings] = useState<GameSettings>({
     boardSize: 7,
     maxPlayers: 2,
     maxValue: 4
   });
+  const [saves, setSaves] = useState<SaveMetadata[]>(getSavesList());
+  const [saveName, setSaveName] = useState("");
+  const [selectedSaveId, setSelectedSaveId] = useState<string | null>(null);
 
   const playerColor = gameEngine.getPlayerManager().getPlayerColor(currentPlayer);
 
@@ -68,22 +86,30 @@ export function GameSidebar({
     onNewGame?.(settings);
   };
 
+  const handleDeleteSave = (saveId: string) => {
+    deleteSave(saveId);
+    setSaves(getSavesList());
+  };
+
+  const handleSaveGame = () => {
+    onSaveGame?.(saveName);
+    setSaveName("");
+    setSaves(getSavesList());
+  };
+
   return (
     <div className="w-80 flex flex-col gap-4">
       <Tabs defaultValue="controls" className="w-full">
-        <TabsList className="w-full">
-          <TabsTrigger value="controls" className="flex-1">Controls</TabsTrigger>
-          <TabsTrigger value="settings" className="flex-1">Settings</TabsTrigger>
-          {isSetupMode && (
-            <TabsTrigger value="setup" className="flex-1">Setup</TabsTrigger>
-          )}
+        <TabsList className="w-full grid grid-cols-3">
+          <TabsTrigger value="controls">Controls</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="saves">Saves</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="controls">
+        <TabsContent value="controls" className="space-y-4">
           <Card className="p-4">
             <h3 className="font-semibold mb-3">Game Controls</h3>
             <div className="flex flex-col gap-2">
-
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -102,13 +128,40 @@ export function GameSidebar({
                   Redo
                 </Button>
               </div>
-              <Button
-                variant="outline"
-                onClick={onReset}
-                className="w-full"
-              >
-                Reset Game
-              </Button>
+              
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={onReset}
+                  className="flex-1"
+                >
+                  Reset Game
+                </Button>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="flex-1">Quick Save</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Save Game</DialogTitle>
+                      <DialogDescription>
+                        Enter a name for your save
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <Input 
+                        value={saveName}
+                        onChange={(e) => setSaveName(e.target.value)}
+                        placeholder="Save name"
+                      />
+                      <Button onClick={handleSaveGame} className="w-full">
+                        Save Game
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
               <Button
                 variant={isSetupMode ? "default" : "outline"}
                 onClick={onToggleSetupMode}
@@ -116,6 +169,7 @@ export function GameSidebar({
               >
                 {isSetupMode ? "Exit Setup Mode" : "Enter Setup Mode"}
               </Button>
+              
               {isSetupMode && (
                 <div className="flex gap-2 items-center justify-between mb-2 p-2 bg-gray-50 rounded">
                   <span className="text-sm">Current Player: {currentPlayer}</span>
@@ -130,6 +184,57 @@ export function GameSidebar({
               )}
             </div>
           </Card>
+
+          {isSetupMode && (
+            <Card className="p-4">
+              <h3 className="font-semibold mb-3">Setup Tools</h3>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Cell Type</Label>
+                  <Select
+                    value={selectedCellType}
+                    onValueChange={(value) => onSelectCellType?.(value as CellType)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select cell type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(CellType).map((type) => {
+                        const mechanics = CellMechanicsFactory.getMechanics(type);
+                        return (
+                          <SelectItem key={type} value={type}>
+                            <div className="flex items-center gap-2">
+                              {mechanics.renderProperties.icon && (
+                                <span>{mechanics.renderProperties.icon}</span>
+                              )}
+                              <span>{mechanics.name}</span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500">
+                    {CellMechanicsFactory.getMechanics(selectedCellType).description}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Cell Value ({selectedValue})</Label>
+                  <Slider
+                    value={[selectedValue]}
+                    onValueChange={([value]) => onSelectValue?.(value)}
+                    min={1}
+                    max={selectedCellType === CellType.Wall ? 5 : gameEngine.getExplosionThreshold()}
+                    step={1}
+                  />
+                  <span className="text-xs text-gray-500">
+                    {CellMechanicsFactory.getMechanics(selectedCellType).mechanics}
+                  </span>
+                </div>
+              </div>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="settings">
@@ -180,63 +285,71 @@ export function GameSidebar({
           </Card>
         </TabsContent>
 
-        <TabsContent value="setup">
+        <TabsContent value="saves">
           <Card className="p-4">
-            <h3 className="font-semibold mb-3">Setup Tools</h3>
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Cell Type</Label>
-                <Select
-                  value={selectedCellType}
-                  onValueChange={(value) => onSelectCellType?.(value as CellType)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select cell type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={CellType.Normal}>Normal</SelectItem>
-                    <SelectItem value={CellType.Dead}>Dead</SelectItem>
-                    <SelectItem value={CellType.Volatile}>Volatile</SelectItem>
-                    <SelectItem value={CellType.Wall}>Wall</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Cell Value ({selectedValue})</Label>
-                <Slider
-                  value={[selectedValue]}
-                  onValueChange={([value]) => onSelectValue?.(value)}
-                  min={1}
-                  max={selectedCellType === CellType.Wall ? 5 : gameEngine.getExplosionThreshold()}
-                  step={1}
-                />
-                <span className="text-xs text-gray-500">
-                  {selectedCellType === CellType.Wall 
-                    ? "Wall durability (hits needed to break)"
-                    : "Cell value (explodes at threshold)"
-                  }
-                </span>
-              </div>
-
-              <div className="flex gap-2 items-center justify-between mb-2 p-2 bg-gray-50 rounded">
-                <span className="text-sm">Current Player: {currentPlayer}</span>
+              {hasAutoSave && (
                 <Button
-                  size="sm"
-                  onClick={onSwitchPlayer}
-                  variant="secondary"
+                  variant="outline"
+                  onClick={onLoadAutoSave}
+                  className="w-full"
                 >
-                  Switch Player
+                  Load Auto-Save
                 </Button>
-              </div>
+              )}
               
-              <Button
-                variant="outline"
-                onClick={onReset}
-                className="w-full"
-              >
-                Reset Board
-              </Button>
+              <div className="space-y-2">
+                <h3 className="font-semibold">Saved Games</h3>
+                <ScrollArea className="h-[300px] w-full rounded-md border p-2">
+                  <div className="space-y-2 pr-4">
+                    {saves.map((save) => (
+                      <Card key={save.id} className="p-3">
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{save.preview}</p>
+                            <p className="text-xs text-gray-500">
+                              {format(save.timestamp, 'PPpp')}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onLoadGame?.(save.id)}
+                            >
+                              Load
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm">Delete</Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Save</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete this save? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteSave(save.id)}>
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                    {saves.length === 0 && (
+                      <p className="text-center text-gray-500 py-4">
+                        No saved games found
+                      </p>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
             </div>
           </Card>
         </TabsContent>
@@ -245,8 +358,8 @@ export function GameSidebar({
       <Card className="flex-1">
         <div className="p-4">
           <h3 className="font-semibold mb-3">Game History</h3>
-          <ScrollArea className="h-[400px]">
-            <div className="space-y-2">
+          <ScrollArea className="h-[300px]">
+            <div className="space-y-2 pr-4">
               {history.map((entry, i) => (
                 <div
                   key={i}
@@ -255,6 +368,11 @@ export function GameSidebar({
                   {entry}
                 </div>
               ))}
+              {history.length === 0 && (
+                <p className="text-center text-gray-500 py-4">
+                  No moves yet
+                </p>
+              )}
             </div>
           </ScrollArea>
         </div>

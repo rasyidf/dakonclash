@@ -1,11 +1,18 @@
 import type { Position, Cell, MoveDelta } from '../types';
 import { CellMechanics } from './CellMechanics';
 import { CellMechanicsFactory } from './CellMechanicsFactory';
+import type { CellRenderProperties } from './CellMechanics';
 
 export class NormalCellMechanics extends CellMechanics {
     name = 'Normal Cell';
     description = 'A standard cell that can be played on and explode.';
     mechanics = 'Normal cells can be played on and explode when they reach a certain value.';
+    renderProperties: CellRenderProperties = {
+        baseStyle: 'bg-white hover:bg-gray-100',
+        beadColor: 'bg-white',
+        contentColor: 'bg-opacity-75',
+        animation: 'transition-all duration-200'
+    };
     
     validateMove(pos: Position, playerId: number): boolean {
         const cell = this.board.getCell(pos);

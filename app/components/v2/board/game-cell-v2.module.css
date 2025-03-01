@@ -24,6 +24,22 @@
   animation: breathe 2s infinite;
 }
 
+.reflectorCell {
+  background: linear-gradient(45deg, #e9d5ff, #f3e8ff);
+  border: 2px solid #d8b4fe;
+  position: relative;
+  overflow: hidden;
+}
+
+.reflectorCell::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, transparent 45%, #d8b4fe 45%, #d8b4fe 55%, transparent 55%);
+  animation: reflectorPulse 2s ease-in-out infinite;
+}
+
 /* Cell state animations */
 .exploding {
   animation: explode 500ms ease-in-out;
@@ -176,4 +192,10 @@
 @keyframes exitBead {
   from { transform: translate(-50%, -50%) scale(1); }
   to { transform: translate(-50%, -50%) scale(0); }
+}
+
+@keyframes reflectorPulse {
+  0% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+  100% { opacity: 0.3; }
 }

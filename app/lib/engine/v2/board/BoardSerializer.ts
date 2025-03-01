@@ -1,4 +1,5 @@
-import type { BoardState } from '../types';
+import type { BoardState, Cell } from '../types';
+import { CellType } from '../types';
 
 export class BoardSerializer {
     private static readonly VERSION = 1;
@@ -6,42 +7,34 @@ export class BoardSerializer {
 
     public static serialize(state: BoardState): string {
         // Use a more efficient binary format
-        const buffer = new ArrayBuffer(this.HEADER_SIZE * 4 + Math.ceil((state.size * state.size * 11) / 8)); // Added 2 bits for cell type
+        const { size, cells, owners, types } = state;
+        const buffer = new ArrayBuffer(this.HEADER_SIZE * 4 + size * size * 3); // 1 byte each for value, owner, type
         const view = new DataView(buffer);
         
         // Write header with version and size
         view.setInt32(0, this.VERSION);
-        view.setInt32(4, state.size);
+        view.setInt32(4, size);
         
         let offset = this.HEADER_SIZE * 4;
-        let bitOffset = 0;
-        let currentByte = 0;
         
-        // Pack cell values (4 bits), owners (2 bits), and types (2 bits)
-        for (let i = 0; i < state.cells.length; i++) {
-            // Pack cell value (4 bits)
-            currentByte |= (state.cells[i] & 0xF) << bitOffset;
-            bitOffset += 4;
-            
-            // Pack owner (2 bits)
-            currentByte |= (state.owners[i] & 0x3) << bitOffset;
-            bitOffset += 2;
-            
-            // Pack cell type (2 bits)
-            currentByte |= (state.types[i] & 0x3) << bitOffset;
-            bitOffset += 2;
-            
-            // Write byte when full
-            if (bitOffset >= 8) {
-                view.setUint8(offset++, currentByte);
-                currentByte = 0;
-                bitOffset = 0;
+        // Handle both array formats
+        if (cells instanceof Uint8Array && owners && types) {
+            // Already in the format we want
+            for (let i = 0; i < size * size; i++) {
+                view.setUint8(offset++, cells[i]);
+                view.setUint8(offset++, owners[i]);
+                view.setUint8(offset++, types[i]);
             }
-        }
-        
-        // Write final byte if needed
-        if (bitOffset > 0) {
-            view.setUint8(offset, currentByte);
+        } else if (Array.isArray(cells)) {
+            // Convert from 2D array to flat format
+            for (let i = 0; i < size; i++) {
+                for (let j = 0; j < size; j++) {
+                    const cell = cells[i][j] as Cell;
+                    view.setUint8(offset++, cell.value);
+                    view.setUint8(offset++, cell.owner);
+                    view.setUint8(offset++, Object.values(CellType).indexOf(cell.type));
+                }
+            }
         }
         
         return btoa(String.fromCharCode(...new Uint8Array(buffer)));
@@ -66,42 +59,18 @@ export class BoardSerializer {
         const size = view.getInt32(4);
         const cellCount = size * size;
         
+        // Create typed arrays for each component
         const cells = new Uint8Array(cellCount);
         const owners = new Uint8Array(cellCount);
         const types = new Uint8Array(cellCount);
         
         let offset = this.HEADER_SIZE * 4;
-        let bitOffset = 0;
-        let currentByte = view.getUint8(offset);
-        let cellIndex = 0;
         
-        // Unpack bits into cells, owners, and types
-        while (cellIndex < cellCount) {
-            if (bitOffset >= 8) {
-                offset++;
-                currentByte = view.getUint8(offset);
-                bitOffset = 0;
-            }
-            
-            // Read value (4 bits)
-            cells[cellIndex] = (currentByte >> bitOffset) & 0xF;
-            bitOffset += 4;
-            
-            if (bitOffset >= 8) {
-                offset++;
-                currentByte = view.getUint8(offset);
-                bitOffset = 0;
-            }
-            
-            // Read owner (2 bits)
-            owners[cellIndex] = (currentByte >> bitOffset) & 0x3;
-            bitOffset += 2;
-            
-            // Read type (2 bits)
-            types[cellIndex] = (currentByte >> bitOffset) & 0x3;
-            bitOffset += 2;
-            
-            cellIndex++;
+        // Read cell data
+        for (let i = 0; i < cellCount; i++) {
+            cells[i] = view.getUint8(offset++);
+            owners[i] = view.getUint8(offset++);
+            types[i] = view.getUint8(offset++);
         }
         
         return { size, cells, owners, types };

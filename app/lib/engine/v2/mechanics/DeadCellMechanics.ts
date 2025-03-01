@@ -5,6 +5,13 @@ export class DeadCellMechanics extends CellMechanics {
     name = 'Dead Cell';
     description = 'A cell that cannot be played on or explode.';
     mechanics = 'Dead cells are inert and do not interact with the game.';
+    renderProperties = {
+        baseStyle: 'bg-gray-900',
+        beadColor: 'bg-gray-600',
+        contentColor: 'bg-gray-800',
+        icon: '⚫'
+    };
+
     validateMove(pos: Position, _: number): boolean {
         return false; // Dead cells cannot be played on
     }

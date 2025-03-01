@@ -4,7 +4,8 @@ export enum CellType {
   Normal = 'normal',
   Dead = 'dead',
   Volatile = 'volatile',
-  Wall = 'wall'
+  Wall = 'wall',
+  Reflector = 'reflector'
 }
 
 export interface SetupModeOperation {
@@ -38,9 +39,10 @@ export interface BoardOperation {
 }
 
 export interface PatternConfig {
+  points?: number;
   name: string;
+  transform: number[][];
   pattern: number[][];
-  transform?: number[][];
   validator?: (board: IBoard, pos: Position) => boolean;
 }
 
@@ -50,9 +52,8 @@ export interface WinConditionResult {
 }
 
 export interface GameConfig {
-  boardSize?: number;
-  maxPlayers?: number;
-  maxValue?: number;
+  boardSize: number; maxPlayers: number;
+  maxValue: number;
   winConditions?: WinCondition[];
   customPatterns?: PatternConfig[];
   animationDelays: {
@@ -62,19 +63,24 @@ export interface GameConfig {
   };
 }
 
-export interface GameStateUpdate {
-  type: 'move' | 'explosion' | "phase-change" | 'chain-complete' | 'player-change' | 'win' | 'reset' | 'cell-update' | 'chain-reaction' | 'player-eliminated' | 'setup-operation';
-  playerId?: number;
-  position?: Position;
-  deltas?: MoveDelta[];
-  affectedPositions?: Position[];
-  reason?: string;
-  cellType?: CellType;
-  value?: number;
-  owner?: number;
-  chainLength?: number;
-  phase?: string;
-}
+export type GameStateUpdate =
+  | { type: 'move'; playerId: number; position: Position, deltas?: MoveDelta[] }
+  | { type: 'explosion'; playerId: number; affectedPositions?: Position[] }
+  | { type: 'cell-update'; playerId?: number; position: Position, deltas?: MoveDelta[] }
+  | { type: 'phase-change'; phase: string }
+  | { type: 'chain-reaction'; playerId?: number; affectedPositions: Position[], deltas?: MoveDelta[] }
+  | { type: 'chain-complete'; playerId: number; chainLength: number }
+  | { type: 'player-eliminated'; playerId: number }
+  | { type: 'win'; playerId: number; reason: string }
+  | { type: 'undo' }
+  | { type: 'redo' }
+  | { type: 'reset' }
+  | { type: 'player-change'; playerId: number }
+  | {
+    type: 'setup-operation';
+    position: Position;
+    cellType: CellType;
+  };
 
 export interface GameObserver {
   onGameStateUpdate: (update: GameStateUpdate) => void;
@@ -95,12 +101,24 @@ export interface IBoard {
 }
 
 export interface IGameEngine {
-  getBoard(): IBoard;
-  getCurrentPlayer(): number;
   makeMove(pos: Position, playerId: number): Promise<boolean>;
+  getBoard(): any;
+  setBoard(board: any): void;
+  reset(): void;
+  validateMove(pos: Position, playerId: number): boolean;
+  getExplosionThreshold(): number;
   addObserver(observer: GameObserver): void;
   removeObserver(observer: GameObserver): void;
-  getPlayerManager(): IPlayerManager;
+  applySetupOperation(operation: SetupModeOperation): boolean;
+  clearSetupOperation(pos: Position): void;
+  getSetupOperations(): SetupModeOperation[];
+  canUndo(): boolean;
+  canRedo(): boolean;
+  undo(): any | null;
+  redo(): any | null;
+  getBoardHistory(): any[];
+  getBoardHistoryIndex(): number;
+  restoreHistory(states: any[], currentIndex: number): void;
 }
 
 export interface IPlayerManager {
@@ -112,9 +130,9 @@ export interface IPlayerManager {
 
 export interface BoardState {
   size: number;
-  cells: Uint8Array;
+  cells: Uint8Array;  // Always use Uint8Array for serialization
   owners: Uint8Array;
-  types: Uint8Array;  // Add types array
+  types: Uint8Array;
 }
 
 export interface MoveOperation {
@@ -129,4 +147,13 @@ export interface BoardMetrics {
   territoryScore: number;
   mobilityScore: number;
   materialScore: number;
+}
+
+export interface GameMoveResult {
+  success: boolean;
+  winResult?: {
+    winner: number | null;
+    reason: string;
+  };
+  affectedPositions?: Position[];
 }

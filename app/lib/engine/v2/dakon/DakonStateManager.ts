@@ -180,6 +180,10 @@ export class DakonStateManager implements GameObserver, BoardEventListener {
     // Check for win condition
     if (this.checkWinCondition()) {
       this.state.gameStatus = 'finished';
+      this.notifyObservers({
+        type: 'phase-change',
+        phase: 'finished'
+      });
       return;
     }
 
