@@ -15,7 +15,7 @@ export class NormalCellMechanics extends CellMechanics {
         icon: '⬜️',
         svgProperties: {
             fill: '#ffffff', // White
-            stroke: '#ffffff', // Gray-200
+            stroke: '#e5e7eb', // Gray-200
             strokeWidth: 1,
             gradient: {
                 type: 'radial' as const,
@@ -27,7 +27,7 @@ export class NormalCellMechanics extends CellMechanics {
             contentGradient: {
                 type: 'radial' as const,
                 colors: [
-                    { offset: 30, color: 'rgba(255, 255, 255, 0.9)' }, 
+                    { offset: 30, color: 'rgba(255, 255, 255, 0.9)' },
                     { offset: 100, color: 'rgba(255, 255, 255, 0.7)' }
                 ]
             },
@@ -47,8 +47,8 @@ export class NormalCellMechanics extends CellMechanics {
             }
         }
     };
-    
-    validateMove(pos: Position, playerId: number): boolean {
+
+    validateMove(pos: Position, _: number): boolean {
         const cell = this.board.getCell(pos);
         // Normal cells can be played on if they exist and either:
         // - belong to the player already
@@ -62,7 +62,7 @@ export class NormalCellMechanics extends CellMechanics {
 
         // Calculate explosion value
         const explosionValue = Math.floor(cell.value / 4);
-        
+
         // Create the delta for the exploding cell itself
         const deltas: MoveDelta[] = [{
             position: pos,
@@ -76,16 +76,16 @@ export class NormalCellMechanics extends CellMechanics {
             const targetPos = { row: pos.row + dx, col: pos.col + dy };
             if (this.board.isValidPosition(targetPos)) {
                 const targetCell = this.board.getCell(targetPos);
-                
+
                 // Skip invalid cells
                 if (!targetCell) return;
-                
+
                 // Get the mechanics for the target cell type
                 const targetMechanics = CellMechanicsFactory.getMechanics(targetCell.type);
-                
+
                 // Transform value based on target cell type
                 const transformedValue = targetMechanics.transformValue(explosionValue);
-                
+
                 // Add the delta for this affected cell
                 deltas.push({
                     position: targetPos,

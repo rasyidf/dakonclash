@@ -14,21 +14,21 @@ export class VolatileCellMechanics extends CellMechanics {
         animation: 'animate-pulse',
         icon: '💥',
         svgProperties: {
-            fill: '#fee2e2', // Light red background
-            stroke: '#ef4444', // Red border
+            fill: '#fee2e2', // Light red background (red-100)
+            stroke: '#ef4444', // Red border (red-500)
             strokeWidth: 2,
             gradient: {
                 type: 'radial' as const,
                 colors: [
-                    { offset: 0, color: '#fee2e2' },  // Light red
-                    { offset: 100, color: '#fca5a5' } // Medium red
+                    { offset: 0, color: '#fee2e2' },  // Light red (red-100)
+                    { offset: 100, color: '#fca5a5' } // Medium red (red-300)
                 ]
             },
             contentGradient: {
                 type: 'radial' as const,
                 colors: [
-                    { offset: 0, color: '#f87171' },  // Medium red
-                    { offset: 100, color: '#dc2626' } // Dark red
+                    { offset: 0, color: '#f87171' },  // Medium red (red-400)
+                    { offset: 100, color: '#dc2626' } // Dark red (red-600)
                 ]
             },
             explosionAnimation: 'explode-volatile',
@@ -36,12 +36,12 @@ export class VolatileCellMechanics extends CellMechanics {
             beadGradient: {
                 type: 'linear' as const,
                 colors: [
-                    { offset: 0, color: '#fecaca' },  // Very light red
-                    { offset: 100, color: '#b91c1c' } // Very dark red
+                    { offset: 0, color: '#fecaca' },  // Very light red (red-200)
+                    { offset: 100, color: '#b91c1c' } // Very dark red (red-700)
                 ]
             },
             glowEffect: {
-                color: '#ef4444',
+                color: '#ef4444', // Red-500
                 blur: 5,
                 spread: 2
             }

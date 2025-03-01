@@ -1,7 +1,7 @@
 import { Board } from "~/lib/engine/v2/board/Board";
 import type { GameEngine } from "~/lib/engine/v2/GameEngine";
 import { cn } from "~/lib/utils";
-import { GameCellV2 } from "./game-cell-v2";
+import { GameCellV2 } from "../game-cell-v2";
 import { useEffect, useState } from "react";
 import { BoardLabels } from "~/components/v1/board/board-labels";
 import { CellType, type GameStateUpdate } from "~/lib/engine/v2/types";

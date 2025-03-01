@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { SVG } from "@svgdotjs/svg.js";
+import { Svg, SVG } from "@svgdotjs/svg.js";
 import type { GameEngine } from "~/lib/engine/v2/GameEngine";
 import { CellType } from "~/lib/engine/v2/types";
 import { cn } from "~/lib/utils";
@@ -50,7 +50,7 @@ export function GameCellV3({
   const svgElementsRef = useRef<SVGElements>({ cellBg: null, cellContent: null, beads: [] });
   const [prevValue, setPrevValue] = useState(value);
   const [isValueChanged, setIsValueChanged] = useState(false);
-  
+
   const mechanics = CellMechanicsFactory.getMechanics(type);
   const renderProps = mechanics.renderProperties;
   const ownerColor = gameEngine.getPlayerManager().getPlayerColor(owner);
@@ -99,7 +99,7 @@ export function GameCellV3({
       if (bgMatch) {
         const colorClass = bgMatch[1]; // e.g. "red-500"
         const [colorName, shade] = colorClass.split("-");
-        
+
         // Map to actual CSS color values
         const colorMap: Record<string, Record<string, string>> = {
           red: { "100": "#fee2e2", "500": "#ef4444" },
@@ -108,47 +108,47 @@ export function GameCellV3({
           gray: { "800": "#1f2937", "900": "#111827" },
           white: { "": "#ffffff" }
         };
-        
+
         return colorMap[colorName]?.[shade] || "#ffffff";
       }
     }
-    
+
     // For normal cells, use the player color
     if (owner === 0) return "#ffffff";
-    
+
     // Map player colors to actual CSS color values
     const playerColorMap: Record<string, string> = {
       red: "#fca5a5",
-      blue: "#93c5fd", 
+      blue: "#93c5fd",
       green: "#86efac",
       purple: "#d8b4fe",
       orange: "#fdba74",
       yellow: "#fde047"
     };
-    
+
     return playerColorMap[ownerColor] || "#ffffff";
   }, [type, renderProps, owner, ownerColor]);
 
   // Get content color for cell interior
   const getContentColor = useCallback(() => {
     if (type !== CellType.Normal) {
-      return renderProps.contentColor?.match(/bg-([a-z]+-\d+)/) ? 
+      return renderProps.contentColor?.match(/bg-([a-z]+-\d+)/) ?
         `#${renderProps.contentColor}`.replace("bg-", "") : "#666666";
     }
-    
+
     // Map player colors to deeper shades for content
     const playerContentColorMap: Record<string, string> = {
       red: "#ef4444",
-      blue: "#3b82f6", 
+      blue: "#3b82f6",
       green: "#22c55e",
       purple: "#a855f7",
       orange: "#f97316",
       yellow: "#eab308"
     };
-    
+
     return playerContentColorMap[ownerColor] || "#666666";
   }, [type, renderProps, ownerColor]);
-  
+
   // Get bead color
   const getBeadColor = useCallback(() => {
     if (type === CellType.Dead) return "#6b7280";
@@ -158,24 +158,24 @@ export function GameCellV3({
   // Initialize SVG
   const initializeSVG = useCallback(() => {
     if (!svgRef.current) return;
-    
+
     // Clear existing SVG content
     svgRef.current.innerHTML = "";
-    
+
     // Get dimensions
     const containerWidth = svgRef.current.clientWidth;
     const containerHeight = svgRef.current.clientHeight;
-    
+
     // Create SVG.js instance
     const draw = SVG().addTo(svgRef.current).size(containerWidth, containerHeight);
-    
+
     // Create cell background
     const bgColor = getCellBackgroundColor();
     const cellBg = draw.rect(containerWidth, containerHeight)
       .radius(8)
       .fill(bgColor)
       .stroke({ width: 1, color: isHighlighted ? '#fbbf24' : '#ffffff' });
-    
+
     // Create cell content (inner circle)
     const contentRadius = Math.min(containerWidth, containerHeight) * 0.4;
     const contentColor = getContentColor();
@@ -183,25 +183,25 @@ export function GameCellV3({
       .center(containerWidth / 2, containerHeight / 2)
       .fill({ color: contentColor, opacity: 0.75 })
       .opacity(value > 0 ? 1 : 0);
-    
+
     // Create beads
     const beads: any[] = [];
     if (value > 0) {
-      const beadPositions = isExploding 
-        ? getCardinalPositions(containerWidth, containerHeight) 
+      const beadPositions = isExploding
+        ? getCardinalPositions(containerWidth, containerHeight)
         : getBeadPositions(value, containerWidth, containerHeight);
-      
+
       const beadSize = Math.min(containerWidth, containerHeight) * 0.15;
       const beadColor = getBeadColor();
-      
+
       beadPositions.slice(0, Math.min(4, value)).forEach((pos, i) => {
         const bead = draw.circle(beadSize)
           .center(pos.x, pos.y)
           .fill('#ffffff')
           .stroke({ width: 0.5, color: '#ffffff' });
-        
+
         beads.push(bead);
-        
+
         if (isExploding) {
           const directions = [
             { x: 0, y: -containerHeight }, // North
@@ -209,14 +209,14 @@ export function GameCellV3({
             { x: 0, y: containerHeight },  // South
             { x: -containerWidth, y: 0 }   // West
           ];
-          
-          bead.animate(500, '<>', 0)
+
+          bead.animate(500, 0)
             .move(pos.x + directions[i].x - beadSize / 2, pos.y + directions[i].y - beadSize / 2)
             .opacity(0);
         }
       });
     }
-    
+
     // Add pattern highlight if needed
     let patternEffect;
     if (inPattern) {
@@ -224,14 +224,14 @@ export function GameCellV3({
         .radius(8)
         .fill({ color: '#fef3c7', opacity: 0.3 })
         .stroke({ width: 2, color: '#fbbf24', opacity: 0.7 });
-      
+
       // Pulse animation
       patternEffect.animate(2000).loop()
         .attr({ opacity: 0.7 })
         .animate()
         .attr({ opacity: 0.3 });
     }
-    
+
     // Add explosion effect if needed
     let explosionEffect;
     if (isExploding) {
@@ -239,29 +239,28 @@ export function GameCellV3({
         .center(containerWidth / 2, containerHeight / 2)
         .fill({ color: '#fef3c7', opacity: 0.4 })
         .stroke({ width: 0, color: '#fbbf24' });
-      
-      explosionEffect.animate(500, '<>', 0)
-        .opacity(0)
-        .radius(Math.min(containerWidth, containerHeight) * 1);
+
+      explosionEffect.animate(500, 0)
+        .opacity(0);
     }
-    
+
     // Store references to SVG elements
-    svgElementsRef.current = { 
-      cellBg, 
-      cellContent, 
+    svgElementsRef.current = {
+      cellBg,
+      cellContent,
       beads,
       patternEffect,
       explosionEffect
     };
-    
+
   }, [
-    getCellBackgroundColor, 
-    getContentColor, 
-    getBeadColor, 
-    getBeadPositions, 
+    getCellBackgroundColor,
+    getContentColor,
+    getBeadColor,
+    getBeadPositions,
     getCardinalPositions,
-    value, 
-    isExploding, 
+    value,
+    isExploding,
     isHighlighted,
     inPattern
   ]);
@@ -269,11 +268,11 @@ export function GameCellV3({
   // Update SVG when the cell value changes
   const updateSVG = useCallback(() => {
     if (!svgRef.current || !svgElementsRef.current.cellBg) return;
-    
+
     const { cellContent, beads } = svgElementsRef.current;
     const containerWidth = svgRef.current.clientWidth;
     const containerHeight = svgRef.current.clientHeight;
-    
+
     // Update cell content visibility
     if (cellContent) {
       if (value > 0) {
@@ -282,7 +281,7 @@ export function GameCellV3({
         cellContent.opacity(0);
       }
     }
-    
+
     // Update beads
     if (beads.length > 0) {
       // First, hide all existing beads with animation
@@ -290,17 +289,17 @@ export function GameCellV3({
         bead.animate(200, '<>', 0).opacity(0).scale(0);
       });
     }
-    
+
     // Then create new beads if value > 0
     if (value > 0 && svgRef.current) {
-      const draw = SVG(svgRef.current);
+      const draw = SVG(svgRef.current) as Svg;
       const beadPositions = getBeadPositions(value, containerWidth, containerHeight);
       const beadSize = Math.min(containerWidth, containerHeight) * 0.15;
       const beadColor = getBeadColor();
-      
+
       // Clear beads array
       svgElementsRef.current.beads = [];
-      
+
       beadPositions.slice(0, Math.min(4, value)).forEach((pos) => {
         const bead = draw.circle(beadSize)
           .center(pos.x, pos.y)
@@ -308,8 +307,8 @@ export function GameCellV3({
           .stroke({ width: 0.5, color: '#ffffff' })
           .opacity(0)
           .scale(0);
-        
-        bead.animate(200, '<>', 0).opacity(1).scale(1);
+
+        bead.animate(200, 0).opacity(1).scale(1);
         svgElementsRef.current.beads.push(bead);
       });
     }
@@ -318,10 +317,10 @@ export function GameCellV3({
   // Handle mouse events for pattern detection
   const handleMouseEnter = useCallback(() => {
     if (row === undefined || col === undefined || !onHoverPattern || isSetupMode) return;
-    
+
     const board = gameEngine.getBoard();
     const positions: { row: number; col: number; }[] = [];
-    
+
     const rotations = [
       { cardinal: { row: -1, col: 0 }, diagonal: { row: -1, col: 1 } },
       { cardinal: { row: 0, col: 1 }, diagonal: { row: 1, col: 1 } },
@@ -394,7 +393,7 @@ export function GameCellV3({
   }, [type]);
 
   return (
-    <div 
+    <div
       className={cn(
         styles.cellContainer,
         getCellTypeClass(),
@@ -413,7 +412,7 @@ export function GameCellV3({
       aria-label={`${mechanics.name} at value ${value}, owned by player ${owner}`}
     >
       <div ref={svgRef} className={styles.svgContainer}></div>
-      
+
       {isSetupMode && (
         <>
           {owner > 0 && (
@@ -428,7 +427,7 @@ export function GameCellV3({
           )}
         </>
       )}
-      
+
       {inPattern && (
         <div className={styles.patternHighlight}></div>
       )}

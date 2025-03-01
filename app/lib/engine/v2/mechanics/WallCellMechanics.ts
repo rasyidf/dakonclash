@@ -13,8 +13,8 @@ export class WallCellMechanics extends CellMechanics {
         contentColor: 'bg-stone-500',
         icon: '🧱',
         svgProperties: {
-            fill: '#44403c', // Dark stone background
-            stroke: '#78716c', // Stone border
+            fill: '#44403c', // Stone 700
+            stroke: '#57534e', // Stone 600
             strokeWidth: 3,
             pattern: 'wall',
             gradient: {

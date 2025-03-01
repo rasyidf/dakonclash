@@ -2,7 +2,7 @@ import { useCallback, useState, useEffect, useRef } from "react";
 import type { GameEngine } from "~/lib/engine/v2/GameEngine";
 import type { Position } from "~/lib/engine/v2/types";
 import { cn } from "~/lib/utils";
-import { GameCellV3 } from "./game-cell-v3";
+import { GameCellV3 } from "../game-cell-v3";
 import { useUiStore } from "~/store/useUiStore";
 
 interface GameBoardV3Props {

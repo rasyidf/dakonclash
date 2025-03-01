@@ -5,9 +5,9 @@ import { GameEngine } from "~/lib/engine/v2/GameEngine";
 import { CellType, type GameConfig, type GameStateUpdate } from "~/lib/engine/v2/types";
 import { autoSaveGame } from "~/lib/storage";
 import { useUiStore } from "~/store/useUiStore";
-import { GameBoard } from "../board/game-board";
-import { GameBoardV2 } from "../board/game-board-v2";
-import { GameBoardV3 } from "../board/game-board-v3";
+import { GameBoard } from "../board/v1/game-board";
+import { GameBoardV2 } from "../board/v2/game-board-v2";
+import { GameBoardV3 } from "../board/v3/game-board-v3";
 import { GameSidebar, type GameSettings } from "./game-sidebar";
 
 export function GameContainer() {
