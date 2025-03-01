@@ -1,13 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLoaderData, type ClientLoaderFunctionArgs } from "react-router";
 import { toast } from "sonner";
-import { GameEngine } from "~/lib/engine/v2/GameEngine";
-import { CellType } from "~/lib/engine/v2/types";
-import { BoardPresetManager, type BoardPreset } from "~/lib/engine/v2/board/BoardPreset";
-import { BoardMakerSidebar } from "~/components/v2/board-maker/board-maker-sidebar";
 import { BoardMakerControls } from "~/components/v2/board-maker/board-maker-controls";
 import { BoardMakerGrid } from "~/components/v2/board-maker/board-maker-grid";
+import { BoardMakerSidebar } from "~/components/v2/board-maker/board-maker-sidebar";
 import { CellTypesPanel } from "~/components/v2/board-maker/cell-types-panel";
+import { BoardPresetManager, type BoardPreset } from "~/lib/engine/v2/board/BoardPreset";
+import { GameEngine } from "~/lib/engine/v2/GameEngine";
+import { CellType } from "~/lib/engine/v2/types";
 
 export async function clientLoader({ request }: ClientLoaderFunctionArgs) {
   const presets = await BoardPresetManager.getPresets();
@@ -130,6 +130,13 @@ export default function BoardMaker() {
   };
 
   const handleSaveChanges = async (preset: BoardPreset) => {
+    if (!presetName && !presetDescription) {
+      // Start editing mode by populating the form
+      setPresetName(preset.name);
+      setPresetDescription(preset.description);
+      return;
+    }
+
     try {
       const boardCells = Array(selectedSize).fill(null).map((_, row) =>
         Array(selectedSize).fill(null).map((_, col) => 
@@ -140,8 +147,8 @@ export default function BoardMaker() {
       // Delete old preset and save as new
       await BoardPresetManager.deletePreset(preset.id);
       const newPreset = await BoardPresetManager.savePreset({
-        name: preset.name,
-        description: preset.description,
+        name: presetName || preset.name,
+        description: presetDescription || preset.description,
         size: selectedSize,
         cells: boardCells,
         difficulty: preset.difficulty,
@@ -149,6 +156,8 @@ export default function BoardMaker() {
       });
 
       setCurrentPreset(newPreset);
+      setPresetName("");
+      setPresetDescription("");
       toast.success("Changes saved successfully");
       window.location.reload();
     } catch (error) {
@@ -157,9 +166,34 @@ export default function BoardMaker() {
     }
   };
 
-  const handleRevertChanges = async (preset: BoardPreset) => {
+  const handleRevertChanges = (preset: BoardPreset) => {
+    setPresetName("");
+    setPresetDescription("");
     handleLoadPreset(preset);
-    toast.info("Reverted to last saved state");
+    toast.info("Changes reverted");
+  };
+
+  const handleFileImport = (preset: BoardPreset) => {
+    setSelectedSize(preset.size);
+    const newEngine = createInitialEngine(preset.size);
+
+    preset.cells.forEach((row, i) => {
+      row.forEach((cellType, j) => {
+        if (cellType !== CellType.Normal) {
+          newEngine.applySetupOperation({
+            position: { row: i, col: j },
+            value: 0,
+            owner: 0,
+            cellType
+          });
+        }
+      });
+    });
+
+    setGameEngine(newEngine);
+    setPresetName(preset.name);
+    setPresetDescription(preset.description);
+    setCurrentPreset(null); // Set to null since this is a new unsaved preset
   };
 
   const clearBoard = useCallback(() => {
@@ -206,6 +240,7 @@ export default function BoardMaker() {
         onDeletePreset={handleDeletePreset}
         onSaveChanges={handleSaveChanges}
         onRevertChanges={handleRevertChanges}
+        onFileImport={handleFileImport}
       />
 
       <div className="flex-1 overflow-hidden">
