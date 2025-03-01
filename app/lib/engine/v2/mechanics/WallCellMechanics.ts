@@ -13,20 +13,24 @@ export class WallCellMechanics extends CellMechanics {
         return false;
     }
 
-    handleExplosion(pos: Position, _: number): MoveDelta[] {
+    handleExplosion(pos: Position, playerId: number): MoveDelta[] {
         const cell = this.board.getCell(pos);
         if (!cell) return [];
 
         const key = `${pos.row},${pos.col}`;
-        const currentValue = cell.value - 1; // Reduce wall value by 1 when hit
+        const currentCount = this.explosionCount.get(key) || 0;
+        this.explosionCount.set(key, currentCount + 1);
         
-        if (currentValue <= 0) {
-            // Wall is destroyed, convert to normal cell
+        // Wall takes damage from explosions
+        const currentValue = cell.value - 1;
+        
+        if (currentValue <= 0 || this.explosionCount.get(key)! >= 3) {
+            // Wall is destroyed after taking enough damage or hits
             this.explosionCount.delete(key);
             return [{
                 position: pos,
-                valueDelta: -cell.value, // Remove wall value
-                newType: CellType.Normal,
+                valueDelta: -cell.value, // Remove wall value completely
+                newType: CellType.Normal, // Convert to normal cell
                 newOwner: 0 // Reset to neutral
             }];
         }
@@ -40,11 +44,13 @@ export class WallCellMechanics extends CellMechanics {
     }
 
     transformValue(value: number): number {
-        return value; // Wall maintains its value as durability
+        // Walls absorb most of the explosion energy
+        return Math.ceil(value * 0.25); // Return only a quarter of the value
     }
 
     canExplode(cell: Cell): boolean {
-        return false; // Walls don't explode
+        // Walls don't explode from their own value
+        return false;
     }
 
     getExplosionThreshold(): number {

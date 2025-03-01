@@ -1,4 +1,4 @@
-import type { Position, MoveDelta, CellTransform, CellType } from '../types';
+import { type Position, type MoveDelta, type CellTransform, CellType } from '../types';
 import { BoardOperations } from '../board/BoardOperations';
 import { BoardPatternMatcher } from '../board/BoardPatternMatcher';
 import { Board } from '../board/Board';
@@ -28,7 +28,10 @@ export class DakonBoardOperations extends BoardOperations {
     this.addMoveValidator((pos, playerId) => {
       if (!this.isSetupPhase()) {
         const cell = this.board.getCell(pos);
-        return cell?.owner === playerId && cell.value >= this.CRITICAL_MASS;
+        if (!cell) return false;
+        
+        const mechanics = CellMechanicsFactory.getMechanics(cell.type);
+        return mechanics.validateMove(pos, playerId);
       }
       return true;
     });
@@ -77,7 +80,9 @@ export class DakonBoardOperations extends BoardOperations {
 
     // During gameplay - explosion mechanics
     if (sourceMechanics.canExplode(sourceCell)) {
+      // Get base explosion value from source cell
       const explosionValue = Math.floor(sourceCell.value / 4);
+      // Let the target cell transform the value according to its mechanics
       const transformedValue = targetMechanics.transformValue(explosionValue);
       
       return {
@@ -92,21 +97,30 @@ export class DakonBoardOperations extends BoardOperations {
 
   public simulateExplosion(pos: Position): MoveDelta[] {
     const cacheKey = `${pos.row},${pos.col}`;
-    if (this.explosionCache.has(cacheKey)) {
+    
+    // Use cached result if available and valid
+    const cell = this.board.getCell(pos);
+    if (!cell) return [];
+    
+    // Don't use cache for special cell types since their behavior might depend on board state
+    if (this.explosionCache.has(cacheKey) && cell.type === CellType.Normal) {
       return [...this.explosionCache.get(cacheKey)!];
     }
 
-    const cell = this.board.getCell(pos);
-    if (!cell) return [];
-
+    // Get the proper cell mechanics for this cell type
     const mechanics = CellMechanicsFactory.getMechanics(cell.type);
+    
+    // Check if this cell can explode
     if (!mechanics.canExplode(cell)) return [];
 
+    // Get explosion deltas from the cell mechanics
     const deltas = mechanics.handleExplosion(pos, cell.owner);
 
-    // Cache the result
-    this.manageExplosionCache();
-    this.explosionCache.set(cacheKey, [...deltas]);
+    // Only cache normal cell explosions for consistency
+    if (cell.type === CellType.Normal) {
+      this.manageExplosionCache();
+      this.explosionCache.set(cacheKey, [...deltas]);
+    }
 
     return deltas;
   }
@@ -120,56 +134,66 @@ export class DakonBoardOperations extends BoardOperations {
   }
 
   public getChainReaction(initialPos: Position): MoveDelta[] {
-    // Non-recursive implementation using a queue
+    // Non-recursive implementation using a queue to handle chain reactions
     let allDeltas: MoveDelta[] = [];
     const processedPositions = new Set<string>();
     const positionsToProcess: Position[] = [initialPos];
     const explosionThreshold = this.getExplosionThreshold();
     
-    // Queue-based approach inspired by V1 implementation
+    // Clone the board to simulate changes without affecting the real board
+    const simulationBoard = this.board.clone();
+    
+    // Process while there are positions in the queue
     while (positionsToProcess.length > 0) {
+      // Take the first position from the queue
       const currentPos = positionsToProcess.shift()!;
       const posKey = `${currentPos.row},${currentPos.col}`;
       
-      // Skip if already processed to prevent loops
+      // Skip already processed positions to prevent infinite loops
       if (processedPositions.has(posKey)) continue;
       processedPositions.add(posKey);
       
-      // Get explosion deltas for this position
-      const cellDeltas = this.simulateExplosion(currentPos);
-      if (cellDeltas.length === 0) continue;
+      // Get the cell at this position in our simulation board
+      const cell = simulationBoard.getCell(currentPos);
+      if (!cell) continue;
       
-      // Add to the total deltas
+      // Get the mechanics for this cell type
+      const mechanics = CellMechanicsFactory.getMechanics(cell.type);
+      
+      // Check if this cell can explode
+      if (!mechanics.canExplode(cell)) continue;
+      
+      // Get explosion deltas for this cell
+      const cellDeltas = mechanics.handleExplosion(currentPos, cell.owner);
+      
+      // Add to our total deltas
       allDeltas = [...allDeltas, ...cellDeltas];
       
-      // Check which cells might explode next as a result
-      const cellsToExplodeNext: Position[] = [];
+      // Apply the deltas to our simulation board
+      simulationBoard.applyDeltas(cellDeltas);
       
-      // Create a temporary board copy to simulate the explosion effects
-      const tempBoard = this.board.clone();
-      tempBoard.applyDeltas(cellDeltas);
-      
-      // Check affected cells to see if they would explode
+      // Check which cells might explode next
       for (const delta of cellDeltas) {
-        if (delta.position.row === currentPos.row && delta.position.col === currentPos.col) {
-          continue; // Skip the cell that just exploded
-        }
-
-        // Calculate the new value after applying the delta
-        const targetCell = tempBoard.getCell(delta.position);
-        if (!targetCell) continue;
+        const targetPos = delta.position;
+        const targetKey = `${targetPos.row},${targetPos.col}`;
         
-        // Check if this cell could now explode
-        const targetMechanics = CellMechanicsFactory.getMechanics(targetCell.type);
-        if (targetMechanics.canExplode(targetCell)) {
-          cellsToExplodeNext.push(delta.position);
+        // Skip if we've already processed this position
+        if (processedPositions.has(targetKey)) continue;
+        
+        // Get the updated cell after applying deltas
+        const updatedCell = simulationBoard.getCell(targetPos);
+        if (!updatedCell) continue;
+        
+        // Get mechanics for this cell
+        const targetMechanics = CellMechanicsFactory.getMechanics(updatedCell.type);
+        
+        // If this cell can now explode, add it to the queue
+        if (targetMechanics.canExplode(updatedCell)) {
+          positionsToProcess.push(targetPos);
         }
       }
-      
-      // Add cells that would explode to the processing queue
-      positionsToProcess.push(...cellsToExplodeNext);
     }
-
+    
     return allDeltas;
   }
 
@@ -189,7 +213,7 @@ export class DakonBoardOperations extends BoardOperations {
     priority += (size - centerDistance) / 2;
 
     // Consider cell value
-    if (cell.value >= this.CRITICAL_MASS) {
+    if (cell.value >= this.CRITICAL_MASS - 1) {
       priority += 3;
     }
 
@@ -204,13 +228,14 @@ export class DakonBoardOperations extends BoardOperations {
     for (let row = 0; row < size; row++) {
       for (let col = 0; col < size; col++) {
         const value = this.board.getCellValue({ row, col });
-        if (value > this.CRITICAL_MASS) return false;
+        if (value > this.CRITICAL_MASS * 2) return false; // Allow some buffer for special cells
         totalValue += value;
       }
     }
 
-    // Check total value conservation
-    return totalValue <= size * size * this.INITIAL_BEADS;
+    // Check total value conservation (with some buffer for special cell mechanics)
+    const expectedMaxValue = size * size * this.INITIAL_BEADS * 1.5;
+    return totalValue <= expectedMaxValue;
   }
 
   private isSetupPhase(): boolean {

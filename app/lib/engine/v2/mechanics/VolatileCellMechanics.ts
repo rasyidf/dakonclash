@@ -1,6 +1,7 @@
 import type { Position, Cell, MoveDelta } from '../types';
 import { CellType } from '../types';
 import { CellMechanics } from './CellMechanics';
+import { CellMechanicsFactory } from './CellMechanicsFactory';
 
 export class VolatileCellMechanics extends CellMechanics {
     name = 'Volatile Cell';
@@ -16,8 +17,8 @@ export class VolatileCellMechanics extends CellMechanics {
         const cell = this.board.getCell(pos);
         if (!cell || !this.canExplode(cell)) return [];
 
-        const explosionValue = Math.floor(cell.value / 4);
         // Volatile cells explode with double force
+        const explosionValue = Math.floor(cell.value / 4);
         const amplifiedValue = explosionValue * 2;
 
         const deltas: MoveDelta[] = [{
@@ -31,16 +32,23 @@ export class VolatileCellMechanics extends CellMechanics {
         const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
         directions.forEach(([dx, dy]) => {
             const targetPos = { row: pos.row + dx, col: pos.col + dy };
-            if (this.board.isValidPosition(targetPos)) {
-                const targetCell = this.board.getCell(targetPos);
-                if (targetCell) {
-                    deltas.push({
-                        position: targetPos,
-                        valueDelta: amplifiedValue,
-                        newOwner: playerId
-                    });
-                }
-            }
+            if (!this.board.isValidPosition(targetPos)) return;
+            
+            const targetCell = this.board.getCell(targetPos);
+            if (!targetCell) return;
+            
+            // Get the mechanics for the target cell type
+            const targetMechanics = CellMechanicsFactory.getMechanics(targetCell.type);
+            
+            // Apply the target cell's transformation to our amplified value
+            const transformedValue = targetMechanics.transformValue(amplifiedValue);
+            
+            // Add delta for this target cell
+            deltas.push({
+                position: targetPos,
+                valueDelta: transformedValue,
+                newOwner: playerId
+            });
         });
 
         return deltas;

@@ -19,7 +19,10 @@ export class NormalCellMechanics extends CellMechanics {
         const cell = this.board.getCell(pos);
         if (!cell || !this.canExplode(cell)) return [];
 
+        // Calculate explosion value
         const explosionValue = Math.floor(cell.value / 4);
+        
+        // Create the delta for the exploding cell itself
         const deltas: MoveDelta[] = [{
             position: pos,
             valueDelta: -cell.value, // Remove all value from exploding cell
@@ -32,14 +35,22 @@ export class NormalCellMechanics extends CellMechanics {
             const targetPos = { row: pos.row + dx, col: pos.col + dy };
             if (this.board.isValidPosition(targetPos)) {
                 const targetCell = this.board.getCell(targetPos);
-                if (targetCell) {
-                    deltas.push({
-                        position: targetPos,
-                        valueDelta: explosionValue,
-                        newOwner: playerId
-                    });
-                    
-                }
+                
+                // Skip invalid cells
+                if (!targetCell) return;
+                
+                // Get the mechanics for the target cell type
+                const targetMechanics = CellMechanicsFactory.getMechanics(targetCell.type);
+                
+                // Transform value based on target cell type
+                const transformedValue = targetMechanics.transformValue(explosionValue);
+                
+                // Add the delta for this affected cell
+                deltas.push({
+                    position: targetPos,
+                    valueDelta: transformedValue,
+                    newOwner: playerId
+                });
             }
         });
 
@@ -47,7 +58,7 @@ export class NormalCellMechanics extends CellMechanics {
     }
 
     transformValue(value: number): number {
-        return value;
+        return value; // Normal cells receive values unchanged
     }
 
     canExplode(cell: Cell): boolean {
