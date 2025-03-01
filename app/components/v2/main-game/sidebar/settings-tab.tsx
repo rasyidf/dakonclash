@@ -6,6 +6,9 @@ import { Slider } from "~/components/ui/slider";
 import { CellMechanicsFactory } from "~/lib/engine/v2/mechanics/CellMechanicsFactory";
 import { CellType } from "~/lib/engine/v2/types";
 import type { GameSettings } from "./types";
+import { Separator } from "~/components/ui/separator";
+import { cn } from "~/lib/utils";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogAction, AlertDialogCancel } from "~/components/ui/alert-dialog";
 
 interface SettingsTabProps {
     onNewGame: (settings: GameSettings) => void;
@@ -43,34 +46,40 @@ export function SettingsTab({
     };
 
     return (
-        <div className="space-y-3">
-            <GameSettingsSection
-                settings={settings}
-                onSettingChange={handleSettingChange}
-                onNewGame={() => onNewGame(settings)}
-            />
-
-            <SetupModeSection
-                isSetupMode={isSetupMode}
-                onToggleSetupMode={onToggleSetupMode}
-                currentPlayer={currentPlayer}
-                onSwitchPlayer={onSwitchPlayer}
-            />
-
-            {isSetupMode && (
-                <CellConfigSection
-                    selectedCellType={selectedCellType}
-                    onSelectCellType={onSelectCellType}
-                    selectedValue={selectedValue}
-                    onSelectValue={onSelectValue}
-                    explosionThreshold={explosionThreshold}
+        <div className="space-y-6">
+            <div className="space-y-4">
+                <h3 className="font-medium">Game Settings</h3>
+                <GameSettingsSection
+                    settings={settings}
+                    onSettingChange={handleSettingChange}
+                    onNewGame={() => onNewGame(settings)}
                 />
-            )}
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+                <h3 className="font-medium">Board Setup</h3>
+                <SetupModeSection
+                    isSetupMode={isSetupMode}
+                    onToggleSetupMode={onToggleSetupMode}
+                    currentPlayer={currentPlayer}
+                    onSwitchPlayer={onSwitchPlayer}
+                />
+
+                {isSetupMode && (
+                    <CellConfigSection
+                        selectedCellType={selectedCellType}
+                        onSelectCellType={onSelectCellType}
+                        selectedValue={selectedValue}
+                        onSelectValue={onSelectValue}
+                        explosionThreshold={explosionThreshold}
+                    />
+                )}
+            </div>
         </div>
     );
 }
-
-// Sub-sections of the Settings Tab
 
 interface GameSettingsSectionProps {
     settings: GameSettings;
@@ -80,7 +89,7 @@ interface GameSettingsSectionProps {
 
 function GameSettingsSection({ settings, onSettingChange, onNewGame }: GameSettingsSectionProps) {
     return (
-        <div className="space-y-3">
+        <div className="space-y-4">
             <SettingSlider
                 label="Board Size"
                 value={settings.boardSize}
@@ -88,6 +97,7 @@ function GameSettingsSection({ settings, onSettingChange, onNewGame }: GameSetti
                 onChange={(value) => onSettingChange('boardSize', value)}
                 min={5}
                 max={12}
+                step={2}
             />
 
             <SettingSlider
@@ -106,9 +116,23 @@ function GameSettingsSection({ settings, onSettingChange, onNewGame }: GameSetti
                 max={8}
             />
 
-            <Button onClick={onNewGame} className="w-full">
-                New Game
-            </Button>
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button className="w-full">New Game</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Start New Game</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will reset the current game. Are you sure?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={onNewGame}>Start</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
@@ -127,22 +151,27 @@ function SetupModeSection({
     onSwitchPlayer
 }: SetupModeSectionProps) {
     return (
-        <div className="space-y-2">
+        <div className="space-y-3">
             <Button
                 variant={isSetupMode ? "default" : "outline"}
                 size="sm"
                 onClick={onToggleSetupMode}
-                className="w-full"
+                className="w-full relative"
             >
-                {isSetupMode ? "Exit Setup" : "Enter Setup"}
+                {isSetupMode ? "Exit Setup Mode" : "Enter Setup Mode"}
             </Button>
 
             {isSetupMode && (
-                <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                <div className={cn(
+                    "flex items-center justify-between p-2 rounded-md",
+                    "bg-muted/50 border transition-colors",
+                    "hover:bg-muted cursor-pointer",
+                )}
+                onClick={onSwitchPlayer}
+                >
                     <span className="text-sm">Current Player: {currentPlayer}</span>
                     <Button
                         size="sm"
-                        onClick={onSwitchPlayer}
                         variant="ghost"
                     >
                         Switch
@@ -169,7 +198,7 @@ function CellConfigSection({
     explosionThreshold
 }: CellConfigSectionProps) {
     return (
-        <div className="space-y-3 pt-2 border-t">
+        <div className="space-y-4 animate-in slide-in-from-left-4">
             <div className="space-y-2">
                 <Label>Cell Type</Label>
                 <Select
@@ -195,6 +224,9 @@ function CellConfigSection({
                         })}
                     </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                    {CellMechanicsFactory.getMechanics(selectedCellType).description}
+                </p>
             </div>
 
             <div className="space-y-2">
@@ -222,9 +254,10 @@ interface SettingSliderProps {
     onChange: (value: number) => void;
     min: number;
     max: number;
+    step?: number;
 }
 
-function SettingSlider({ label, value, suffix, onChange, min, max }: SettingSliderProps) {
+function SettingSlider({ label, value, suffix, onChange, min, max, step = 1 }: SettingSliderProps) {
     return (
         <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -236,7 +269,7 @@ function SettingSlider({ label, value, suffix, onChange, min, max }: SettingSlid
                 onValueChange={([value]) => onChange(value)}
                 min={min}
                 max={max}
-                step={1}
+                step={step}
                 className="py-0"
             />
         </div>

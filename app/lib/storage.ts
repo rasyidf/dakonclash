@@ -185,5 +185,5 @@ function generateSavePreview(state: SavedGameState): string {
   const { boardSize, maxPlayers } = state.settings;
   const board = deserializeBoard(state.boardState);
   const pieces = board.getCells().flat().reduce((sum, cell) => sum + cell.value, 0);
-  return `${boardSize}x${boardSize} board - ${maxPlayers} players - ${pieces} pieces`;
+  return `${boardSize}x${boardSize} board - ${maxPlayers} players`;
 }

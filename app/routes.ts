@@ -10,6 +10,7 @@ export default [
     route("v2", "routes/v2/index.tsx",
       [
         index("routes/v2/home.tsx"),
+        route("board-maker", "routes/v2/board-maker.tsx"),
       ]
     ),
   ])

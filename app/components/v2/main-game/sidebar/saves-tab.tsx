@@ -4,6 +4,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import { Separator } from "~/components/ui/separator";
+import { Clock, HardDrive, Save, Trash2 } from "lucide-react";
 import type { SaveMetadata } from "~/lib/storage";
 import { getSavesList } from "~/lib/storage";
 
@@ -22,7 +24,7 @@ export function SavesTab({
 }: SavesTabProps) {
   const [saves, setSaves] = useState<SaveMetadata[]>([]);
 
-  // Load saves when component mounts
+  // Load saves when component mounts or after deletion
   useEffect(() => {
     setSaves(getSavesList());
   }, []);
@@ -34,18 +36,26 @@ export function SavesTab({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-6">
       {hasAutoSave && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onLoadAutoSave}
-          className="w-full"
-          aria-label="Load auto-saved game"
-        >
-          Load Auto-Save
-        </Button>
+        <div className="space-y-4">
+          <h3 className="font-medium">Quick Resume</h3>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onLoadAutoSave}
+            className="w-full flex items-center gap-2 h-auto py-4"
+          >
+            <Clock className="h-4 w-4" />
+            <div className="flex flex-col items-start">
+              <span>Auto-saved Game</span>
+              <span className="text-xs text-muted-foreground">Continue from where you left off</span>
+            </div>
+          </Button>
+        </div>
       )}
+
+      {hasAutoSave && <Separator />}
 
       <SavesList
         saves={saves}
@@ -64,9 +74,9 @@ interface SavesListProps {
 
 function SavesList({ saves, onLoadGame, onDeleteSave }: SavesListProps) {
   return (
-    <div>
-      <h3 className="text-sm font-medium mb-2">Saved Games</h3>
-      <ScrollArea className="h-[300px] border rounded-md">
+    <div className="space-y-4">
+      <h3 className="font-medium">Saved Games</h3>
+      <ScrollArea className="h-[300px] rounded-md border">
         <div className="p-2 space-y-2">
           {saves.map((save) => (
             <SaveItem
@@ -77,9 +87,11 @@ function SavesList({ saves, onLoadGame, onDeleteSave }: SavesListProps) {
             />
           ))}
           {saves.length === 0 && (
-            <p className="text-center text-muted-foreground text-sm py-4">
-              No saved games
-            </p>
+            <div className="flex flex-col items-center justify-center h-[260px] text-center text-sm text-muted-foreground">
+              <Save className="h-8 w-8 mb-2 opacity-50" />
+              <p>No saved games</p>
+              <p className="text-xs">Your saved games will appear here</p>
+            </div>
           )}
         </div>
       </ScrollArea>
@@ -95,43 +107,52 @@ interface SaveItemProps {
 
 function SaveItem({ save, onLoad, onDelete }: SaveItemProps) {
   return (
-    <Card className="border rounded-md p-2">
-      <div className="flex-1 min-w-0">
-        <p className="font-medium truncate max-w-52">{save.preview.substring(0, 20)}</p>
-        <p className="text-xs text-muted-foreground">
-          {format(save.timestamp, 'PPpp')}
-        </p>
+    <Card className="p-3 flex items-start justify-between group hover:bg-accent transition-colors">
+      <div className="flex items-start gap-3">
+        <div className="mt-1">
+          <HardDrive className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <div className="space-y-1 min-w-0">
+          <p className="font-medium text-sm truncate max-w-52">{save.preview}</p>
+          <p className="text-xs text-muted-foreground">
+            {format(save.timestamp, 'PPpp')}
+          </p>
+        </div>
       </div>
 
-      <div className="flex gap-1">
+      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <Button
           variant="ghost"
           size="sm"
           onClick={onLoad}
-          aria-label="Load game"
+          className="h-8 px-2"
         >
           Load
         </Button>
+
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
               variant="ghost"
-              size="sm"
-              aria-label="Delete save"
+              size="icon"
+              className="h-8 w-8 text-destructive"
             >
-              Delete
+              <Trash2 className="h-4 w-4" />
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Save</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure? This cannot be undone.
+                Are you sure you want to delete this save? This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={onDelete}>
+              <AlertDialogAction 
+                onClick={onDelete}
+                className="bg-destructive hover:bg-destructive/90"
+              >
                 Delete
               </AlertDialogAction>
             </AlertDialogFooter>
