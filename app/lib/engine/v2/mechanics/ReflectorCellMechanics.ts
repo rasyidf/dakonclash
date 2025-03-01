@@ -10,7 +10,42 @@ export class ReflectorCellMechanics extends CellMechanics {
         beadColor: 'bg-purple-400',
         contentColor: 'bg-purple-500',
         animation: 'animate-pulse',
-        icon: '↗️'
+        icon: '↗️',
+        svgProperties: {
+            fill: '#f3e8ff',  // Purple 100
+            stroke: '#d8b4fe', // Purple 300
+            strokeWidth: 2,
+            pattern: 'reflector',
+            gradient: {
+                type: 'radial' as const,
+                colors: [
+                    { offset: 0, color: '#f3e8ff' },  // Purple 100
+                    { offset: 50, color: '#e9d5ff' }, // Purple 200
+                    { offset: 100, color: '#d8b4fe' } // Purple 300
+                ]
+            },
+            contentGradient: {
+                type: 'linear' as const,
+                colors: [
+                    { offset: 0, color: '#c084fc' },  // Purple 400
+                    { offset: 100, color: '#a855f7' } // Purple 500
+                ]
+            },
+            explosionAnimation: 'reflect',
+            beadShape: 'diamond' as const,
+            beadGradient: {
+                type: 'linear' as const,
+                colors: [
+                    { offset: 0, color: '#e9d5ff' },  // Purple 200
+                    { offset: 100, color: '#a855f7' } // Purple 500
+                ]
+            },
+            glowEffect: {
+                color: '#c084fc',  // Purple 400
+                blur: 8,
+                spread: 2
+            }
+        }
     };
 
     validateMove(_: Position, __: number): boolean {

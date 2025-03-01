@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { GameEngine } from "~/lib/engine/v2/GameEngine";
-import { Board } from "~/lib/engine/v2/board/Board";
-import { CellType, type GameStateUpdate, type Position, type SetupModeOperation } from "~/lib/engine/v2/types";
+import { CellType, type GameConfig, type GameStateUpdate } from "~/lib/engine/v2/types";
+import { autoSaveGame } from "~/lib/storage";
+import { useUiStore } from "~/store/useUiStore";
 import { GameBoard } from "../board/game-board";
 import { GameBoardV2 } from "../board/game-board-v2";
+import { GameBoardV3 } from "../board/game-board-v3";
 import { GameSidebar, type GameSettings } from "./game-sidebar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { useUiStore } from "~/store/useUiStore";
-import { toast } from "sonner";
-import { autoSaveGame, deserializeBoard, loadAutoSave, loadGame, saveGame } from "~/lib/storage";
 
 export function GameContainer() {
-  const [gameEngine, setGameEngine] = useState(() => new GameEngine({ 
-    boardSize: 7, 
-    maxPlayers: 2, 
-    maxValue: 4, 
+  const [gameEngine, setGameEngine] = useState(() => new GameEngine({
+    boardSize: 7,
+    maxPlayers: 2,
+    maxValue: 4,
     animationDelays: {
       cellUpdate: 200,
       explosion: 300,
@@ -27,8 +27,7 @@ export function GameContainer() {
   const [selectedCellType, setSelectedCellType] = useState<CellType>(CellType.Normal);
   const [selectedValue, setSelectedValue] = useState(1);
   const [board, setBoard] = useState(() => gameEngine.getBoard());
-  const [version, setVersion] = useState<'v1' | 'v2'>('v2');
-  const [hasAutoSave, setHasAutoSave] = useState(false);
+  const [version, setVersion] = useState<'v1' | 'v2' | 'v3'>('v3');
 
   const { setProcessing, handleGameUpdate } = useUiStore();
 
@@ -40,17 +39,11 @@ export function GameContainer() {
     syncBoardWithEngine();
   }, [gameEngine, syncBoardWithEngine]);
 
-  // Check for autosave on mount
-  useEffect(() => {
-    const autoSave = loadAutoSave();
-    setHasAutoSave(!!autoSave);
-  }, []);
-
   useEffect(() => {
     const observer = {
       onGameStateUpdate: (update: GameStateUpdate) => {
         handleGameUpdate(update);
-        
+
         switch (update.type) {
           case 'explosion':
             toast.info("Chain reaction!", {
@@ -74,13 +67,12 @@ export function GameContainer() {
 
         if (['move', 'explosion', 'player-eliminated'].includes(update.type)) {
           autoSaveGame(gameEngine, currentPlayer);
-          setHasAutoSave(true);
         }
 
         syncBoardWithEngine();
       }
     };
-    
+
     gameEngine.addObserver(observer);
     return () => gameEngine.removeObserver(observer);
   }, [gameEngine, handleGameUpdate, currentPlayer, syncBoardWithEngine]);
@@ -90,7 +82,7 @@ export function GameContainer() {
     try {
       if (isSetupMode) {
         const position = { row, col };
-        const setupOp: SetupModeOperation = {
+        const setupOp = {
           position,
           value: selectedValue,
           owner: currentPlayer,
@@ -123,7 +115,7 @@ export function GameContainer() {
 
   const handleUndo = useCallback(() => {
     if (!gameEngine.canUndo()) return;
-    
+
     const previousBoard = gameEngine.undo();
     if (previousBoard) {
       setBoard(previousBoard);
@@ -135,7 +127,7 @@ export function GameContainer() {
 
   const handleRedo = useCallback(() => {
     if (!gameEngine.canRedo()) return;
-    
+
     const nextBoard = gameEngine.redo();
     if (nextBoard) {
       setBoard(nextBoard);
@@ -146,12 +138,11 @@ export function GameContainer() {
   }, [gameEngine, currentPlayer]);
 
   const handleNewGame = useCallback((settings: GameSettings) => {
-    const newEngine = new GameEngine(settings);
+    const newEngine = new GameEngine(settings as Partial<GameConfig>);
     setGameEngine(newEngine);
     setBoard(newEngine.getBoard());
     setCurrentPlayer(1);
     setMoveHistory([]);
-    autoSaveGame(newEngine, 1);
   }, []);
 
   const handleReset = useCallback(() => {
@@ -159,49 +150,7 @@ export function GameContainer() {
     syncBoardWithEngine();
     setCurrentPlayer(1);
     setMoveHistory([]);
-    autoSaveGame(gameEngine, 1);
   }, [gameEngine, syncBoardWithEngine]);
-
-  const handleSaveGame = useCallback((name?: string) => {
-    const saveId = saveGame(gameEngine, currentPlayer, name ? `custom_${Date.now()}` : undefined);
-    toast.success("Game saved successfully!");
-    return saveId;
-  }, [gameEngine, currentPlayer]);
-
-  const handleLoadGame = useCallback((saveId: string) => {
-    const savedState = loadGame(saveId);
-    if (!savedState) {
-      toast.error("Failed to load game");
-      return;
-    }
-
-    const newEngine = new GameEngine(savedState.settings);
-    const board = deserializeBoard(savedState.boardState);
-    newEngine.setBoard(board);
-
-    // Restore history if available
-    if (savedState.history && savedState.historyIndex !== undefined) {
-      const historyBoards = savedState.history.map(state => deserializeBoard(state));
-      newEngine.restoreHistory(historyBoards, savedState.historyIndex);
-    }
-
-    setGameEngine(newEngine);
-    setBoard(board);
-    setCurrentPlayer(savedState.currentPlayer);
-    setMoveHistory([]);
-    toast.success("Game loaded successfully!");
-  }, []);
-
-  const handleLoadAutoSave = useCallback(() => {
-    const autoSave = loadAutoSave();
-    if (autoSave) {
-      handleLoadGame(`${autoSave.timestamp}`);
-    }
-  }, [handleLoadGame]);
-
-  const toggleSetupMode = useCallback(() => {
-    setIsSetupMode(prev => !prev);
-  }, []);
 
   const handleSwitchPlayer = useCallback(() => {
     if (isSetupMode) {
@@ -212,35 +161,14 @@ export function GameContainer() {
     }
   }, [isSetupMode, currentPlayer, gameEngine]);
 
-  return (
-    <div className="flex gap-4 p-4">
-      <div className="flex-1">
-        <Tabs value={version} onValueChange={(v) => setVersion(v as 'v1' | 'v2')}>
-          <TabsList>
-            <TabsTrigger value="v1">Classic Mode</TabsTrigger>
-            <TabsTrigger value="v2">Enhanced Mode</TabsTrigger>
-          </TabsList>
-          <TabsContent value="v1">
-            <GameBoard
-              board={board}
-              onCellClick={handleCellClick}
-              currentPlayer={currentPlayer}
-              isSetupMode={isSetupMode}
-              gameEngine={gameEngine}
-            />
-          </TabsContent>
-          <TabsContent value="v2">
-            <GameBoardV2
-              board={board}
-              onCellClick={handleCellClick}
-              currentPlayer={currentPlayer}
-              isSetupMode={isSetupMode}
-              gameEngine={gameEngine}
-            />
-          </TabsContent>
-        </Tabs>
-      </div>
+  const handleBoardStateChange = useCallback((newEngine: GameEngine, newCurrentPlayer: number) => {
+    setGameEngine(newEngine);
+    setCurrentPlayer(newCurrentPlayer);
+    setMoveHistory([]);
+  }, []);
 
+  return (
+    <div className="flex flex-col md:flex-row h-screen w-full">
       <GameSidebar
         gameEngine={gameEngine}
         history={moveHistory}
@@ -251,18 +179,60 @@ export function GameContainer() {
         canUndo={gameEngine.canUndo()}
         canRedo={gameEngine.canRedo()}
         onNewGame={handleNewGame}
-        onToggleSetupMode={toggleSetupMode}
+        onToggleSetupMode={() => setIsSetupMode(!isSetupMode)}
         isSetupMode={isSetupMode}
         onSwitchPlayer={handleSwitchPlayer}
         selectedCellType={selectedCellType}
         onSelectCellType={setSelectedCellType}
         selectedValue={selectedValue}
         onSelectValue={setSelectedValue}
-        onSaveGame={handleSaveGame}
-        onLoadGame={handleLoadGame}
-        onLoadAutoSave={handleLoadAutoSave}
-        hasAutoSave={hasAutoSave}
+        onBoardStateChange={handleBoardStateChange}
       />
+      <main className="flex-grow h-full flex flex-col">
+        <Tabs 
+          value={version} 
+          onValueChange={(v) => setVersion(v as 'v1' | 'v2' | 'v3')}
+          className="w-full h-full flex flex-col"
+        >
+          <div className="p-2 pb-0">
+            <TabsList className="w-full sm:w-auto">
+              <TabsTrigger value="v1">Classic Mode</TabsTrigger>
+              <TabsTrigger value="v2">Enhanced Mode</TabsTrigger>
+              <TabsTrigger value="v3">SVG Mode</TabsTrigger>
+            </TabsList>
+          </div>
+          
+          <div className="flex-grow w-full h-full">
+            <TabsContent value="v1" className="h-full">
+              <GameBoard
+                board={board}
+                onCellClick={handleCellClick}
+                currentPlayer={currentPlayer}
+                isSetupMode={isSetupMode}
+                gameEngine={gameEngine}
+              />
+            </TabsContent>
+            <TabsContent value="v2" className="h-full">
+              <GameBoardV2
+                board={board}
+                onCellClick={handleCellClick}
+                currentPlayer={currentPlayer}
+                isSetupMode={isSetupMode}
+                gameEngine={gameEngine}
+              />
+            </TabsContent>
+            <TabsContent value="v3" className="h-full">
+              <GameBoardV3
+                board={board}
+                onCellClick={handleCellClick}
+                currentPlayer={currentPlayer}
+                isSetupMode={isSetupMode}
+                gameEngine={gameEngine}
+              />
+            </TabsContent>
+          </div>
+        </Tabs>
+      </main>
     </div>
   );
 }

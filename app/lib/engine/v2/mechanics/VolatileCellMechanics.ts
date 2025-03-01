@@ -12,7 +12,40 @@ export class VolatileCellMechanics extends CellMechanics {
         beadColor: 'bg-red-400',
         contentColor: 'bg-red-500',
         animation: 'animate-pulse',
-        icon: '💥'
+        icon: '💥',
+        svgProperties: {
+            fill: '#fee2e2', // Light red background
+            stroke: '#ef4444', // Red border
+            strokeWidth: 2,
+            gradient: {
+                type: 'radial' as const,
+                colors: [
+                    { offset: 0, color: '#fee2e2' },  // Light red
+                    { offset: 100, color: '#fca5a5' } // Medium red
+                ]
+            },
+            contentGradient: {
+                type: 'radial' as const,
+                colors: [
+                    { offset: 0, color: '#f87171' },  // Medium red
+                    { offset: 100, color: '#dc2626' } // Dark red
+                ]
+            },
+            explosionAnimation: 'explode-volatile',
+            beadShape: 'diamond' as const,
+            beadGradient: {
+                type: 'linear' as const,
+                colors: [
+                    { offset: 0, color: '#fecaca' },  // Very light red
+                    { offset: 100, color: '#b91c1c' } // Very dark red
+                ]
+            },
+            glowEffect: {
+                color: '#ef4444',
+                blur: 5,
+                spread: 2
+            }
+        }
     };
 
     validateMove(pos: Position, _: number): boolean {

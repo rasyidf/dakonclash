@@ -11,7 +11,37 @@ export class WallCellMechanics extends CellMechanics {
         baseStyle: 'bg-stone-700 border-2 border-stone-600',
         beadColor: 'bg-stone-300',
         contentColor: 'bg-stone-500',
-        icon: '🧱'
+        icon: '🧱',
+        svgProperties: {
+            fill: '#44403c', // Dark stone background
+            stroke: '#78716c', // Stone border
+            strokeWidth: 3,
+            pattern: 'wall',
+            gradient: {
+                type: 'linear' as const,
+                colors: [
+                    { offset: 0, color: '#57534e' },   // Stone 600
+                    { offset: 50, color: '#44403c' },  // Stone 700
+                    { offset: 100, color: '#292524' }  // Stone 800
+                ]
+            },
+            contentGradient: {
+                type: 'linear' as const,
+                colors: [
+                    { offset: 0, color: '#78716c' },   // Stone 400
+                    { offset: 100, color: '#57534e' }  // Stone 600
+                ]
+            },
+            explosionAnimation: 'crumble-wall',
+            beadShape: 'square' as const,
+            beadGradient: {
+                type: 'linear' as const,
+                colors: [
+                    { offset: 0, color: '#d6d3d1' },   // Stone 200
+                    { offset: 100, color: '#a8a29e' }  // Stone 300
+                ]
+            }
+        }
     };
 
     private explosionCount: Map<string, number> = new Map();

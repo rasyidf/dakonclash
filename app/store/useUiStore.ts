@@ -28,6 +28,7 @@ export const useUiStore = create<UiState>((set) => ({
   lastUpdate: null,
   isGameStartModalOpen: true,
   isWinnerModalOpen: false,
+  
   showWinnerModal: (isOpen: boolean) => set({ isWinnerModalOpen: isOpen }),
   showGameStartModal: (isOpen: boolean) => set({ isGameStartModalOpen: isOpen }),
   setMessage: (message, type = 'info') => set({ message, messageType: type }),
