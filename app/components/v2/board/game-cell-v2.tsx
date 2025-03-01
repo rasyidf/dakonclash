@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { GameEngine } from "~/lib/engine/v2/GameEngine";
 import { CellType } from "~/lib/engine/v2/types";
 import { cn } from "~/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
+import styles from './game-cell-v2.module.css';
 
 interface GameCellV2Props {
   value: number;
@@ -58,6 +58,8 @@ export function GameCellV2({
   const [mounted, setMounted] = useState(false);
   const [prevValue, setPrevValue] = useState(value);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isEntering, setIsEntering] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -65,13 +67,20 @@ export function GameCellV2({
 
   useEffect(() => {
     if (value !== prevValue) {
+      if (value > prevValue) {
+        setIsEntering(true);
+        setTimeout(() => setIsEntering(false), 200);
+      } else {
+        setIsExiting(true);
+        setTimeout(() => {
+          setIsExiting(false);
+          setPrevValue(value);
+        }, 200);
+      }
       setIsAnimating(true);
-      const timer = setTimeout(() => {
-        setIsAnimating(false);
-        setPrevValue(value);
-      }, 300);
-      return () => clearTimeout(timer);
+      setTimeout(() => setIsAnimating(false), 300);
     }
+    setPrevValue(value);
   }, [value, prevValue]);
 
   const handleMouseEnter = () => {
@@ -115,43 +124,73 @@ export function GameCellV2({
   const getCellTypeStyle = () => {
     switch (type) {
       case CellType.Dead:
-        return {
-          className: "bg-gray-800 opacity-50",
-          animation: { scale: [1, 0.95, 1], transition: { repeat: Infinity, duration: 2 } }
-        };
+        return styles.deadCell;
       case CellType.Volatile:
-        return {
-          className: "bg-gradient-to-br from-yellow-400 to-red-500",
-          animation: { 
-            rotate: [0, 5, -5, 0],
-            transition: { repeat: Infinity, duration: 1.5 }
-          }
-        };
+        return styles.volatileCell;
       case CellType.Wall:
-        return {
-          className: "bg-gradient-to-br from-stone-700 to-stone-900 border-2 border-stone-500",
-          animation: { scale: [1, 1.02, 1], transition: { repeat: Infinity, duration: 2 } }
-        };
+        return styles.wallCell;
       default:
-        return { className: "", animation: {} };
+        return '';
     }
   };
 
-  const cellTypeStyle = getCellTypeStyle();
+  const getCardinalPositions = () => [
+    { x: 50, y: 25 }, // North
+    { x: 75, y: 50 }, // East
+    { x: 50, y: 75 }, // South
+    { x: 25, y: 50 }, // West
+  ];
+
+  const renderBeads = () => {
+    if (isExploding) {
+      // When exploding, beads start from cardinal positions
+      return getCardinalPositions().map((pos, i) => (
+        <div
+          key={i}
+          className={cn(
+            styles.bead,
+            type === CellType.Dead ? "bg-gray-600" : "bg-white"
+          )}
+          style={{
+            left: `${pos.x}%`,
+            top: `${pos.y}%`,
+          }}
+        />
+      ));
+    }
+
+    // Normal bead display for non-exploding state
+    return Array.from({ length: Math.min(4, value) }).map((_, i) => {
+      const pos = getBeadPosition(i, value);
+      return (
+        <div
+          key={i}
+          className={cn(
+            styles.bead,
+            isEntering && styles.entering,
+            isExiting && styles.exiting,
+            type === CellType.Dead ? "bg-gray-600" : "bg-white",
+            isAnimating && "scale-110 opacity-75"
+          )}
+          style={{
+            left: `${pos.x}%`,
+            top: `${pos.y}%`,
+          }}
+        />
+      );
+    });
+  };
 
   return (
-    <motion.div
-      animate={{
-        ...cellTypeStyle.animation,
-        scale: isExploding ? [1, 1.2, 1] : 1,
-      }}
+    <div
       className={cn(
-        "w-full h-full rounded-lg relative transition-all duration-200",
+        styles.cell,
         value >= 4 && "animate-pulse",
         isAnimating && "scale-110",
-        !isSetupMode && owner === 0 && "cursor-pointer hover:scale-105",
+        !isSetupMode && owner === 0 && "cursor-pointer",
         isSetupMode && "cursor-pointer hover:ring-2 hover:ring-offset-2 hover:ring-blue-500",
-        cellTypeStyle.className,
+        getCellTypeStyle(),
+        isExploding && styles.exploding,
         {
           "bg-white hover:bg-gray-100": owner === 0 && type === CellType.Normal,
           [`bg-${ownerColor}-200 hover:bg-${ownerColor}-300`]: isCurrentPlayer && type === CellType.Normal,
@@ -166,54 +205,28 @@ export function GameCellV2({
       tabIndex={0}
       aria-label={`Cell at value ${value}, owned by player ${owner}, type ${type}`}
     >
-      <AnimatePresence>
-        {value > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0 }}
-            className={cn(
-              "cell-content w-full h-full",
-              'transition-colors duration-150',
-              type === CellType.Normal ? `bg-${ownerColor}-500` : ''
-            )}
-          >
-            <div className="relative w-full h-full p-2">
-              {Array.from({ length: Math.min(4, value) }).map((_, i) => {
-                const pos = getBeadPosition(i, value);
-                return (
-                  <motion.div
-                    key={i}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
-                    className={cn(
-                      "absolute w-3 h-3 rounded-full transition-all duration-300",
-                      type === CellType.Dead ? "bg-gray-600" : "bg-white",
-                      isAnimating && "scale-110 opacity-75"
-                    )}
-                    style={{
-                      left: `${pos.x}%`,
-                      top: `${pos.y}%`,
-                      transform: "translate(-50%, -50%)",
-                    }}
-                  />
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {value > 0 && (
+        <div className={cn(
+          styles.cellContent,
+          isEntering && styles.entering,
+          isExiting && styles.exiting,
+          'transition-colors duration-150',
+          type === CellType.Normal ? `bg-${ownerColor}-500` : ''
+        )}>
+          <div className="relative w-full h-full p-2">
+            {renderBeads()}
+          </div>
+        </div>
+      )}
       
       {isSetupMode && owner > 0 && (
-        <motion.span 
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className="absolute top-0 right-0 text-xs bg-white text-gray-800 rounded-full w-4 h-4 flex items-center justify-center"
-        >
+        <div className={cn(
+          "absolute top-0 right-0 text-xs bg-white text-gray-800 rounded-full w-4 h-4 flex items-center justify-center",
+          isEntering && styles.entering
+        )}>
           {owner}
-        </motion.span>
+        </div>
       )}
-    </motion.div>
+    </div>
   );
 }

@@ -1,0 +1,179 @@
+/* Cell base states */
+.cell {
+  width: 100%;
+  height: 100%;
+  border-radius: 0.5rem;
+  position: relative;
+  transition: all 200ms ease;
+}
+
+.cell:hover {
+  transform: scale(1.05);
+}
+
+/* Cell type animations */
+.deadCell {
+  animation: pulse 2s infinite;
+}
+
+.volatileCell {
+  animation: wobble 1.5s infinite;
+}
+
+.wallCell {
+  animation: breathe 2s infinite;
+}
+
+/* Cell state animations */
+.exploding {
+  animation: explode 500ms ease-in-out;
+}
+
+.exploding .bead {
+  animation: moveOutward 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.exploding .bead:nth-child(1) { /* North */
+  --moveX: 0;
+  --moveY: -100%;
+}
+
+.exploding .bead:nth-child(2) { /* East */
+  --moveX: 100%;
+  --moveY: 0;
+}
+
+.exploding .bead:nth-child(3) { /* South */
+  --moveX: 0;
+  --moveY: 100%;
+}
+
+.exploding .bead:nth-child(4) { /* West */
+  --moveX: -100%;
+  --moveY: 0;
+}
+
+/* Pre-explosion state to arrange beads */
+.exploding .cellContent {
+  transition: none; /* Disable transition during explosion */
+}
+
+.exploding .bead {
+  transition: none; /* Disable transition to snap to cardinal positions */
+  animation: none; /* Clear any existing animations */
+}
+
+/* Then apply the explosion animation after a tiny delay */
+.exploding .bead:nth-child(1) {
+  animation: moveOutward 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards 50ms;
+  --moveX: 0;
+  --moveY: -150%;
+}
+
+.exploding .bead:nth-child(2) {
+  animation: moveOutward 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards 50ms;
+  --moveX: 150%;
+  --moveY: 0;
+}
+
+.exploding .bead:nth-child(3) {
+  animation: moveOutward 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards 50ms;
+  --moveX: 0;
+  --moveY: 150%;
+}
+
+.exploding .bead:nth-child(4) {
+  animation: moveOutward 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards 50ms;
+  --moveX: -150%;
+  --moveY: 0;
+}
+
+.cellContent {
+  width: 100%;
+  height: 100%;
+  transition: all 150ms ease;
+}
+
+.cellContent.entering {
+  animation: enterContent 200ms ease-out;
+}
+
+.cellContent.exiting {
+  animation: exitContent 200ms ease-in;
+}
+
+.bead {
+  position: absolute;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: left 200ms ease-out, top 200ms ease-out;
+  will-change: transform, left, top;
+}
+
+.bead.entering {
+  animation: enterBead 200ms ease-out;
+}
+
+.bead.exiting {
+  animation: exitBead 200ms ease-in;
+}
+
+/* Keyframe animations */
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(0.95); opacity: 0.4; }
+}
+
+@keyframes wobble {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(5deg); }
+  75% { transform: rotate(-5deg); }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+@keyframes explode {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes moveOutward {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  60% {
+    transform: translate(calc(-50% + var(--moveX) * 0.6), calc(-50% + var(--moveY) * 0.6)) scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--moveX)), calc(-50% + var(--moveY))) scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes enterContent {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes exitContent {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(0); opacity: 0; }
+}
+
+@keyframes enterBead {
+  from { transform: translate(-50%, -50%) scale(0); }
+  to { transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes exitBead {
+  from { transform: translate(-50%, -50%) scale(1); }
+  to { transform: translate(-50%, -50%) scale(0); }
+}

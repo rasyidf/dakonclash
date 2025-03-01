@@ -5,6 +5,12 @@ import { WinConditionFactory } from '../factories/WinConditionFactory';
 import type { GameStateUpdate, Position, WinConditionResult, GameConfig } from '../types';
 
 export class GameMechanics {
+    private ANIMATION_TIMINGS = {
+        EXPLOSION: 500,
+        EXPLOSION_DELAY: 50,
+        CELL_UPDATE: 100,
+    };
+
     constructor(
         private board: Board,
         private playerManager: PlayerManager,
@@ -72,19 +78,34 @@ export class GameMechanics {
             position: pos
         });
 
-        const currentValue = this.board.getCellValue(pos);
+        const cell = this.board.getCell(pos);
+        if (!cell) return { success: false };
+
         const isFirstMove = this.playerManager.isFirstMove(playerId);
         const addValue = isFirstMove ? 3 : 1;
-        const newValue = currentValue + addValue;
+        const newValue = cell.value + addValue;
 
+        // Update the cell with new value
         this.board.updateCell(pos, newValue, playerId);
+
+        this.notifyObservers({
+            type: 'cell-update',
+            playerId,
+            position: pos,
+            deltas: [{
+                position: pos,
+                valueDelta: addValue,
+                newOwner: playerId
+            }]
+        });
 
         if (isFirstMove) {
             this.playerManager.setFirstMoveMade(playerId);
         }
 
         // Phase 3: Handle Explosions
-        if (newValue >= this.config.maxValue) {
+        const mechanics = CellMechanicsFactory.getMechanics(cell.type);
+        if (mechanics.canExplode({ ...cell, value: newValue })) {
             await this.handleExplosion(pos, playerId);
         }
 
@@ -130,6 +151,73 @@ export class GameMechanics {
         return { success: true };
     }
 
+    private async handleExplosion(pos: Position, playerId: number): Promise<void> {
+        const explosionQueue: Position[] = [pos];
+        const processedCells = new Set<string>();
+        const maxChainLength = 100; // Safety limit for chain reactions
+        let chainLength = 0;
+
+        while (explosionQueue.length > 0 && chainLength < maxChainLength) {
+            const currentPos = explosionQueue.shift()!;
+            const posKey = `${currentPos.row},${currentPos.col}`;
+
+            if (processedCells.has(posKey)) continue;
+            processedCells.add(posKey);
+
+            const cell = this.board.getCell(currentPos);
+            if (!cell) continue;
+
+            const mechanics = CellMechanicsFactory.getMechanics(cell.type);
+            
+            // Only process if the cell can actually explode
+            if (!mechanics.canExplode(cell)) continue;
+
+            // 1. Notify about explosion
+            this.notifyObservers({
+                type: 'explosion',
+                playerId,
+                position: currentPos,
+                affectedPositions: [currentPos]
+            });
+
+            // Wait for explosion animation
+            await new Promise(resolve => setTimeout(resolve, this.ANIMATION_TIMINGS.EXPLOSION));
+
+            // 2. Get and apply explosion deltas
+            const deltas = mechanics.handleExplosion(currentPos, playerId);
+            
+            // Apply deltas one by one with timing
+            for (const delta of deltas) {
+                this.board.applyDeltas([delta]);
+
+                // Notify observers about the cell update
+                this.notifyObservers({
+                    type: 'cell-update',
+                    playerId,
+                    position: delta.position,
+                    deltas: [delta]
+                });
+
+                // Check for chain reactions in affected cells
+                const updatedCell = this.board.getCell(delta.position);
+                if (updatedCell && !processedCells.has(`${delta.position.row},${delta.position.col}`)) {
+                    const updatedMechanics = CellMechanicsFactory.getMechanics(updatedCell.type);
+                    if (updatedMechanics.canExplode(updatedCell)) {
+                        explosionQueue.push(delta.position);
+                    }
+                }
+
+                await new Promise(resolve => setTimeout(resolve, this.ANIMATION_TIMINGS.CELL_UPDATE));
+            }
+
+            chainLength++;
+        }
+
+        if (chainLength >= maxChainLength) {
+            console.warn('Chain reaction safety limit reached');
+        }
+    }
+    
     private hasValidMoves(playerId: number): boolean {
         return this.getValidMoves(playerId).length > 0 || this.playerManager.isFirstMove(playerId);
     }
@@ -150,71 +238,4 @@ export class GameMechanics {
         return true;
     }
 
-    private async handleExplosion(pos: Position, playerId: number): Promise<void> {
-        const explosionQueue: Position[] = [pos];
-        const processedCells = new Set<string>();
-        const maxChainLength = 100; // Safety limit for chain reactions
-        let chainLength = 0;
-
-        while (explosionQueue.length > 0 && chainLength < maxChainLength) {
-            const currentPos = explosionQueue.shift()!;
-            const posKey = `${currentPos.row},${currentPos.col}`;
-
-            // Skip if already processed
-            if (processedCells.has(posKey)) continue;
-            processedCells.add(posKey);
-
-            const cell = this.board.getCell(currentPos);
-            if (!cell) continue;
-
-            // Wait for explosion animation
-            await new Promise(resolve => setTimeout(resolve, this.config.animationDelays.explosion));
-
-            const mechanics = CellMechanicsFactory.getMechanics(cell.type);
-            const deltas = mechanics.handleExplosion(currentPos, playerId);
-
-            // Apply the deltas with cell update delay
-            for (const delta of deltas) {
-                await new Promise(resolve => setTimeout(resolve, this.config.animationDelays.cellUpdate));
-                this.board.applyDeltas([delta]);
-
-                // Notify about each cell update
-                this.notifyObservers({
-                    type: 'cell-update',
-                    playerId,
-                    position: delta.position,
-                    deltas: [delta]
-                });
-            }
-
-            // Notify about explosion
-            this.notifyObservers({
-                type: 'explosion',
-                playerId,
-                position: currentPos,
-                deltas,
-                affectedPositions: deltas.map(d => d.position)
-            });
-
-            // Check for chain reactions
-            for (const delta of deltas) {
-                const targetCell = this.board.getCell(delta.position);
-                if (targetCell && !processedCells.has(`${delta.position.row},${delta.position.col}`)) {
-                    const targetMechanics = CellMechanicsFactory.getMechanics(targetCell.type);
-                    if (targetMechanics.canExplode(targetCell)) {
-                        // Wait for chain reaction delay
-                        await new Promise(resolve => setTimeout(resolve, this.config.animationDelays.chainReaction));
-                        explosionQueue.push(delta.position);
-                    }
-                }
-            }
-
-            chainLength++;
-        }
-
-        // If we hit the safety limit, log a warning
-        if (chainLength >= maxChainLength) {
-            console.warn('Chain reaction safety limit reached');
-        }
-    }
 }

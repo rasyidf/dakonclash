@@ -22,21 +22,31 @@ export class NormalCellMechanics extends CellMechanics {
         const explosionValue = Math.floor(cell.value / 4);
         const deltas: MoveDelta[] = [{
             position: pos,
-            valueDelta: -(explosionValue * 4), // Remove all value that will be distributed
+            valueDelta: -cell.value, // Remove all value from exploding cell
             newOwner: playerId
         }];
 
-        // Distribute to adjacent cells
+        // Distribute to adjacent cells in cardinal directions
         const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
         directions.forEach(([dx, dy]) => {
             const targetPos = { row: pos.row + dx, col: pos.col + dy };
             if (this.board.isValidPosition(targetPos)) {
                 const targetCell = this.board.getCell(targetPos);
                 if (targetCell) {
-                    // Let the target cell's mechanics handle the incoming explosion
-                    const targetMechanics = CellMechanicsFactory.getMechanics(targetCell.type);
-                    const targetDeltas = targetMechanics.handleExplosion(targetPos, playerId);
-                    deltas.push(...targetDeltas);
+                    deltas.push({
+                        position: targetPos,
+                        valueDelta: explosionValue,
+                        newOwner: playerId
+                    });
+
+                    // Check if the target cell will explode after receiving value
+                    if (targetCell.value + explosionValue >= this.getExplosionThreshold()) {
+                        const targetMechanics = CellMechanicsFactory.getMechanics(targetCell.type);
+                        if (targetMechanics.canExplode({ ...targetCell, value: targetCell.value + explosionValue })) {
+                            const chainDeltas = targetMechanics.handleExplosion(targetPos, playerId);
+                            deltas.push(...chainDeltas);
+                        }
+                    }
                 }
             }
         });

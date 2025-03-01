@@ -1,4 +1,5 @@
 import type { Position, Cell, MoveDelta } from '../types';
+import { CellType } from '../types';
 import { CellMechanics } from './CellMechanics';
 
 export class VolatileCellMechanics extends CellMechanics {
@@ -31,11 +32,14 @@ export class VolatileCellMechanics extends CellMechanics {
         directions.forEach(([dx, dy]) => {
             const targetPos = { row: pos.row + dx, col: pos.col + dy };
             if (this.board.isValidPosition(targetPos)) {
-                deltas.push({
-                    position: targetPos,
-                    valueDelta: amplifiedValue,
-                    newOwner: playerId
-                });
+                const targetCell = this.board.getCell(targetPos);
+                if (targetCell) {
+                    deltas.push({
+                        position: targetPos,
+                        valueDelta: amplifiedValue,
+                        newOwner: playerId
+                    });
+                }
             }
         });
 

@@ -33,19 +33,49 @@ export function GameBoardV2({
 
     const [highlightedCells, setHighlightedCells] = useState<{ row: number; col: number; }[] | null>(null);
     const [explodingCells, setExplodingCells] = useState<{ row: number; col: number; }[] | null>(null);
+    const [previousBoard, setPreviousBoard] = useState<Board | null>(null);
 
-    // Subscribe to game engine events for animations
+    // Track board changes to detect value decreases
+    useEffect(() => {
+        if (previousBoard) {
+            const size = board.getSize();
+            const explodingPositions: { row: number; col: number; }[] = [];
+
+            // Check for cells that lost value
+            for (let row = 0; row < size; row++) {
+                for (let col = 0; col < size; col++) {
+                    const prevValue = previousBoard.getCellValue({ row, col });
+                    const currentValue = board.getCellValue({ row, col });
+                    if (currentValue < prevValue) {
+                        explodingPositions.push({ row, col });
+                    }
+                }
+            }
+
+            if (explodingPositions.length > 0) {
+                setExplodingCells(explodingPositions);
+                setTimeout(() => setExplodingCells(null), 500); // Match CSS animation duration
+            }
+        }
+        setPreviousBoard(board);
+    }, [board]);
+
+    // Enhanced explosion handling with fixed timing values
     useEffect(() => {
         const handleUpdate = (update: GameStateUpdate) => {
             if (update.type === 'explosion') {
-                setExplodingCells(update.affectedPositions ? update.affectedPositions.map((p: {
-                    row: number; col: number;
-                }) => ({ row: p.row, col: p.col })) : null);
-                setTimeout(() => setExplodingCells(null), 500); // Clear explosion effect after animation
+                const positions = update.affectedPositions ?? [];
+                setExplodingCells(positions.map(p => ({ row: p.row, col: p.col })));
+                
+                // Using fixed delay values that match the CSS animation durations
+                const explosionDuration = 500; // matches the CSS explode animation
+                setTimeout(() => setExplodingCells(null), explosionDuration);
             }
         };
-        gameEngine.addObserver({ onGameStateUpdate: handleUpdate });
-        return () => gameEngine.removeObserver({ onGameStateUpdate: handleUpdate });
+        
+        const observer = { onGameStateUpdate: handleUpdate };
+        gameEngine.addObserver(observer);
+        return () => gameEngine.removeObserver(observer);
     }, [gameEngine]);
 
     return (
@@ -83,8 +113,7 @@ export function GameBoardV2({
                                 key={key}
                                 className={cn(
                                     'relative',
-                                    isHighlighted && 'ring-2 ring-yellow-400 rounded-lg',
-                                    isExploding && 'animate-bounce'
+                                    isHighlighted && 'ring-2 ring-yellow-400 rounded-lg'
                                 )}
                             >
                                 <GameCellV2

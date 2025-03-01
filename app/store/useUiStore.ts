@@ -10,6 +10,10 @@ interface UiState {
   // Game engine events
   lastUpdate: GameStateUpdate | null;
   
+  isWinnerModalOpen: boolean;
+  isGameStartModalOpen: boolean;
+  showWinnerModal: (isOpen: boolean) => void;
+  showGameStartModal: (isOpen: boolean) => void;
   // Actions
   setMessage: (message: string | null, type?: 'info' | 'success' | 'error') => void;
   clearMessage: () => void;
@@ -22,7 +26,10 @@ export const useUiStore = create<UiState>((set) => ({
   messageType: null,
   isProcessing: false,
   lastUpdate: null,
-
+  isGameStartModalOpen: true,
+  isWinnerModalOpen: false,
+  showWinnerModal: (isOpen: boolean) => set({ isWinnerModalOpen: isOpen }),
+  showGameStartModal: (isOpen: boolean) => set({ isGameStartModalOpen: isOpen }),
   setMessage: (message, type = 'info') => set({ message, messageType: type }),
   clearMessage: () => set({ message: null, messageType: null }),
   setProcessing: (processing) => set({ isProcessing: processing }),
