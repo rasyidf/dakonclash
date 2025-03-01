@@ -4,6 +4,7 @@ import { CellType } from "~/lib/engine/v2/types";
 import { cn } from "~/lib/utils";
 import styles from "./game-cell-v2.module.css";
 import { CellMechanicsFactory } from "~/lib/engine/v2/mechanics/CellMechanicsFactory";
+import { CELL_RENDER_CONFIG } from "../config/cell-render-config";
 
 interface GameCellV2Props {
   value: number;
@@ -122,7 +123,7 @@ export function GameCellV2({
   const ownerColor = gameEngine.getPlayerManager().getPlayerColor(owner);
   const isCurrentPlayer = owner === currentPlayer;
   const mechanics = CellMechanicsFactory.getMechanics(type);
-  const renderProps = mechanics.renderProperties;
+  const renderConfig = CELL_RENDER_CONFIG[type];
 
   const getCellTypeStyle = () => {
     switch (type) {
@@ -194,7 +195,7 @@ export function GameCellV2({
         isAnimating && "scale-110",
         !isSetupMode && owner === 0 && "cursor-pointer",
         isSetupMode && "cursor-pointer hover:ring-2 hover:ring-offset-2 hover:ring-blue-500",
-        renderProps.baseStyle,
+        renderConfig.baseStyle,
         getCellTypeStyle(),
         isExploding && styles.exploding,
         {
@@ -203,7 +204,7 @@ export function GameCellV2({
           "bg-yellow-200": isHighlighted,
           "opacity-90": !isCurrentPlayer && !isSetupMode && type === CellType.Normal,
         },
-        renderProps.animation
+        renderConfig.animation
       )}
       onClick={onClick}
       onMouseEnter={handleMouseEnter}
@@ -218,7 +219,7 @@ export function GameCellV2({
           isEntering && styles.entering,
           isExiting && styles.exiting,
           'transition-colors duration-150 rounded-full',
-          type === CellType.Normal ? `bg-${ownerColor}-500` : renderProps.contentColor
+          type === CellType.Normal ? `bg-${ownerColor}-500` : renderConfig.contentColor
         )}>
           <div className="relative w-full h-full p-2">
             {renderBeads()}
@@ -236,9 +237,9 @@ export function GameCellV2({
               {owner}
             </div>
           )}
-          {renderProps.icon && (
+          {mechanics.icon && (
             <div className="absolute bottom-0 right-0 text-xs">
-              {renderProps.icon}
+              {mechanics.icon}
             </div>
           )}
         </>

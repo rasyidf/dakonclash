@@ -1,10 +1,10 @@
-import { Board } from "~/lib/engine/v2/board/Board";
-import type { GameEngine } from "~/lib/engine/v2/GameEngine";
-import { cn } from "~/lib/utils";
-import { GameCellV2 } from "../game-cell-v2";
 import { useEffect, useState } from "react";
 import { BoardLabels } from "~/components/v1/board/board-labels";
-import { CellType, type GameStateUpdate } from "~/lib/engine/v2/types";
+import { Board } from "~/lib/engine/v2/board/Board";
+import type { GameEngine } from "~/lib/engine/v2/GameEngine";
+import { type GameStateUpdate } from "~/lib/engine/v2/types";
+import { cn } from "~/lib/utils";
+import { GameCellV2 } from "./game-cell-v2";
 
 interface GameBoardV2Props {
     board: Board;
@@ -66,13 +66,13 @@ export function GameBoardV2({
             if (update.type === 'explosion') {
                 const positions = update.affectedPositions ?? [];
                 setExplodingCells(positions.map(p => ({ row: p.row, col: p.col })));
-                
+
                 // Using fixed delay values that match the CSS animation durations
                 const explosionDuration = 500; // matches the CSS explode animation
                 setTimeout(() => setExplodingCells(null), explosionDuration);
             }
         };
-        
+
         const observer = { onGameStateUpdate: handleUpdate };
         gameEngine.addObserver(observer);
         return () => gameEngine.removeObserver(observer);
@@ -80,9 +80,7 @@ export function GameBoardV2({
 
     return (
         <div className="relative mt-4 w-full max-w-[min(90vw,90vh)] mx-auto">
-            <div className="absolute inset-0 pointer-events-none">
-                <BoardLabels size={size} />
-            </div>
+
             <div
                 className={cn(
                     "grid bg-gray-200 rounded-lg p-6",
@@ -120,20 +118,21 @@ export function GameBoardV2({
                                     value={cell.value}
                                     owner={cell.owner}
                                     type={cell.type}
+                                    gameEngine={gameEngine}
+                                    currentPlayer={currentPlayer}
                                     isHighlighted={isHighlighted}
                                     isExploding={isExploding}
                                     onClick={() => onCellClick(i, j)}
-                                    gameEngine={gameEngine}
                                     isSetupMode={isSetupMode}
-                                    currentPlayer={currentPlayer}
-                                    row={i}
-                                    col={j}
                                     onHoverPattern={setHighlightedCells}
                                 />
                             </div>
                         );
                     })
                 )}
+            </div>
+            <div className="absolute inset-0 pointer-events-none">
+                <BoardLabels size={size} />
             </div>
         </div>
     );

@@ -1,52 +1,11 @@
 import type { Position, Cell, MoveDelta } from '../types';
-import { CellMechanics, type CellRenderProperties } from './CellMechanics';
+import { CellMechanics } from './CellMechanics';
 
 export class ReflectorCellMechanics extends CellMechanics {
     name = 'Reflector Cell';
     description = 'A cell that redirects explosions to different directions.';
     mechanics = 'Reflector cells bounce explosions in perpendicular directions.';
-    renderProperties: CellRenderProperties = {
-        baseStyle: 'bg-purple-100 hover:bg-purple-200',
-        beadColor: 'bg-purple-400',
-        contentColor: 'bg-purple-500',
-        animation: 'animate-pulse',
-        icon: '↗️',
-        svgProperties: {
-            fill: '#f3e8ff',  // Purple 100
-            stroke: '#d8b4fe', // Purple 300
-            strokeWidth: 2,
-            pattern: 'reflector',
-            gradient: {
-                type: 'radial' as const,
-                colors: [
-                    { offset: 0, color: '#f3e8ff' },  // Purple 100
-                    { offset: 50, color: '#e9d5ff' }, // Purple 200
-                    { offset: 100, color: '#d8b4fe' } // Purple 300
-                ]
-            },
-            contentGradient: {
-                type: 'linear' as const,
-                colors: [
-                    { offset: 0, color: '#c084fc' },  // Purple 400
-                    { offset: 100, color: '#a855f7' } // Purple 500
-                ]
-            },
-            explosionAnimation: 'reflect',
-            beadShape: 'diamond' as const,
-            beadGradient: {
-                type: 'linear' as const,
-                colors: [
-                    { offset: 0, color: '#e9d5ff' },  // Purple 200
-                    { offset: 100, color: '#a855f7' } // Purple 500
-                ]
-            },
-            glowEffect: {
-                color: '#c084fc',  // Purple 400
-                blur: 8,
-                spread: 2
-            }
-        }
-    };
+    icon = '↗️';
 
     validateMove(_: Position, __: number): boolean {
         // Reflector cells cannot be directly played on

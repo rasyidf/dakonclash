@@ -1,153 +1,139 @@
-import { useCallback, useState, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
+import { BoardLabels } from "~/components/v1/board/board-labels";
+import { Board } from "~/lib/engine/v2/board/Board";
 import type { GameEngine } from "~/lib/engine/v2/GameEngine";
-import type { Position } from "~/lib/engine/v2/types";
+import { type GameStateUpdate } from "~/lib/engine/v2/types";
 import { cn } from "~/lib/utils";
-import { GameCellV3 } from "../game-cell-v3";
-import { useUiStore } from "~/store/useUiStore";
+import { GameCellV3 } from "./game-cell-v3";
 
 interface GameBoardV3Props {
-  board: any; // Board instance
-  onCellClick: (row: number, col: number) => void;
-  currentPlayer: number;
-  isSetupMode?: boolean;
-  gameEngine: GameEngine;
+    board: Board;
+    currentPlayer: number;
+    onCellClick: (row: number, col: number) => void;
+    isSetupMode?: boolean;
+    isProcessing?: boolean;
+    isPreview?: boolean;
+    className?: string;
+    gameEngine: GameEngine;
 }
 
-export function GameBoardV3({ board, onCellClick, currentPlayer, isSetupMode = false, gameEngine }: GameBoardV3Props) {
-  const [patternHighlight, setPatternHighlight] = useState<Position[] | null>(null);
-  const [boardSize, setBoardSize] = useState({ width: 0, height: 0 });
-  const boardRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { animation } = useUiStore();
-  const { explosion } = animation || {};
+export function GameBoardV3({
+    board,
+    currentPlayer,
+    onCellClick,
+    isSetupMode = false,
+    isProcessing,
+    isPreview = false,
+    className,
+    gameEngine
+}: GameBoardV3Props) {
+    const size = board.getSize();
+    const cells = board.getCells();
+    const playerColor = currentPlayer ? gameEngine.getPlayerManager().getPlayerColor(currentPlayer) : undefined;
 
-  const handleCellClick = useCallback((row: number, col: number) => {
-    onCellClick(row, col);
-  }, [onCellClick]);
+    const [highlightedCells, setHighlightedCells] = useState<{ row: number; col: number; }[] | null>(null);
+    const [explodingCells, setExplodingCells] = useState<{ row: number; col: number; }[] | null>(null);
+    const [previousBoard, setPreviousBoard] = useState<Board | null>(null);
 
-  const handleHoverPattern = useCallback((positions: Position[] | null) => {
-    setPatternHighlight(positions);
-  }, []);
+    // Track board changes to detect value decreases
+    useEffect(() => {
+        if (previousBoard) {
+            const size = board.getSize();
+            const explodingPositions: { row: number; col: number; }[] = [];
 
-  // Calculate optimal board size based on container and screen dimensions
-  useEffect(() => {
-    const resizeBoard = () => {
-      if (!containerRef.current) return;
-      
-      const container = containerRef.current;
-      const containerWidth = container.clientWidth;
-      const containerHeight = container.clientHeight;
-      
-      // Always maintain a perfect square by taking the smaller dimension
-      const size = Math.min(containerWidth * 0.9, containerHeight * 0.85);
-      
-      setBoardSize({ width: size, height: size });
-    };
+            // Check for cells that lost value
+            for (let row = 0; row < size; row++) {
+                for (let col = 0; col < size; col++) {
+                    const prevValue = previousBoard.getCellValue({ row, col });
+                    const currentValue = board.getCellValue({ row, col });
+                    if (currentValue < prevValue) {
+                        explodingPositions.push({ row, col });
+                    }
+                }
+            }
 
-    // Initial sizing
-    resizeBoard();
-    
-    // Add resize listener
-    window.addEventListener('resize', resizeBoard);
-    return () => window.removeEventListener('resize', resizeBoard);
-  }, []);
+            if (explodingPositions.length > 0) {
+                setExplodingCells(explodingPositions);
+                setTimeout(() => setExplodingCells(null), 500); // Match CSS animation duration
+            }
+        }
+        setPreviousBoard(board);
+    }, [board]);
 
-  return (
-    <div 
-      ref={containerRef} 
-      className="w-full h-full flex flex-col items-center justify-center p-1 sm:p-2"
-    >
-      <div
-        ref={boardRef}
-        className="relative bg-gradient-to-br from-gray-100 to-gray-200 shadow-md rounded-lg overflow-hidden"
-        style={{
-          width: `${boardSize.width}px`,
-          height: `${boardSize.height}px`,
-          aspectRatio: "1 / 1", // Enforce square aspect ratio
-          maxWidth: '95vmin',
-          maxHeight: '95vmin'
-        }}
-      >
-        {/* Row labels - positioned outside the board */}
-        <div className="absolute -left-6 sm:-left-8 top-0 h-full flex flex-col justify-around text-xs sm:text-sm text-gray-600">
-          {Array.from({ length: board.getSize() }).map((_, idx) => (
-            <div key={`row-${idx}`} className="flex items-center justify-center h-6 sm:h-8">
-              {idx}
+    // Enhanced explosion handling with fixed timing values
+    useEffect(() => {
+        const handleUpdate = (update: GameStateUpdate) => {
+            if (update.type === 'explosion') {
+                const positions = update.affectedPositions ?? [];
+                setExplodingCells(positions.map(p => ({ row: p.row, col: p.col })));
+
+                // Using fixed delay values that match the CSS animation durations
+                const explosionDuration = 500; // matches the CSS explode animation
+                setTimeout(() => setExplodingCells(null), explosionDuration);
+            }
+        };
+
+        const observer = { onGameStateUpdate: handleUpdate };
+        gameEngine.addObserver(observer);
+        return () => gameEngine.removeObserver(observer);
+    }, [gameEngine]);
+
+    return (
+        <div className="relative mt-4 w-full max-w-[min(90vw,90vh)] mx-auto">
+
+            <div
+                className={cn(
+                    "grid bg-gray-200 rounded-lg p-6",
+                    "w-full h-full",
+                    "transition-all duration-300 ease-in-out transform",
+                    isPreview && "pointer-events-none",
+                    playerColor && `ring-4 bg-${playerColor}-100 ring-${playerColor}-500`,
+                    isProcessing && "pointer-events-none scale-[0.98]", // Add subtle scale effect when processing
+                    className,
+                    isSetupMode && 'border-2 border-blue-500 shadow-lg'
+                )}
+                style={{
+                    gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
+                    gridTemplateRows: `repeat(${size}, minmax(0, 1fr))`,
+                    rowGap: size <= 7 ? '0.5rem' : '0.25rem',
+                    columnGap: size <= 7 ? '0.5rem' : '0.25rem',
+                    aspectRatio: '1 / 1'
+                }}
+            >
+                {cells.map((row, i) =>
+                    row.map((cell, j) => {
+                        const key = `${i}-${j}-${cell.value}-${cell.owner}-${cell.type}`;
+                        const isHighlighted = highlightedCells?.some(pos => pos.row === i && pos.col === j);
+                        const isExploding = explodingCells?.some(pos => pos.row === i && pos.col === j);
+
+                        return (
+                            <div
+                                key={key}
+                                className={cn(
+                                    'relative',
+                                    isHighlighted && 'ring-2 ring-yellow-400 rounded-lg'
+                                )}
+                            >
+                                <GameCellV3
+                                    value={cell.value}
+                                    owner={cell.owner}
+                                    type={cell.type}
+                                    gameEngine={gameEngine}
+                                    currentPlayer={currentPlayer}
+                                    isHighlighted={isHighlighted}
+                                    isExploding={isExploding}
+                                    onClick={() => onCellClick(i, j)}
+                                    isSetupMode={isSetupMode}
+                                    onHoverPattern={setHighlightedCells}
+                                />
+                            </div>
+                        );
+                    })
+                )}
             </div>
-          ))}
-        </div>
-
-        {/* Column labels - positioned outside the board */}
-        <div className="absolute -top-6 sm:-top-8 left-0 w-full flex justify-around text-xs sm:text-sm text-gray-600">
-          {Array.from({ length: board.getSize() }).map((_, idx) => (
-            <div key={`col-${idx}`} className="flex items-center justify-center w-6 sm:w-8">
-              {idx}
+            <div className="absolute inset-0 pointer-events-none">
+                <BoardLabels size={size} />
             </div>
-          ))}
         </div>
-        
-        {/* Game board grid */}
-        <div 
-          className="w-full h-full grid gap-1 p-1 sm:gap-1.5 sm:p-2" 
-          style={{ 
-            gridTemplateColumns: `repeat(${board.getSize()}, 1fr)`,
-            gridTemplateRows: `repeat(${board.getSize()}, 1fr)`
-          }}
-        >
-          {Array.from({ length: board.getSize() }).map((_, row) => (
-            Array.from({ length: board.getSize() }).map((_, col) => {
-              const cell = board.getCell({ row, col });
-              const isExploding = explosion && explosion.row === row && explosion.col === col;
-              const inPattern = patternHighlight?.some(pos => pos.row === row && pos.col === col);
-              
-              return (
-                <div key={`cell-${row}-${col}`} className="w-full h-full">
-                  <GameCellV3
-                    value={cell.value}
-                    owner={cell.owner}
-                    gameEngine={gameEngine}
-                    currentPlayer={currentPlayer}
-                    isExploding={isExploding}
-                    inPattern={inPattern}
-                    onClick={() => handleCellClick(row, col)}
-                    row={row}
-                    col={col}
-                    isSetupMode={isSetupMode}
-                    type={cell.type}
-                    onHoverPattern={handleHoverPattern}
-                  />
-                </div>
-              );
-            })
-          ))}
-        </div>
-      </div>
-      
-      {/* Cell type legends - show in setup mode */}
-      {isSetupMode && (
-        <div className="mt-4 flex flex-wrap gap-2 text-xs justify-center">
-          <div className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-white rounded-sm"></div>
-            <span>Normal</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-red-100 rounded-sm"></div>
-            <span>Volatile</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-stone-700 rounded-sm"></div>
-            <span>Wall</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-purple-100 rounded-sm"></div>
-            <span>Reflector</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-gray-900 rounded-sm"></div>
-            <span>Dead</span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    );
 }

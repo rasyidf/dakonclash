@@ -7,46 +7,7 @@ export class VolatileCellMechanics extends CellMechanics {
     name = 'Volatile Cell';
     description = 'A cell that can explode with amplified force.';
     mechanics = 'Volatile cells explode at a lower threshold and distribute amplified value to adjacent cells.';
-    renderProperties = {
-        baseStyle: 'bg-red-100 hover:bg-red-200',
-        beadColor: 'bg-red-400',
-        contentColor: 'bg-red-500',
-        animation: 'animate-pulse',
-        icon: '💥',
-        svgProperties: {
-            fill: '#fee2e2', // Light red background (red-100)
-            stroke: '#ef4444', // Red border (red-500)
-            strokeWidth: 2,
-            gradient: {
-                type: 'radial' as const,
-                colors: [
-                    { offset: 0, color: '#fee2e2' },  // Light red (red-100)
-                    { offset: 100, color: '#fca5a5' } // Medium red (red-300)
-                ]
-            },
-            contentGradient: {
-                type: 'radial' as const,
-                colors: [
-                    { offset: 0, color: '#f87171' },  // Medium red (red-400)
-                    { offset: 100, color: '#dc2626' } // Dark red (red-600)
-                ]
-            },
-            explosionAnimation: 'explode-volatile',
-            beadShape: 'diamond' as const,
-            beadGradient: {
-                type: 'linear' as const,
-                colors: [
-                    { offset: 0, color: '#fecaca' },  // Very light red (red-200)
-                    { offset: 100, color: '#b91c1c' } // Very dark red (red-700)
-                ]
-            },
-            glowEffect: {
-                color: '#ef4444', // Red-500
-                blur: 5,
-                spread: 2
-            }
-        }
-    };
+    icon = '💥';
 
     validateMove(pos: Position, _: number): boolean {
         // Volatile cells cannot be directly played on

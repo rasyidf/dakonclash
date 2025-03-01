@@ -185,8 +185,8 @@ function CellConfigSection({
                             return (
                                 <SelectItem key={type} value={type}>
                                     <div className="flex items-center gap-2">
-                                        {mechanics.renderProperties.icon && (
-                                            <span>{mechanics.renderProperties.icon}</span>
+                                        {mechanics.icon && (
+                                            <span>{mechanics.icon}</span>
                                         )}
                                         <span>{mechanics.name}</span>
                                     </div>

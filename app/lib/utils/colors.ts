@@ -71,7 +71,7 @@ export const TAILWIND_COLORS = {
 };
 
 // Convert tailwind class to RGB color value
-export const getTailwindColor = (classString: string): string => {
+export const getTailwindColor = (classString?: string): string => {
   if (!classString) return "#ffffff";
 
   // Extract color information from tailwind class (e.g., "bg-red-500" -> "red-500")

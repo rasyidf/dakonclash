@@ -7,8 +7,8 @@ import { autoSaveGame } from "~/lib/storage";
 import { useUiStore } from "~/store/useUiStore";
 import { GameBoard } from "../board/v1/game-board";
 import { GameBoardV2 } from "../board/v2/game-board-v2";
-import { GameBoardV3 } from "../board/v3/game-board-v3";
 import { GameSidebar, type GameSettings } from "./game-sidebar";
+import { GameBoardV3 } from "../board/v3/game-board-v3";
 
 export function GameContainer() {
   const [gameEngine, setGameEngine] = useState(() => new GameEngine({
@@ -203,7 +203,7 @@ export function GameContainer() {
           </div>
           
           <div className="flex-grow w-full h-full">
-            <TabsContent value="v1" className="h-full">
+            <TabsContent value="v1" key="board-v1" className="h-full">
               <GameBoard
                 board={board}
                 onCellClick={handleCellClick}
@@ -212,7 +212,7 @@ export function GameContainer() {
                 gameEngine={gameEngine}
               />
             </TabsContent>
-            <TabsContent value="v2" className="h-full">
+            <TabsContent value="v2" key="board-v2" className="h-full">
               <GameBoardV2
                 board={board}
                 onCellClick={handleCellClick}
@@ -221,7 +221,7 @@ export function GameContainer() {
                 gameEngine={gameEngine}
               />
             </TabsContent>
-            <TabsContent value="v3" className="h-full">
+            <TabsContent value="v3" key="board-v3" className="h-full" forceMount>
               <GameBoardV3
                 board={board}
                 onCellClick={handleCellClick}

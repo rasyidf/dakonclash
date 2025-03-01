@@ -1,48 +1,12 @@
 import { CellType } from '../types';
 import type { Position, Cell, MoveDelta } from '../types';
 import { CellMechanics } from './CellMechanics';
-import type { CellRenderProperties } from './CellMechanics';
 
 export class WallCellMechanics extends CellMechanics {
     name = 'Wall Cell';
     description = 'A cell that absorbs explosions and can be targeted multiple times.';
     mechanics = 'Walls can be targeted multiple times before being destroyed.';
-    renderProperties: CellRenderProperties = {
-        baseStyle: 'bg-stone-700 border-2 border-stone-600',
-        beadColor: 'bg-stone-300',
-        contentColor: 'bg-stone-500',
-        icon: '🧱',
-        svgProperties: {
-            fill: '#44403c', // Stone 700
-            stroke: '#57534e', // Stone 600
-            strokeWidth: 3,
-            pattern: 'wall',
-            gradient: {
-                type: 'linear' as const,
-                colors: [
-                    { offset: 0, color: '#57534e' },   // Stone 600
-                    { offset: 50, color: '#44403c' },  // Stone 700
-                    { offset: 100, color: '#292524' }  // Stone 800
-                ]
-            },
-            contentGradient: {
-                type: 'linear' as const,
-                colors: [
-                    { offset: 0, color: '#78716c' },   // Stone 400
-                    { offset: 100, color: '#57534e' }  // Stone 600
-                ]
-            },
-            explosionAnimation: 'crumble-wall',
-            beadShape: 'square' as const,
-            beadGradient: {
-                type: 'linear' as const,
-                colors: [
-                    { offset: 0, color: '#d6d3d1' },   // Stone 200
-                    { offset: 100, color: '#a8a29e' }  // Stone 300
-                ]
-            }
-        }
-    };
+    icon = '🧱';
 
     private explosionCount: Map<string, number> = new Map();
 

@@ -1,58 +1,15 @@
 import type { Position, Cell, MoveDelta } from '../types';
 import { CellMechanics } from './CellMechanics';
 import { CellMechanicsFactory } from './CellMechanicsFactory';
-import type { CellRenderProperties } from './CellMechanics';
 
 export class NormalCellMechanics extends CellMechanics {
     name = 'Normal Cell';
     description = 'A standard cell that can be played on and explode.';
     mechanics = 'Normal cells can be played on and explode when they reach a certain value.';
-    renderProperties: CellRenderProperties = {
-        baseStyle: 'bg-white hover:bg-gray-100',
-        beadColor: 'bg-white',
-        contentColor: 'bg-opacity-75',
-        animation: 'transition-all duration-200',
-        icon: '⬜️',
-        svgProperties: {
-            fill: '#ffffff', // White
-            stroke: '#e5e7eb', // Gray-200
-            strokeWidth: 1,
-            gradient: {
-                type: 'radial' as const,
-                colors: [
-                    { offset: 0, color: '#ffffff' },   // White
-                    { offset: 100, color: '#f9fafb' }  // Gray-50
-                ]
-            },
-            contentGradient: {
-                type: 'radial' as const,
-                colors: [
-                    { offset: 30, color: 'rgba(255, 255, 255, 0.9)' },
-                    { offset: 100, color: 'rgba(255, 255, 255, 0.7)' }
-                ]
-            },
-            explosionAnimation: 'explode-normal',
-            beadShape: 'circle' as const,
-            beadGradient: {
-                type: 'radial' as const,
-                colors: [
-                    { offset: 0, color: '#ffffff' },   // White
-                    { offset: 100, color: '#f3f4f6' }  // Gray-100
-                ]
-            },
-            glowEffect: {
-                color: '#e5e7eb',  // Gray-200
-                blur: 3,
-                spread: 1
-            }
-        }
-    };
+    icon = '⬜️';
 
     validateMove(pos: Position, _: number): boolean {
         const cell = this.board.getCell(pos);
-        // Normal cells can be played on if they exist and either:
-        // - belong to the player already
-        // - or are neutral (0) during first move
         return cell !== null;
     }
 
