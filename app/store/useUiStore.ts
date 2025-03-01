@@ -1,11 +1,20 @@
 import { create } from 'zustand';
-import type { GameStateUpdate } from '~/lib/engine/v2/types';
+import type { GameStateUpdate, Position } from '~/lib/engine/v2/types';
+
+interface Animation {
+  positions: Position[];
+  type: 'explosion' | 'move';
+  timestamp: number;
+}
 
 interface UiState {
   // Game feedback
   message: string | null;
   messageType: 'info' | 'success' | 'error' | null;
   isProcessing: boolean;
+  
+  // Animation state
+  animation: Animation | null;
   
   // Game engine events
   lastUpdate: GameStateUpdate | null;
@@ -25,6 +34,7 @@ export const useUiStore = create<UiState>((set) => ({
   message: null,
   messageType: null,
   isProcessing: false,
+  animation: null,
   lastUpdate: null,
   isGameStartModalOpen: true,
   isWinnerModalOpen: false,
@@ -40,8 +50,20 @@ export const useUiStore = create<UiState>((set) => ({
     
     switch (update.type) {
       case 'explosion':
-        set({ message: 'Chain reaction!', messageType: 'info' });
-        setTimeout(() => set({ message: null, messageType: null }), 1500);
+        set({
+          message: 'Chain reaction!',
+          messageType: 'info',
+          animation: {
+            positions: update.affectedPositions || [],
+            type: 'explosion',
+            timestamp: Date.now()
+          }
+        });
+        setTimeout(() => set({ 
+          message: null,
+          messageType: null,
+          animation: null
+        }), 1500);
         break;
       
       case 'player-eliminated':

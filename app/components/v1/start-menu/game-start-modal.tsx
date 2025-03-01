@@ -9,14 +9,14 @@ import { Label } from "~/components/ui/label";
 import { Slider } from "~/components/ui/slider";
 import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { useGame } from "~/hooks/use-game";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { useUiStore } from '~/store/useUiStore';
 import type { GameSettings } from '~/lib/engine/v1/types';
 import { Link } from 'react-router';
+import { useGameStore } from '~/store/useGameStore';
 
 export function GameStartModal() {
-  const { startGame, setTimer, changeBoardSize, gameId, boardSize } = useGame();
+  const { startGame, changeBoardSize, gameId, boardSize } = useGameStore();
   const { isGameStartModalOpen, showGameStartModal } = useUiStore();
   const [selectedMode, setSelectedMode] = useState<'local' | 'vs-bot' | 'online'>('local');
   const [showQR, setShowQR] = useState(false);
