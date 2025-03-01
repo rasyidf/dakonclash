@@ -120,42 +120,57 @@ export class DakonBoardOperations extends BoardOperations {
   }
 
   public getChainReaction(initialPos: Position): MoveDelta[] {
-    const deltas: MoveDelta[] = [];
-    const processedCells = new Set<string>();
-    const cellsToProcess = new Map<string, Position>();
+    // Non-recursive implementation using a queue
+    let allDeltas: MoveDelta[] = [];
+    const processedPositions = new Set<string>();
+    const positionsToProcess: Position[] = [initialPos];
+    const explosionThreshold = this.getExplosionThreshold();
     
-    // Initialize with first position
-    cellsToProcess.set(`${initialPos.row},${initialPos.col}`, initialPos);
-
-    while (cellsToProcess.size > 0) {
-        const nextEntry = cellsToProcess.entries().next().value;
-        if (!nextEntry) continue;
-        const [key, pos] = nextEntry;
-        cellsToProcess.delete(key);
-        
-        if (processedCells.has(key)) continue;
-        processedCells.add(key);
-
-        const explosionDeltas = this.simulateExplosion(pos);
-        if (explosionDeltas.length > 0) {
-            deltas.push(...explosionDeltas);
-            
-            // Efficiently identify potential chain reactions
-            explosionDeltas
-                .filter(delta => delta.position !== pos)
-                .forEach(delta => {
-                    const targetCell = this.board.getCell(delta.position);
-                    if (targetCell && targetCell.value + delta.valueDelta >= this.CRITICAL_MASS) {
-                        const newKey = `${delta.position.row},${delta.position.col}`;
-                        if (!processedCells.has(newKey)) {
-                            cellsToProcess.set(newKey, delta.position);
-                        }
-                    }
-                });
+    // Queue-based approach inspired by V1 implementation
+    while (positionsToProcess.length > 0) {
+      const currentPos = positionsToProcess.shift()!;
+      const posKey = `${currentPos.row},${currentPos.col}`;
+      
+      // Skip if already processed to prevent loops
+      if (processedPositions.has(posKey)) continue;
+      processedPositions.add(posKey);
+      
+      // Get explosion deltas for this position
+      const cellDeltas = this.simulateExplosion(currentPos);
+      if (cellDeltas.length === 0) continue;
+      
+      // Add to the total deltas
+      allDeltas = [...allDeltas, ...cellDeltas];
+      
+      // Check which cells might explode next as a result
+      const cellsToExplodeNext: Position[] = [];
+      
+      // Create a temporary board copy to simulate the explosion effects
+      const tempBoard = this.board.clone();
+      tempBoard.applyDeltas(cellDeltas);
+      
+      // Check affected cells to see if they would explode
+      for (const delta of cellDeltas) {
+        if (delta.position.row === currentPos.row && delta.position.col === currentPos.col) {
+          continue; // Skip the cell that just exploded
         }
+
+        // Calculate the new value after applying the delta
+        const targetCell = tempBoard.getCell(delta.position);
+        if (!targetCell) continue;
+        
+        // Check if this cell could now explode
+        const targetMechanics = CellMechanicsFactory.getMechanics(targetCell.type);
+        if (targetMechanics.canExplode(targetCell)) {
+          cellsToExplodeNext.push(delta.position);
+        }
+      }
+      
+      // Add cells that would explode to the processing queue
+      positionsToProcess.push(...cellsToExplodeNext);
     }
 
-    return deltas;
+    return allDeltas;
   }
 
   public getMovePriority(pos: Position, playerId: number): number {

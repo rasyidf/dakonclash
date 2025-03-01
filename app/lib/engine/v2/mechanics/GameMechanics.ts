@@ -6,9 +6,9 @@ import type { GameStateUpdate, Position, WinConditionResult, GameConfig } from '
 
 export class GameMechanics {
     private ANIMATION_TIMINGS = {
-        EXPLOSION: 500,
+        EXPLOSION: 300, // Reduced for faster gameplay
         EXPLOSION_DELAY: 50,
-        CELL_UPDATE: 100,
+        CELL_UPDATE: 50, // Reduced for more responsive feel
     };
 
     constructor(
@@ -152,62 +152,82 @@ export class GameMechanics {
     }
 
     private async handleExplosion(pos: Position, playerId: number): Promise<void> {
+        // Similar to V1 implementation but using a queue instead of recursion
         const explosionQueue: Position[] = [pos];
         const processedCells = new Set<string>();
-        const maxChainLength = 100; // Safety limit for chain reactions
         let chainLength = 0;
+        
+        // Track positions that exploded for animation and feedback
+        const allAffectedPositions: Position[] = [];
+        const maxChainLength = 100; // Safety limit
 
         while (explosionQueue.length > 0 && chainLength < maxChainLength) {
-            const currentPos = explosionQueue.shift()!;
-            const posKey = `${currentPos.row},${currentPos.col}`;
+            // Process current batch of explosions
+            const currentBatchSize = explosionQueue.length;
+            const currentBatch = explosionQueue.splice(0, currentBatchSize);
+            const allCurrentDeltas = []; // Collect all deltas for this batch
 
-            if (processedCells.has(posKey)) continue;
-            processedCells.add(posKey);
+            // Process each position in the current batch
+            for (const currentPos of currentBatch) {
+                const posKey = `${currentPos.row},${currentPos.col}`;
+                
+                // Skip already processed cells to avoid infinite loops
+                if (processedCells.has(posKey)) continue;
+                processedCells.add(posKey);
+                
+                const cell = this.board.getCell(currentPos);
+                if (!cell) continue;
 
-            const cell = this.board.getCell(currentPos);
-            if (!cell) continue;
+                const mechanics = CellMechanicsFactory.getMechanics(cell.type);
+                
+                // Only process if the cell can actually explode
+                if (!mechanics.canExplode(cell)) continue;
+                
+                // Add to affected positions for animation
+                allAffectedPositions.push(currentPos);
 
-            const mechanics = CellMechanicsFactory.getMechanics(cell.type);
+                // Get explosion deltas from the cell mechanics
+                const deltas = mechanics.handleExplosion(currentPos, playerId);
+                allCurrentDeltas.push(...deltas);
+
+                // Notify about the explosion
+                this.notifyObservers({
+                    type: 'explosion',
+                    playerId,
+                    position: currentPos,
+                    affectedPositions: [currentPos]
+                });
+            }
+
+            // Apply all deltas from this batch at once for consistency
+            this.board.applyDeltas(allCurrentDeltas);
             
-            // Only process if the cell can actually explode
-            if (!mechanics.canExplode(cell)) continue;
-
-            // 1. Notify about explosion
+            // Notify observers about all cell updates in this batch
             this.notifyObservers({
-                type: 'explosion',
+                type: 'cell-update',
                 playerId,
-                position: currentPos,
-                affectedPositions: [currentPos]
+                position: pos, // Original position
+                deltas: allCurrentDeltas
             });
 
             // Wait for explosion animation
             await new Promise(resolve => setTimeout(resolve, this.ANIMATION_TIMINGS.EXPLOSION));
-
-            // 2. Get and apply explosion deltas
-            const deltas = mechanics.handleExplosion(currentPos, playerId);
             
-            // Apply deltas one by one with timing
-            for (const delta of deltas) {
-                this.board.applyDeltas([delta]);
+            // Find cells that should explode after this batch
+            for (const delta of allCurrentDeltas) {
+                const targetPos = delta.position;
+                const targetPosKey = `${targetPos.row},${targetPos.col}`;
+                
+                // Skip already processed cells
+                if (processedCells.has(targetPosKey)) continue;
+                
+                const updatedCell = this.board.getCell(targetPos);
+                if (!updatedCell) continue;
 
-                // Notify observers about the cell update
-                this.notifyObservers({
-                    type: 'cell-update',
-                    playerId,
-                    position: delta.position,
-                    deltas: [delta]
-                });
-
-                // Check for chain reactions in affected cells
-                const updatedCell = this.board.getCell(delta.position);
-                if (updatedCell && !processedCells.has(`${delta.position.row},${delta.position.col}`)) {
-                    const updatedMechanics = CellMechanicsFactory.getMechanics(updatedCell.type);
-                    if (updatedMechanics.canExplode(updatedCell)) {
-                        explosionQueue.push(delta.position);
-                    }
+                const updatedMechanics = CellMechanicsFactory.getMechanics(updatedCell.type);
+                if (updatedMechanics.canExplode(updatedCell)) {
+                    explosionQueue.push(targetPos);
                 }
-
-                await new Promise(resolve => setTimeout(resolve, this.ANIMATION_TIMINGS.CELL_UPDATE));
             }
 
             chainLength++;
@@ -215,6 +235,15 @@ export class GameMechanics {
 
         if (chainLength >= maxChainLength) {
             console.warn('Chain reaction safety limit reached');
+        }
+
+        // Notify of chain completion if there was a significant chain
+        if (chainLength > 1) {
+            this.notifyObservers({
+                type: 'chain-complete',
+                playerId,
+                chainLength
+            });
         }
     }
     

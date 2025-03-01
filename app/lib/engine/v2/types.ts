@@ -63,7 +63,7 @@ export interface GameConfig {
 }
 
 export interface GameStateUpdate {
-  type: 'move' | 'explosion' | 'player-change' | 'win' | 'reset' | 'cell-update' | 'chain-reaction' | 'player-eliminated' | 'setup-operation';
+  type: 'move' | 'explosion' | 'chain-complete' | 'player-change' | 'win' | 'reset' | 'cell-update' | 'chain-reaction' | 'player-eliminated' | 'setup-operation';
   playerId?: number;
   position?: Position;
   deltas?: MoveDelta[];
@@ -72,6 +72,7 @@ export interface GameStateUpdate {
   cellType?: CellType;
   value?: number;
   owner?: number;
+  chainLength?: number;
 }
 
 export interface GameObserver {

@@ -38,15 +38,7 @@ export class NormalCellMechanics extends CellMechanics {
                         valueDelta: explosionValue,
                         newOwner: playerId
                     });
-
-                    // Check if the target cell will explode after receiving value
-                    if (targetCell.value + explosionValue >= this.getExplosionThreshold()) {
-                        const targetMechanics = CellMechanicsFactory.getMechanics(targetCell.type);
-                        if (targetMechanics.canExplode({ ...targetCell, value: targetCell.value + explosionValue })) {
-                            const chainDeltas = targetMechanics.handleExplosion(targetPos, playerId);
-                            deltas.push(...chainDeltas);
-                        }
-                    }
+                    
                 }
             }
         });
