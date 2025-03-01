@@ -9,6 +9,7 @@ import { GameBoard } from "../board/v1/game-board";
 import { GameBoardV2 } from "../board/v2/game-board-v2";
 import { GameSidebar, type GameSettings } from "./game-sidebar";
 import { GameBoardV3 } from "../board/v3/game-board-v3";
+import { GameStartDialog } from "./game-start-dialog";
 
 export function GameContainer() {
   const [gameEngine, setGameEngine] = useState(() => new GameEngine({
@@ -28,6 +29,7 @@ export function GameContainer() {
   const [selectedValue, setSelectedValue] = useState(1);
   const [board, setBoard] = useState(() => gameEngine.getBoard());
   const [version, setVersion] = useState<'v1' | 'v2' | 'v3'>('v3');
+  const [isStartDialogOpen, setIsStartDialogOpen] = useState(false);
 
   const { setProcessing, handleGameUpdate } = useUiStore();
 
@@ -146,11 +148,23 @@ export function GameContainer() {
   }, []);
 
   const handleReset = useCallback(() => {
-    gameEngine.reset();
-    syncBoardWithEngine();
+    setIsStartDialogOpen(true);
+  }, []);
+
+  const handleStartNewGame = useCallback((config: Partial<GameConfig>) => {
+    const newEngine = new GameEngine(config);
+    
+    // If there are setup operations from a preset, apply them
+    if (config.setupOperations) {
+      config.setupOperations.forEach(op => newEngine.applySetupOperation(op));
+    }
+    
+    setGameEngine(newEngine);
+    setBoard(newEngine.getBoard());
     setCurrentPlayer(1);
     setMoveHistory([]);
-  }, [gameEngine, syncBoardWithEngine]);
+    setIsSetupMode(false);
+  }, []);
 
   const handleSwitchPlayer = useCallback(() => {
     if (isSetupMode) {
@@ -178,7 +192,7 @@ export function GameContainer() {
         onRedo={handleRedo}
         canUndo={gameEngine.canUndo()}
         canRedo={gameEngine.canRedo()}
-        onNewGame={handleNewGame}
+        onNewGame={() => setIsStartDialogOpen(true)}
         onToggleSetupMode={() => setIsSetupMode(!isSetupMode)}
         isSetupMode={isSetupMode}
         onSwitchPlayer={handleSwitchPlayer}
@@ -233,6 +247,12 @@ export function GameContainer() {
           </div>
         </Tabs>
       </main>
+      
+      <GameStartDialog 
+        isOpen={isStartDialogOpen}
+        onClose={() => setIsStartDialogOpen(false)}
+        onStartGame={handleStartNewGame}
+      />
     </div>
   );
 }

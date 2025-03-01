@@ -1,4 +1,3 @@
-import { CellType } from "~/lib/engine/v2/types";
 import { GameEngine } from "~/lib/engine/v2/GameEngine";
 
 export interface GameSettings {
@@ -17,12 +16,5 @@ export interface GameSidebarProps {
   canUndo?: boolean;
   canRedo?: boolean;
   onNewGame?: (settings: GameSettings) => void;
-  onToggleSetupMode?: () => void;
-  isSetupMode?: boolean;
-  onSwitchPlayer?: () => void;
-  selectedCellType?: CellType;
-  onSelectCellType?: (type: CellType) => void;
-  selectedValue?: number;
-  onSelectValue?: (value: number) => void;
   onBoardStateChange?: (gameEngine: GameEngine, currentPlayer: number) => void;
 }

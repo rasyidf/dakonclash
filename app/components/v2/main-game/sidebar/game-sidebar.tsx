@@ -3,17 +3,18 @@ import { toast } from "sonner";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarGroup } from "~/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { GameEngine } from "~/lib/engine/v2/GameEngine";
-import { CellType } from "~/lib/engine/v2/types";
 import { deleteSave, deserializeBoard, loadAutoSave, loadGame, saveGame } from "~/lib/storage";
-import { ControlsTab } from "./controls-tab";
+import { Button } from "~/components/ui/button";
+import { Users2, Info } from "lucide-react";
+import { PlayerManagementDialog } from "../sections/player-management-dialog";
+import { StatisticsTab } from "../sections/statistics-tab";
+import { StrategyTab } from "../sections/strategy-tab";
 import { SavesTab } from "./saves-tab";
-import { SettingsTab } from "./settings-tab";
+import { ControlsTab } from "./controls-tab";
 import type { GameSidebarProps } from "./types";
 import { AppIcon } from "~/components/v1/app-icon";
-import { Button } from "~/components/ui/button";
-import { Info } from "lucide-react";
 
-export { type GameSettings } from "./types";
+export type { GameSettings } from "./types";
 export type { GameSidebarProps } from "./types";
 
 export function GameSidebar({
@@ -26,19 +27,12 @@ export function GameSidebar({
     canUndo = false,
     canRedo = false,
     onNewGame,
-    onToggleSetupMode,
-    isSetupMode = false,
-    onSwitchPlayer,
-    selectedCellType = CellType.Normal,
-    onSelectCellType,
-    selectedValue = 1,
-    onSelectValue,
     onBoardStateChange,
 }: GameSidebarProps) {
     const [hasAutoSave, setHasAutoSave] = useState(false);
-    const [activeTab, setActiveTab] = useState("settings");
+    const [activeTab, setActiveTab] = useState("game");
+    const [isPlayerManagementOpen, setIsPlayerManagementOpen] = useState(false);
 
-    // Check for autosave on mount
     useEffect(() => {
         const autoSave = loadAutoSave();
         setHasAutoSave(!!autoSave);
@@ -61,7 +55,6 @@ export function GameSidebar({
         const board = deserializeBoard(savedState.boardState);
         newEngine.setBoard(board);
 
-        // Restore history if available
         if (savedState.history && savedState.historyIndex !== undefined) {
             const historyBoards = savedState.history.map(state => deserializeBoard(state));
             newEngine.restoreHistory(historyBoards, savedState.historyIndex);
@@ -69,9 +62,7 @@ export function GameSidebar({
 
         onBoardStateChange?.(newEngine, savedState.currentPlayer);
         toast.success("Game loaded successfully!");
-        
-        // Switch to controls tab after loading
-        setActiveTab("controls");
+        setActiveTab("game");
     }, [onBoardStateChange]);
 
     const handleLoadAutoSave = useCallback(() => {
@@ -91,38 +82,32 @@ export function GameSidebar({
             <SidebarHeader className="border-b pb-2">
                 <div className="flex items-center justify-between">
                     <AppIcon />
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Info className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={() => setIsPlayerManagementOpen(true)}
+                        >
+                            <Users2 className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Info className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
             </SidebarHeader>
             <SidebarContent>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="w-full grid grid-cols-3 sticky top-0 bg-background z-10">
-                        <TabsTrigger value="settings" className="text-xs sm:text-sm">Setup</TabsTrigger>
-                        <TabsTrigger value="controls" className="text-xs sm:text-sm">Game</TabsTrigger>
+                    <TabsList className="w-full grid grid-cols-4 sticky top-0 bg-background z-10">
+                        <TabsTrigger value="game" className="text-xs sm:text-sm">Game</TabsTrigger>
+                        <TabsTrigger value="strategy" className="text-xs sm:text-sm">Strategy</TabsTrigger>
+                        <TabsTrigger value="stats" className="text-xs sm:text-sm">Stats</TabsTrigger>
                         <TabsTrigger value="saves" className="text-xs sm:text-sm">Saves</TabsTrigger>
                     </TabsList>
 
                     <div className="mt-4 space-y-4">
-                        <TabsContent value="settings">
-                            <SidebarGroup>
-                                <SettingsTab
-                                    onNewGame={onNewGame || (() => { })}
-                                    onToggleSetupMode={onToggleSetupMode || (() => { })}
-                                    onSwitchPlayer={onSwitchPlayer || (() => { })}
-                                    onSelectCellType={onSelectCellType || (() => { })}
-                                    onSelectValue={onSelectValue || (() => { })}
-                                    isSetupMode={isSetupMode}
-                                    currentPlayer={currentPlayer}
-                                    selectedCellType={selectedCellType}
-                                    selectedValue={selectedValue}
-                                    explosionThreshold={gameEngine.getExplosionThreshold()}
-                                />
-                            </SidebarGroup>
-                        </TabsContent>
-
-                        <TabsContent value="controls">
+                        <TabsContent value="game">
                             <SidebarGroup>
                                 <ControlsTab
                                     onUndo={onUndo || (() => { })}
@@ -130,11 +115,30 @@ export function GameSidebar({
                                     onReset={onReset}
                                     onSaveGame={(name) => {
                                         handleSaveGame(name);
-                                        setActiveTab("saves"); // Switch to saves tab after saving
+                                        setActiveTab("saves");
                                     }}
                                     canUndo={canUndo}
                                     canRedo={canRedo}
                                     history={history}
+                                />
+                            </SidebarGroup>
+                        </TabsContent>
+
+                        <TabsContent value="strategy">
+                            <SidebarGroup>
+                                <StrategyTab
+                                    gameEngine={gameEngine}
+                                    currentPlayer={currentPlayer}
+                                />
+                            </SidebarGroup>
+                        </TabsContent>
+
+                        <TabsContent value="stats">
+                            <SidebarGroup>
+                                <StatisticsTab
+                                    gameEngine={gameEngine}
+                                    history={history}
+                                    currentPlayer={currentPlayer}
                                 />
                             </SidebarGroup>
                         </TabsContent>
@@ -157,6 +161,11 @@ export function GameSidebar({
                     Made with ❤️ by Rasyid
                 </div>
             </SidebarFooter>
+
+            <PlayerManagementDialog 
+                isOpen={isPlayerManagementOpen}
+                onClose={() => setIsPlayerManagementOpen(false)}
+            />
         </Sidebar>
     );
 }
