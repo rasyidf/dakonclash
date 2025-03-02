@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { Card } from "~/components/ui/card";
 import { Progress } from "~/components/ui/progress";
 import { Separator } from "~/components/ui/separator";
 import { GameEngine } from "~/lib/engine/v2/GameEngine";
+import { DakonBoardAnalyzer } from "~/lib/engine/v2/dakon/DakonBoardAnalyzer";
 
 interface StatisticsTabProps {
   gameEngine: GameEngine;
@@ -10,28 +12,27 @@ interface StatisticsTabProps {
 }
 
 export function StatisticsTab({ gameEngine, history, currentPlayer }: StatisticsTabProps) {
-  // Future: These will be calculated from game events
+  const analyzer = useMemo(() => new DakonBoardAnalyzer(gameEngine.getBoard()), [gameEngine]);
+
+  // Calculate real game metrics
   const gameStats = {
     moveCount: history.length,
-    chainReactions: 4,
-    explosions: 12,
-    maxChainLength: 5,
+    chainReactions: history.filter(h => h.includes("chain reaction")).length,
+    explosions: history.filter(h => h.includes("exploded")).length,
   };
 
-  const playerStats = {
-    player1: {
-      moves: history.filter(h => h.includes("Player 1")).length,
-      territory: 45,
-      captures: 8,
-      avgChainLength: 2.5
-    },
-    player2: {
-      moves: history.filter(h => h.includes("Player 2")).length,
-      territory: 55,
-      captures: 6,
-      avgChainLength: 3.1
-    }
-  };
+  // Calculate metrics for each player
+  const players = gameEngine.getPlayerManager().getPlayers().map(id => {
+    const metrics = analyzer.calculateBoardMetrics(id);
+    return {
+      id,
+      name: `Player ${id}`,
+      color: gameEngine.getPlayerManager().getPlayerColor(id),
+      moves: history.filter(h => h.includes(`Player ${id}`)).length,
+      metrics,
+      isActive: !gameEngine.getPlayerManager().isEliminated(id)
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -52,12 +53,16 @@ export function StatisticsTab({ gameEngine, history, currentPlayer }: Statistics
             <div className="text-sm font-medium">Game Records</div>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <div className="text-muted-foreground">Longest Chain</div>
-                <div>{gameStats.maxChainLength} cells</div>
-              </div>
-              <div>
                 <div className="text-muted-foreground">Total Explosions</div>
                 <div>{gameStats.explosions}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">Avg Moves/Player</div>
+                <div>
+                  {players.length > 0
+                    ? Math.round(gameStats.moveCount / players.length)
+                    : 0}
+                </div>
               </div>
             </div>
           </div>
@@ -69,16 +74,13 @@ export function StatisticsTab({ gameEngine, history, currentPlayer }: Statistics
       <div className="space-y-4">
         <h3 className="font-medium">Player Performance</h3>
         <div className="space-y-6">
-          <PlayerStatsCard 
-            player={1} 
-            stats={playerStats.player1}
-            isActive={currentPlayer === 1}
-          />
-          <PlayerStatsCard 
-            player={2} 
-            stats={playerStats.player2}
-            isActive={currentPlayer === 2}
-          />
+          {players.map(player => (
+            <PlayerStatsCard
+              key={player.id}
+              player={player}
+              isCurrentTurn={player.id === currentPlayer}
+            />
+          ))}
         </div>
       </div>
     </div>
@@ -86,23 +88,36 @@ export function StatisticsTab({ gameEngine, history, currentPlayer }: Statistics
 }
 
 interface PlayerStatsCardProps {
-  player: number;
-  stats: {
+  player: {
+    id: number;
+    name: string;
+    color: string;
     moves: number;
-    territory: number;
-    captures: number;
-    avgChainLength: number;
+    metrics: {
+      controlScore: number;
+      territoryScore: number;
+      mobilityScore: number;
+      materialScore: number;
+    };
+    isActive: boolean;
   };
-  isActive: boolean;
+  isCurrentTurn: boolean;
 }
 
-function PlayerStatsCard({ player, stats, isActive }: PlayerStatsCardProps) {
+function PlayerStatsCard({ player, isCurrentTurn }: PlayerStatsCardProps) {
+  const normalizedScore = (score: number) => Math.min(Math.max(score * 100, 0), 100);
+
   return (
-    <Card className="p-3">
+    <Card className={`p-3 ${isCurrentTurn ? `border-${player.color}-500` : ''} ${!player.isActive ? 'opacity-50' : ''}`}>
       <div className="flex items-center justify-between mb-2">
-        <div className="font-medium">Player {player}</div>
-        {isActive && (
-          <div className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+        <div className="font-medium">{player.name}</div>
+        {!player.isActive && (
+          <div className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
+            Eliminated
+          </div>
+        )}
+        {isCurrentTurn && player.isActive && (
+          <div className={`text-xs bg-${player.color}-100 text-${player.color}-700 px-2 py-0.5 rounded-full`}>
             Current Turn
           </div>
         )}
@@ -111,22 +126,22 @@ function PlayerStatsCard({ player, stats, isActive }: PlayerStatsCardProps) {
         <div>
           <div className="flex items-center justify-between text-sm mb-1">
             <span className="text-muted-foreground">Territory Control</span>
-            <span>{stats.territory}%</span>
+            <span>{Math.round(normalizedScore(player.metrics.territoryScore))}%</span>
           </div>
-          <Progress value={stats.territory} className="h-1" />
+          <Progress value={normalizedScore(player.metrics.territoryScore)} className="h-1" />
         </div>
         <div className="grid grid-cols-3 gap-2 text-sm">
           <div>
+            <div className="text-muted-foreground">Material</div>
+            <div>{Math.round(player.metrics.materialScore)}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Mobility</div>
+            <div>{Math.round(player.metrics.mobilityScore)}</div>
+          </div>
+          <div>
             <div className="text-muted-foreground">Moves</div>
-            <div>{stats.moves}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground">Captures</div>
-            <div>{stats.captures}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground">Avg Chain</div>
-            <div>{stats.avgChainLength}</div>
+            <div>{player.moves}</div>
           </div>
         </div>
       </div>

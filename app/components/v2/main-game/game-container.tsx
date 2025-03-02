@@ -139,13 +139,6 @@ export function GameContainer() {
     }
   }, [gameEngine, currentPlayer]);
 
-  const handleNewGame = useCallback((settings: GameSettings) => {
-    const newEngine = new GameEngine(settings as Partial<GameConfig>);
-    setGameEngine(newEngine);
-    setBoard(newEngine.getBoard());
-    setCurrentPlayer(1);
-    setMoveHistory([]);
-  }, []);
 
   const handleReset = useCallback(() => {
     setIsStartDialogOpen(true);
@@ -153,12 +146,12 @@ export function GameContainer() {
 
   const handleStartNewGame = useCallback((config: Partial<GameConfig>) => {
     const newEngine = new GameEngine(config);
-    
+
     // If there are setup operations from a preset, apply them
     if (config.setupOperations) {
       config.setupOperations.forEach(op => newEngine.applySetupOperation(op));
     }
-    
+
     setGameEngine(newEngine);
     setBoard(newEngine.getBoard());
     setCurrentPlayer(1);
@@ -203,8 +196,8 @@ export function GameContainer() {
         onBoardStateChange={handleBoardStateChange}
       />
       <main className="flex-grow h-full flex flex-col">
-        <Tabs 
-          value={version} 
+        <Tabs
+          value={version}
           onValueChange={(v) => setVersion(v as 'v1' | 'v2' | 'v3')}
           className="w-full h-full flex flex-col"
         >
@@ -215,7 +208,7 @@ export function GameContainer() {
               <TabsTrigger value="v3">SVG Mode</TabsTrigger>
             </TabsList>
           </div>
-          
+
           <div className="flex-grow w-full h-full">
             <TabsContent value="v1" key="board-v1" className="h-full">
               <GameBoard
@@ -247,8 +240,8 @@ export function GameContainer() {
           </div>
         </Tabs>
       </main>
-      
-      <GameStartDialog 
+
+      <GameStartDialog
         isOpen={isStartDialogOpen}
         onClose={() => setIsStartDialogOpen(false)}
         onStartGame={handleStartNewGame}

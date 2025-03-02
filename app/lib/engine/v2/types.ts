@@ -56,6 +56,7 @@ export interface GameConfig {
   maxValue: number;
   winConditions?: WinCondition[];
   customPatterns?: PatternConfig[];
+  setupOperations?: SetupModeOperation[];
   animationDelays: {
     explosion: number;
     chainReaction: number;

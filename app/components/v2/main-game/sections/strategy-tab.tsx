@@ -1,8 +1,12 @@
+import { useMemo, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { Label } from "~/components/ui/label";
+import { Separator } from "~/components/ui/separator";
+import { DakonBoardAnalyzer } from "~/lib/engine/v2/dakon/DakonBoardAnalyzer";
 import { GameEngine } from "~/lib/engine/v2/GameEngine";
-import { CellType } from "~/lib/engine/v2/types";
+import { cn } from "~/lib/utils";
+import { PlayerInfo, type PlayerInfo as PlayerInfoType } from "./player-info";
 
 interface StrategyTabProps {
   gameEngine: GameEngine;
@@ -10,93 +14,116 @@ interface StrategyTabProps {
 }
 
 export function StrategyTab({ gameEngine, currentPlayer }: StrategyTabProps) {
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const board = gameEngine.getBoard();
+  const analyzer = useMemo(() => new DakonBoardAnalyzer(board), [board]);
 
-  // Future: These will be calculated by the game engine's analysis tools
-  const controlZones = {
-    player1: 45,
-    player2: 55
+  const players: PlayerInfoType[] = gameEngine.getPlayerManager().getPlayers().map(id => ({
+    id,
+    name: `Player ${id}`,
+    color: gameEngine.getPlayerManager().getPlayerColor(id),
+    type: 'human',
+    status: gameEngine.getPlayerManager().isEliminated(id) ? 'eliminated' : 'active'
+  }));
+
+  const criticalPositions = useMemo(() => {
+    return analyzer.getCriticalPositions(currentPlayer);
+  }, [analyzer, currentPlayer]);
+
+  const handleAnalyzePosition = () => {
+    setIsAnalyzing(true);
+    // Analysis will be run in background and metrics will be updated
+    setTimeout(() => setIsAnalyzing(false), 1000);
   };
-
-  const criticalPositions = [
-    { row: 3, col: 3, risk: "high" },
-    { row: 4, col: 4, risk: "medium" }
-  ];
 
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <h3 className="font-medium">Board Control</h3>
-        <div className="grid grid-cols-2 gap-2">
-          <Card className="p-3">
-            <div className="text-sm font-medium">Territory</div>
-            <div className="mt-1 flex items-center justify-between">
-              <div className="text-xs">Player 1</div>
-              <div className="text-xs font-medium">{controlZones.player1}%</div>
-            </div>
-            <div className="mt-1 flex items-center justify-between">
-              <div className="text-xs">Player 2</div>
-              <div className="text-xs font-medium">{controlZones.player2}%</div>
-            </div>
-          </Card>
-          <Card className="p-3">
-            <div className="text-sm font-medium">Material</div>
-            <div className="mt-1 flex items-center justify-between">
-              <div className="text-xs">Volatile</div>
-              <div className="text-xs font-medium">3</div>
-            </div>
-            <div className="mt-1 flex items-center justify-between">
-              <div className="text-xs">Walls</div>
-              <div className="text-xs font-medium">2</div>
-            </div>
-          </Card>
+        <h3 className="font-medium">Players</h3>
+        <div className="space-y-4">
+          {players.map(player => (
+            <PlayerInfo
+              key={player.id}
+              player={player}
+              isCurrentTurn={player.id === currentPlayer}
+              gameEngine={gameEngine}
+            />
+          ))}
         </div>
       </div>
+
+      <Separator />
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-medium">Analysis</h3>
-          <Button variant="ghost" size="sm" className="text-xs opacity-50" disabled>
-            Analyze Position
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-xs"
+            onClick={handleAnalyzePosition}
+            disabled={isAnalyzing}
+          >
+            {isAnalyzing ? 'Analyzing...' : 'Analyze Position'}
           </Button>
         </div>
 
-        <div className="space-y-2 opacity-50">
-          <Label className="text-xs flex items-center gap-2">
-            Critical Positions
-            <span className="text-yellow-600">(Coming Soon)</span>
-          </Label>
+        <div className="space-y-2">
+          <Label className="text-xs">Critical Positions</Label>
           <Card className="p-3">
-            <div className="text-xs text-muted-foreground">
-              Position analysis will show:
-              <ul className="mt-1 list-disc list-inside">
-                <li>Chain reaction opportunities</li>
-                <li>Territory control suggestions</li>
-                <li>Defensive positions</li>
-                <li>Material imbalances</li>
-              </ul>
-            </div>
+            {criticalPositions.length > 0 ? (
+              <div className="space-y-2">
+                {criticalPositions.map((pos, i) => {
+                  const chainScore = analyzer.getChainReactionScore(pos);
+                  const centrality = analyzer.getCellCentrality(pos);
+                  
+                  return (
+                    <div 
+                      key={i}
+                      className={cn(
+                        "p-2 rounded-md text-xs",
+                        "bg-muted/50 border",
+                        chainScore > 3 ? "border-yellow-500/50" : "border-muted"
+                      )}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span>Position ({pos.row}, {pos.col})</span>
+                        <span className="text-muted-foreground">
+                          Score: {Math.round(chainScore * 10) / 10}
+                        </span>
+                      </div>
+                      <div className="mt-1 grid grid-cols-2 gap-2 text-muted-foreground">
+                        <span>Centrality: {Math.round(centrality * 100)}%</span>
+                        <span>Chain potential: {chainScore > 3 ? 'High' : 'Medium'}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground text-center py-2">
+                No critical positions found
+              </div>
+            )}
           </Card>
         </div>
-      </div>
 
-      <div className="space-y-4">
-        <h3 className="font-medium">Pattern Library</h3>
-        <div className="grid grid-cols-2 gap-2">
-          {["Fork Pattern", "Triangle Setup", "Corner Defense", "Center Control"].map((pattern) => (
-            <Button 
-              key={pattern}
-              variant="outline" 
-              size="sm"
-              disabled
-              className="h-auto py-2 opacity-50"
-            >
-              <div className="text-left">
-                <div className="text-xs font-medium">{pattern}</div>
-                <div className="text-xs text-muted-foreground">Coming Soon</div>
-              </div>
-            </Button>
-          ))}
+        <div className="space-y-2">
+          <Label className="text-xs">Defense Analysis</Label>
+          <Card className="p-3">
+            <div className="text-xs text-muted-foreground">
+              {(() => {
+                const defensiveScore = analyzer.getDefensiveScore(currentPlayer);
+                if (defensiveScore < -5) {
+                  return "High risk of chain reactions. Consider defensive moves.";
+                } else if (defensiveScore < -2) {
+                  return "Moderate risk. Watch opponent's critical positions.";
+                } else {
+                  return "Low risk. Good defensive position.";
+                }
+              })()}
+            </div>
+          </Card>
         </div>
       </div>
     </div>

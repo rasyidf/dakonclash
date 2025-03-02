@@ -1,21 +1,20 @@
+import { Info, Users2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarGroup } from "~/components/ui/sidebar";
+import { Button } from "~/components/ui/button";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarHeader } from "~/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { AppIcon } from "~/components/v1/app-icon";
 import { GameEngine } from "~/lib/engine/v2/GameEngine";
 import { deleteSave, deserializeBoard, loadAutoSave, loadGame, saveGame } from "~/lib/storage";
-import { Button } from "~/components/ui/button";
-import { Users2, Info } from "lucide-react";
 import { PlayerManagementDialog } from "../sections/player-management-dialog";
 import { StatisticsTab } from "../sections/statistics-tab";
 import { StrategyTab } from "../sections/strategy-tab";
-import { SavesTab } from "./saves-tab";
 import { ControlsTab } from "./controls-tab";
+import { SavesTab } from "./saves-tab";
 import type { GameSidebarProps } from "./types";
-import { AppIcon } from "~/components/v1/app-icon";
 
-export type { GameSettings } from "./types";
-export type { GameSidebarProps } from "./types";
+export type { GameSettings, GameSidebarProps } from "./types";
 
 export function GameSidebar({
     gameEngine,
@@ -78,14 +77,14 @@ export function GameSidebar({
     };
 
     return (
-        <Sidebar variant="floating" collapsible="offcanvas">
+        <Sidebar variant="floating" collapsible="offcanvas" >
             <SidebarHeader className="border-b pb-2">
                 <div className="flex items-center justify-between">
                     <AppIcon />
                     <div className="flex items-center gap-2">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
+                        <Button
+                            variant="ghost"
+                            size="icon"
                             className="h-8 w-8"
                             onClick={() => setIsPlayerManagementOpen(true)}
                         >
@@ -99,7 +98,7 @@ export function GameSidebar({
             </SidebarHeader>
             <SidebarContent>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="w-full grid grid-cols-4 sticky top-0 bg-background z-10">
+                    <TabsList className="w-full grid grid-cols-5 sticky top-0 bg-background z-10">
                         <TabsTrigger value="game" className="text-xs sm:text-sm">Game</TabsTrigger>
                         <TabsTrigger value="strategy" className="text-xs sm:text-sm">Strategy</TabsTrigger>
                         <TabsTrigger value="stats" className="text-xs sm:text-sm">Stats</TabsTrigger>
@@ -162,7 +161,9 @@ export function GameSidebar({
                 </div>
             </SidebarFooter>
 
-            <PlayerManagementDialog 
+            <PlayerManagementDialog
+                gameEngine={gameEngine}
+                currentPlayer={currentPlayer}
                 isOpen={isPlayerManagementOpen}
                 onClose={() => setIsPlayerManagementOpen(false)}
             />

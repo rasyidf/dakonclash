@@ -1,19 +1,20 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
-import { Button } from "~/components/ui/button";
-import { Separator } from "~/components/ui/separator";
-import { Switch } from "~/components/ui/switch";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { Label } from "~/components/ui/label";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "~/components/ui/alert-dialog";
+import { Switch } from "~/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { PlayersTab } from "./players-tab";
+import type { GameEngine } from "~/lib/engine/v2/GameEngine";
 
 interface PlayerManagementDialogProps {
+  gameEngine: GameEngine;
+  currentPlayer: number;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export function PlayerManagementDialog({ isOpen, onClose }: PlayerManagementDialogProps) {
+export function PlayerManagementDialog({ gameEngine, currentPlayer, isOpen, onClose }: PlayerManagementDialogProps) {
   const [selectedTab, setSelectedTab] = useState<'players' | 'teams' | 'handicap'>('players');
 
   return (
@@ -38,6 +39,10 @@ export function PlayerManagementDialog({ isOpen, onClose }: PlayerManagementDial
                 <CardDescription>Configure player profiles and AI opponents</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <PlayersTab
+                  gameEngine={gameEngine}
+                  currentPlayer={currentPlayer}
+                />
                 <div className="opacity-50 space-y-4">
                   <div className="flex items-center justify-between">
                     <Label className="flex items-center gap-2">
