@@ -1,5 +1,5 @@
-import type { Position, Cell, MoveDelta } from '../types';
-import { CellMechanics } from './CellMechanics';
+import type { Position, Cell, MoveDelta } from '../../types';
+import { CellMechanics } from '../CellMechanics';
 
 export class DeadCellMechanics extends CellMechanics {
     name = 'Dead Cell';

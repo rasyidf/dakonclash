@@ -1,6 +1,6 @@
-import { CellType } from '../types';
-import type { Position, Cell, MoveDelta } from '../types';
-import { CellMechanics } from './CellMechanics';
+import { CellType } from '../../types';
+import type { Position, Cell, MoveDelta } from '../../types';
+import { CellMechanics } from '../CellMechanics';
 
 export class WallCellMechanics extends CellMechanics {
     name = 'Wall Cell';

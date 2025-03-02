@@ -1,10 +1,10 @@
 import { CellType } from '../types';
 import type { Board } from '../board/Board';
-import { NormalCellMechanics } from './NormalCellMechanics';
-import { DeadCellMechanics } from './DeadCellMechanics';
-import { VolatileCellMechanics } from './VolatileCellMechanics';
-import { WallCellMechanics } from './WallCellMechanics';
-import { ReflectorCellMechanics } from './ReflectorCellMechanics';
+import { NormalCellMechanics } from './cells/NormalCellMechanics';
+import { DeadCellMechanics } from './cells/DeadCellMechanics';
+import { VolatileCellMechanics } from './cells/VolatileCellMechanics';
+import { WallCellMechanics } from './cells/WallCellMechanics';
+import { ReflectorCellMechanics } from './cells/ReflectorCellMechanics';
 import type { CellMechanics } from './CellMechanics';
 
 export class CellMechanicsFactory {

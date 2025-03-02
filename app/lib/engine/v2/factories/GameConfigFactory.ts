@@ -9,6 +9,7 @@ export class GameConfigFactory {
             maxPlayers: 4,
             winConditions: [],
             customPatterns: DEFAULT_PATTERNS,
+            setupOperations: [],
             animationDelays: {
                 explosion: 300,      // Base explosion animation time
                 chainReaction: 150,  // Delay between chain reactions

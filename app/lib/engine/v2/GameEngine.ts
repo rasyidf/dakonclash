@@ -29,6 +29,7 @@ export class GameEngine implements IGameEngine {
             maxValue: Math.max(2, Math.min(config.maxValue ?? defaultConfig.maxValue, 8)),
             winConditions: [],
             customPatterns: config.customPatterns ?? DEFAULT_PATTERNS,
+            setupOperations: config.setupOperations ?? [],
             animationDelays: {
                 explosion: config.animationDelays?.explosion ?? defaultConfig.animationDelays.explosion,
                 chainReaction: config.animationDelays?.chainReaction ?? defaultConfig.animationDelays.chainReaction,

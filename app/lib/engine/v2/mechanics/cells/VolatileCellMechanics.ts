@@ -1,7 +1,7 @@
-import type { Position, Cell, MoveDelta } from '../types';
-import { CellType } from '../types';
-import { CellMechanics } from './CellMechanics';
-import { CellMechanicsFactory } from './CellMechanicsFactory';
+import type { Position, Cell, MoveDelta } from '../../types';
+import { CellType } from '../../types';
+import { CellMechanics } from '../CellMechanics';
+import { CellMechanicsFactory } from '../CellMechanicsFactory';
 
 export class VolatileCellMechanics extends CellMechanics {
     name = 'Volatile Cell';
