@@ -1,16 +1,15 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { Label } from "~/components/ui/label";
-import { Slider } from "~/components/ui/slider";
-import { BoardTextFormat } from "~/lib/engine/v2/board/BoardTextFormat";
-import { BoardPresetManager } from "~/lib/engine/v2/board/BoardPreset";
 import { ScrollArea } from "~/components/ui/scroll-area";
-import { Switch } from "~/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
+import { Slider } from "~/components/ui/slider";
+import { Switch } from "~/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { BoardPresetManager } from "~/lib/engine/v2/board/BoardPreset";
 import { GameEngine } from "~/lib/engine/v2/GameEngine";
 import type { GameConfig } from "~/lib/engine/v2/types";
 

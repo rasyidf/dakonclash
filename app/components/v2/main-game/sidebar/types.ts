@@ -1,3 +1,4 @@
+import type { GameController } from "~/lib/engine/v2/controller/GameController";
 import { GameEngine } from "~/lib/engine/v2/GameEngine";
 
 export interface GameSettings {
@@ -8,6 +9,7 @@ export interface GameSettings {
 
 export interface GameSidebarProps {
   gameEngine: GameEngine;
+  gameController?: GameController;
   history: string[];
   onReset: () => void;
   currentPlayer: number;
@@ -15,6 +17,6 @@ export interface GameSidebarProps {
   onRedo?: () => void;
   canUndo?: boolean;
   canRedo?: boolean;
-  onNewGame?: (settings: GameSettings) => void;
+  onNewGame: () => void;
   onBoardStateChange?: (gameEngine: GameEngine, currentPlayer: number) => void;
 }

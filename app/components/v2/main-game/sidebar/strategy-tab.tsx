@@ -6,7 +6,8 @@ import { Separator } from "~/components/ui/separator";
 import { DakonBoardAnalyzer } from "~/lib/engine/v2/dakon/DakonBoardAnalyzer";
 import { GameEngine } from "~/lib/engine/v2/GameEngine";
 import { cn } from "~/lib/utils";
-import { PlayerInfo, type PlayerInfo as PlayerInfoType } from "./player-info";
+import { PlayerInfo, type PlayerInfo as PlayerInfoType } from "../sections/player-info";
+import { ScrollArea } from "@radix-ui/react-scroll-area";
 
 interface StrategyTabProps {
   gameEngine: GameEngine;
@@ -37,14 +38,15 @@ export function StrategyTab({ gameEngine, currentPlayer }: StrategyTabProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-4">
+    <div className="space-y-4">
+      <div className="space-y-2">
         <h3 className="font-medium">Players</h3>
-        <div className="space-y-4">
+        <div className="space-y-2">
           {players.map(player => (
             <PlayerInfo
               key={player.id}
               player={player}
+              withMetrics={false}
               isCurrentTurn={player.id === currentPlayer}
               gameEngine={gameEngine}
             />
@@ -54,12 +56,12 @@ export function StrategyTab({ gameEngine, currentPlayer }: StrategyTabProps) {
 
       <Separator />
 
-      <div className="space-y-4">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="font-medium">Analysis</h3>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="text-xs"
             onClick={handleAnalyzePosition}
             disabled={isAnalyzing}
@@ -69,6 +71,23 @@ export function StrategyTab({ gameEngine, currentPlayer }: StrategyTabProps) {
         </div>
 
         <div className="space-y-2">
+          <Label className="text-xs">Defense Analysis</Label>
+          <Card className="p-3">
+            <div className="text-xs text-muted-foreground">
+              {(() => {
+                const defensiveScore = analyzer.getDefensiveScore(currentPlayer);
+                if (defensiveScore < -5) {
+                  return "High risk of chain reactions. Consider defensive moves.";
+                } else if (defensiveScore < -2) {
+                  return "Moderate risk. Watch opponent's critical positions.";
+                } else {
+                  return "Low risk. Good defensive position.";
+                }
+              })()}
+            </div>
+          </Card>
+        </div>
+        <div className="space-y-2">
           <Label className="text-xs">Critical Positions</Label>
           <Card className="p-3">
             {criticalPositions.length > 0 ? (
@@ -76,9 +95,9 @@ export function StrategyTab({ gameEngine, currentPlayer }: StrategyTabProps) {
                 {criticalPositions.map((pos, i) => {
                   const chainScore = analyzer.getChainReactionScore(pos);
                   const centrality = analyzer.getCellCentrality(pos);
-                  
+
                   return (
-                    <div 
+                    <div
                       key={i}
                       className={cn(
                         "p-2 rounded-md text-xs",
@@ -108,23 +127,6 @@ export function StrategyTab({ gameEngine, currentPlayer }: StrategyTabProps) {
           </Card>
         </div>
 
-        <div className="space-y-2">
-          <Label className="text-xs">Defense Analysis</Label>
-          <Card className="p-3">
-            <div className="text-xs text-muted-foreground">
-              {(() => {
-                const defensiveScore = analyzer.getDefensiveScore(currentPlayer);
-                if (defensiveScore < -5) {
-                  return "High risk of chain reactions. Consider defensive moves.";
-                } else if (defensiveScore < -2) {
-                  return "Moderate risk. Watch opponent's critical positions.";
-                } else {
-                  return "Low risk. Good defensive position.";
-                }
-              })()}
-            </div>
-          </Card>
-        </div>
       </div>
     </div>
   );

@@ -10,7 +10,7 @@ export interface PlayerInfo {
     name: string;
     color: string;
     type: 'human' | 'ai' | 'online';
-    status: 'active' | 'eliminated' | 'disconnected';
+    status: 'active' | 'eliminated' | 'disconnected' | 'waiting';
 }
 
 interface PlayerInfoProps {
@@ -18,6 +18,7 @@ interface PlayerInfoProps {
     isCurrentTurn: boolean;
     gameEngine: GameEngine;
     withMetrics?: boolean;
+    withTeritory?: boolean;
     metrics?: {
         territory: number;
         material: number;
@@ -25,14 +26,14 @@ interface PlayerInfoProps {
     };
 }
 
-export function PlayerInfo({ player, isCurrentTurn, gameEngine, withMetrics = true, metrics }: PlayerInfoProps) {
+export function PlayerInfo({ player, isCurrentTurn, gameEngine, withTeritory = true, withMetrics = true, metrics }: PlayerInfoProps) {
     const analyzer = useMemo(() => {
         const analyzer = new DakonBoardAnalyzer(gameEngine.getBoard());
         return analyzer;
     }, [gameEngine]);
 
     const currentMetrics = metrics || {
-        territory: analyzer.calculateTerritoryScore(player.id) * 100,
+        territory: analyzer.calculateTerritoryScore(player.id),
         material: analyzer.calculateMaterialScore(player.id),
         mobility: analyzer.calculateMobilityScore(player.id),
     };
@@ -61,13 +62,18 @@ export function PlayerInfo({ player, isCurrentTurn, gameEngine, withMetrics = tr
                 withMetrics && (
 
                     <div className="mt-3 space-y-3">
-                        <div>
-                            <div className="flex items-center justify-between text-sm mb-1">
-                                <span className="text-muted-foreground">Territory</span>
-                                <span>{Math.round(currentMetrics.territory)}%</span>
-                            </div>
-                            <Progress value={currentMetrics.territory} className="h-1" />
-                        </div>
+                        {
+                            withTeritory && (
+
+                                <div>
+                                    <div className="flex items-center justify-between text-sm mb-1">
+                                        <span className="text-muted-foreground">Territory</span>
+                                        <span>{Math.round(currentMetrics.territory)}%</span>
+                                    </div>
+                                    <Progress value={currentMetrics.territory} className="h-1" />
+                                </div>
+                            )
+                        }
 
                         <div className="grid grid-cols-2 gap-2 text-sm">
                             <div>

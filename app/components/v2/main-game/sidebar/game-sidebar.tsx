@@ -8,8 +8,8 @@ import { AppIcon } from "~/components/v1/app-icon";
 import { GameEngine } from "~/lib/engine/v2/GameEngine";
 import { deleteSave, deserializeBoard, loadAutoSave, loadGame, saveGame } from "~/lib/storage";
 import { PlayerManagementDialog } from "../sections/player-management-dialog";
-import { StatisticsTab } from "../sections/statistics-tab";
-import { StrategyTab } from "../sections/strategy-tab";
+import { StatisticsTab } from "./statistics-tab";
+import { StrategyTab } from "./strategy-tab";
 import { ControlsTab } from "./controls-tab";
 import { SavesTab } from "./saves-tab";
 import type { GameSidebarProps } from "./types";
@@ -18,6 +18,7 @@ export type { GameSettings, GameSidebarProps } from "./types";
 
 export function GameSidebar({
     gameEngine,
+    gameController,
     history,
     onReset,
     currentPlayer,
@@ -90,9 +91,6 @@ export function GameSidebar({
                         >
                             <Users2 className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Info className="h-4 w-4" />
-                        </Button>
                     </div>
                 </div>
             </SidebarHeader>
@@ -109,6 +107,7 @@ export function GameSidebar({
                         <TabsContent value="game">
                             <SidebarGroup>
                                 <ControlsTab
+                                    onNewGame={onNewGame}
                                     onUndo={onUndo || (() => { })}
                                     onRedo={onRedo || (() => { })}
                                     onReset={onReset}
@@ -157,12 +156,13 @@ export function GameSidebar({
             </SidebarContent>
             <SidebarFooter className="border-t mt-auto">
                 <div className="p-4 text-xs text-muted-foreground text-center">
-                    Made with ❤️ by Rasyid
+                    Made with ❤️ by <a href="https://rasyid.dev" target="_blank" rel="noopener noreferrer">Rasyid</a>
                 </div>
             </SidebarFooter>
 
             <PlayerManagementDialog
                 gameEngine={gameEngine}
+                gameController={gameController}
                 currentPlayer={currentPlayer}
                 isOpen={isPlayerManagementOpen}
                 onClose={() => setIsPlayerManagementOpen(false)}

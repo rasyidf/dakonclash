@@ -4,6 +4,7 @@ import { Progress } from "~/components/ui/progress";
 import { Separator } from "~/components/ui/separator";
 import { GameEngine } from "~/lib/engine/v2/GameEngine";
 import { DakonBoardAnalyzer } from "~/lib/engine/v2/dakon/DakonBoardAnalyzer";
+import { PlayerInfo } from "../sections/player-info";
 
 interface StatisticsTabProps {
   gameEngine: GameEngine;
@@ -30,8 +31,10 @@ export function StatisticsTab({ gameEngine, history, currentPlayer }: Statistics
       color: gameEngine.getPlayerManager().getPlayerColor(id),
       moves: history.filter(h => h.includes(`Player ${id}`)).length,
       metrics,
-      isActive: !gameEngine.getPlayerManager().isEliminated(id)
-    };
+      isActive: !gameEngine.getPlayerManager().isEliminated(id),
+      type: 'human',
+      status: gameEngine.getPlayerManager().isEliminated(id) ? 'eliminated' : 'active'
+    } as PlayerInfo
   });
 
   return (
@@ -75,76 +78,15 @@ export function StatisticsTab({ gameEngine, history, currentPlayer }: Statistics
         <h3 className="font-medium">Player Performance</h3>
         <div className="space-y-6">
           {players.map(player => (
-            <PlayerStatsCard
+            <PlayerInfo
               key={player.id}
-              player={player}
+              player={player as PlayerInfo}
               isCurrentTurn={player.id === currentPlayer}
+              gameEngine={gameEngine}
             />
           ))}
         </div>
       </div>
     </div>
-  );
-}
-
-interface PlayerStatsCardProps {
-  player: {
-    id: number;
-    name: string;
-    color: string;
-    moves: number;
-    metrics: {
-      controlScore: number;
-      territoryScore: number;
-      mobilityScore: number;
-      materialScore: number;
-    };
-    isActive: boolean;
-  };
-  isCurrentTurn: boolean;
-}
-
-function PlayerStatsCard({ player, isCurrentTurn }: PlayerStatsCardProps) {
-  const normalizedScore = (score: number) => Math.min(Math.max(score * 100, 0), 100);
-
-  return (
-    <Card className={`p-3 ${isCurrentTurn ? `border-${player.color}-500` : ''} ${!player.isActive ? 'opacity-50' : ''}`}>
-      <div className="flex items-center justify-between mb-2">
-        <div className="font-medium">{player.name}</div>
-        {!player.isActive && (
-          <div className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
-            Eliminated
-          </div>
-        )}
-        {isCurrentTurn && player.isActive && (
-          <div className={`text-xs bg-${player.color}-100 text-${player.color}-700 px-2 py-0.5 rounded-full`}>
-            Current Turn
-          </div>
-        )}
-      </div>
-      <div className="space-y-3">
-        <div>
-          <div className="flex items-center justify-between text-sm mb-1">
-            <span className="text-muted-foreground">Territory Control</span>
-            <span>{Math.round(normalizedScore(player.metrics.territoryScore))}%</span>
-          </div>
-          <Progress value={normalizedScore(player.metrics.territoryScore)} className="h-1" />
-        </div>
-        <div className="grid grid-cols-3 gap-2 text-sm">
-          <div>
-            <div className="text-muted-foreground">Material</div>
-            <div>{Math.round(player.metrics.materialScore)}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground">Mobility</div>
-            <div>{Math.round(player.metrics.mobilityScore)}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground">Moves</div>
-            <div>{player.moves}</div>
-          </div>
-        </div>
-      </div>
-    </Card>
   );
 }

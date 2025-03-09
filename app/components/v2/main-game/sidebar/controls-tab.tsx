@@ -10,6 +10,7 @@ interface ControlsTabProps {
   onUndo: () => void;
   onRedo: () => void;
   onReset: () => void;
+  onNewGame: () => void;
   onSaveGame: (name?: string) => void;
   canUndo: boolean;
   canRedo: boolean;
@@ -19,7 +20,7 @@ interface ControlsTabProps {
 export function ControlsTab({
   onUndo,
   onRedo,
-  onReset,
+  onReset, onNewGame,
   onSaveGame,
   canUndo,
   canRedo,
@@ -30,19 +31,19 @@ export function ControlsTab({
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <h3 className="font-medium">Game Controls</h3>
-        <ActionButtons 
-          onUndo={onUndo} 
-          onRedo={onRedo} 
-          canUndo={canUndo} 
-          canRedo={canRedo} 
+        <ActionButtons
+          onNewGame={onNewGame}
+          onUndo={onUndo}
+          onRedo={onRedo}
+          canUndo={canUndo}
+          canRedo={canRedo}
           onReset={onReset}
           onSaveGame={onSaveGame}
           saveName={saveName}
           setSaveName={setSaveName}
         />
       </div>
-      
+
       <HistoryLog history={history} />
     </div>
   );
@@ -56,18 +57,19 @@ interface ActionButtonsProps {
   canUndo: boolean;
   canRedo: boolean;
   saveName: string;
+  onNewGame: () => void;
   setSaveName: (name: string) => void;
 }
 
-function ActionButtons({ 
-  onUndo, 
-  onRedo, 
-  onReset, 
-  onSaveGame, 
-  canUndo, 
+function ActionButtons({
+  onUndo,
+  onRedo,
+  onReset, onNewGame,
+  onSaveGame,
+  canUndo,
   canRedo,
   saveName,
-  setSaveName 
+  setSaveName
 }: ActionButtonsProps) {
   const handleSave = () => {
     onSaveGame(saveName);
@@ -76,6 +78,11 @@ function ActionButtons({
 
   return (
     <div className="grid grid-cols-2 gap-2">
+      <Button className="col-span-2"
+        onClick={onNewGame}
+        aria-label="New game">
+        New Game
+      </Button>
       <Button
         variant="outline"
         size="sm"
@@ -128,8 +135,8 @@ function ActionButtons({
 
       <Dialog>
         <DialogTrigger asChild>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             className="flex items-center gap-2"
             aria-label="Save game"
@@ -169,8 +176,8 @@ function HistoryLog({ history }: HistoryLogProps) {
       <ScrollArea className="h-[200px] rounded-md border">
         <div className="p-2 space-y-2">
           {history.map((entry, i) => (
-            <div 
-              key={i} 
+            <div
+              key={i}
               className="text-sm p-2 rounded-md bg-muted/50 border"
             >
               {entry}
