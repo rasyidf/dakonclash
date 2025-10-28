@@ -125,6 +125,7 @@ export function GameBoardV2({
                                     onClick={() => onCellClick(i, j)}
                                     isSetupMode={isSetupMode}
                                     onHoverPattern={setHighlightedCells}
+                                    boardSize={size}
                                 />
                             </div>
                         );

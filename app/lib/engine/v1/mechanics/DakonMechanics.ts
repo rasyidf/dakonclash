@@ -30,13 +30,25 @@ export class DakonMechanics extends GameMechanicsEngine {
     this.notify('processing', { isProcessing: this.isProcessing });
   }
 
-  private async processCellExplosion(x: number, y: number, playerId: number, chainLength: number): Promise<number> {
+  private async processCellExplosion(x: number, y: number, playerId: number, chainLength: number, processedCells: Set<string> = new Set()): Promise<number> {
     const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
     const criticalMass = this.boardManager.boardOps.calculateCriticalMass(x, y);
+    const MAX_CHAIN_LENGTH = 100; // Safety limit
+
+    if (chainLength >= MAX_CHAIN_LENGTH) {
+      console.warn('Maximum chain reaction length reached');
+      return chainLength;
+    }
+
+    const cellKey = `${x},${y}`;
+    if (processedCells.has(cellKey)) {
+      return chainLength;
+    }
+    processedCells.add(cellKey);
 
     this.handleCellUpdate(x, y, 0, -criticalMass);
 
-    let maxChainLength = chainLength;
+    let currentMaxChain = chainLength;
     const promises: Promise<number>[] = [];
 
     for (const [dx, dy] of directions) {
@@ -47,11 +59,12 @@ export class DakonMechanics extends GameMechanicsEngine {
 
       this.handleCellUpdate(newX, newY, playerId, 1);
 
-      if (this.boardManager.boardOps.getCellAt(newX, newY).value >= this.boardManager.boardOps.calculateCriticalMass(newX, newY)) {
+      const neighborCell = this.boardManager.boardOps.getCellAt(newX, newY);
+      if (neighborCell.value >= this.boardManager.boardOps.calculateCriticalMass(newX, newY)) {
         const promise = (async () => {
           this.notify('chainReaction', { x: newX, y: newY, chainLength, playerId });
           await delay(CHAIN_REACTION_DELAY_MS);
-          return this.processCellExplosion(newX, newY, playerId, chainLength + 1);
+          return this.processCellExplosion(newX, newY, playerId, chainLength + 1, processedCells);
         })();
         promises.push(promise);
       }
@@ -59,14 +72,14 @@ export class DakonMechanics extends GameMechanicsEngine {
 
     if (promises.length > 0) {
       const results = await Promise.all(promises);
-      maxChainLength = Math.max(maxChainLength, ...results);
+      currentMaxChain = Math.max(currentMaxChain, ...results);
     }
 
-    if (maxChainLength > chainLength) {
-      this.notify('score', { x, y, score: maxChainLength, playerId });
+    if (currentMaxChain > chainLength) {
+      this.notify('score', { x, y, score: currentMaxChain, playerId });
     }
 
-    return maxChainLength;
+    return currentMaxChain;
   }
 
   public async makeMove(x: number, y: number, currentPlayerId: number): Promise<number> {
@@ -80,7 +93,7 @@ export class DakonMechanics extends GameMechanicsEngine {
     let totalChainLength = 0;
     if (this.boardManager.boardOps.getCellAt(x, y).value >= this.boardManager.boardOps.calculateCriticalMass(x, y)) {
       this.isProcessing = true;
-      totalChainLength = await this.triggerChainReaction(x, y, currentPlayerId, 1);
+      totalChainLength = await this.triggerChainReaction(x, y, currentPlayerId, 1, new Set());
     }
 
     if (this.firstMoves[currentPlayerId]) {
@@ -104,11 +117,13 @@ export class DakonMechanics extends GameMechanicsEngine {
     x: number,
     y: number,
     playerId: number,
-    chainLength: number = 1
+    chainLength: number = 1,
+    processedCells: Set<string> = new Set()
   ): Promise<number> {
-    if (this.boardManager.boardOps.getCellAt(x, y).value >= this.boardManager.boardOps.calculateCriticalMass(x, y)) {
+    const cell = this.boardManager.boardOps.getCellAt(x, y);
+    if (cell && cell.value >= this.boardManager.boardOps.calculateCriticalMass(x, y)) {
       this.isProcessing = true;
-      return this.processCellExplosion(x, y, playerId, chainLength);
+      return this.processCellExplosion(x, y, playerId, chainLength, processedCells);
     }
     return chainLength;
   }

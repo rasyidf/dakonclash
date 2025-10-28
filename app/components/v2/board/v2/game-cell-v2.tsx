@@ -19,6 +19,7 @@ interface GameCellV2Props {
   onClick: () => void;
   onHoverPattern?: (positions: { row: number, col: number }[] | null) => void;
   type?: CellType;
+  boardSize?: number;
 }
 
 function getBeadPosition(index: number, total: number) {
@@ -43,11 +44,11 @@ function getBeadPosition(index: number, total: number) {
   return positions[Math.min(total, 4) as keyof typeof positions]?.[index] || { x: 50, y: 50 };
 }
 
-export function GameCellV2({ 
-  value, 
-  owner, 
-  onClick, 
-  gameEngine, 
+export function GameCellV2({
+  value,
+  owner,
+  onClick,
+  gameEngine,
   isSetupMode,
   isHighlighted,
   isExploding,
@@ -55,7 +56,8 @@ export function GameCellV2({
   row,
   col,
   onHoverPattern,
-  type = CellType.Normal
+  type = CellType.Normal,
+  boardSize = 10
 }: GameCellV2Props) {
   const [mounted, setMounted] = useState(false);
   const [prevValue, setPrevValue] = useState(value);
@@ -147,10 +149,14 @@ export function GameCellV2({
     { x: 25, y: 50 }, // West
   ];
 
+  const beadSize = boardSize <= 5 ? '0.5rem' : boardSize <= 8 ? '0.6rem' : '0.75rem';
+
   const renderBeads = () => {
     if (isExploding) {
-      // When exploding, beads start from cardinal positions
-      return getCardinalPositions().map((pos, i) => (
+      // When exploding, beads start from cardinal positions, but limit to actual value
+      const beadCount = Math.min(4, value);
+      const positions = getCardinalPositions();
+      return positions.slice(0, beadCount).map((pos, i) => (
         <div
           key={i}
           className={cn(
@@ -160,6 +166,8 @@ export function GameCellV2({
           style={{
             left: `${pos.x}%`,
             top: `${pos.y}%`,
+            width: beadSize,
+            height: beadSize,
           }}
         />
       ));
@@ -181,6 +189,8 @@ export function GameCellV2({
           style={{
             left: `${pos.x}%`,
             top: `${pos.y}%`,
+            width: beadSize,
+            height: beadSize,
           }}
         />
       );

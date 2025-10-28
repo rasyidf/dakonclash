@@ -128,11 +128,11 @@ export abstract class BoardAnalyzer {
    * @param pos The position to find adjacents for
    * @returns Array of adjacent positions
    */
-  protected getAdjacentPositions(pos: Position): Position[] {
+  public getAdjacentPositions(pos: Position): Position[] {
     const { row, col } = pos;
     const size = this.board.getSize();
     const adjacent: Position[] = [];
-    
+
     const directions = [[-1,0], [1,0], [0,-1], [0,1]];
     for (const [dr, dc] of directions) {
       const newRow = row + dr;
@@ -141,8 +141,15 @@ export abstract class BoardAnalyzer {
         adjacent.push({ row: newRow, col: newCol });
       }
     }
-    
+
     return adjacent;
+  }
+
+  /**
+   * Gets the board instance
+   */
+  public getBoard(): Board {
+    return this.board;
   }
 
   /**

@@ -1,5 +1,6 @@
 import { DakonBoardAnalyzer } from "../dakon/DakonBoardAnalyzer";
 import { GameEngine } from "../GameEngine";
+import { BotEngine } from "../bot/BotEngine";
 import { type PlayerData, PlayerStatus } from "../PlayerManager";
 import { type Position } from "../types";
 
@@ -7,14 +8,16 @@ import { type Position } from "../types";
  * Service for handling AI player moves and behavior
  */
 export class AIPlayerService {
-    private static readonly MIN_MOVE_DELAY = 500;  // ms
-    private static readonly MAX_MOVE_DELAY = 2000; // ms
+    private static readonly MIN_MOVE_DELAY = 800;  // ms
+    private static readonly MAX_MOVE_DELAY = 1000; // ms
 
     private readonly gameEngine: GameEngine;
+    private readonly botEngine: BotEngine;
     private moveTimeouts: Map<number, NodeJS.Timeout> = new Map();
 
     constructor(gameEngine: GameEngine) {
         this.gameEngine = gameEngine;
+        this.botEngine = new BotEngine(gameEngine);
     }
 
     /**
@@ -42,9 +45,11 @@ export class AIPlayerService {
                     const success = await this.gameEngine.makeMove(move, currentPlayerId);
                     playerManager.setPlayerStatus(currentPlayerId, PlayerStatus.Active);
                     resolve(success);
-                } else {
-                    resolve(false);
+                    console.log(`AI Player ${currentPlayerId} made move at (${move.row}, ${move.col})`);
+                    return;
                 }
+                console.log(`AI Player ${currentPlayerId} has no valid moves.`);
+                resolve(false);
             }, moveDelay);
 
             this.moveTimeouts.set(currentPlayerId, timeout);
@@ -85,43 +90,19 @@ export class AIPlayerService {
     }
 
     /**
-     * Generate an optimal move for the AI player
-     */
+      * Generate an optimal move for the AI player
+      */
     private async generateAIMove(player: PlayerData): Promise<Position | null> {
-        const board = this.gameEngine.getBoard();
-        const playerManager = this.gameEngine.getPlayerManager();
         const validMoves = this.gameEngine.getValidMoves(player.id);
 
         if (validMoves.length === 0) {
             return null;
         }
 
-        // Use first move strategy for first move
-        if (playerManager.isFirstMove(player.id)) {
-            return this.findStrategicFirstMove(validMoves);
-        }
-
-        // Analyze each possible move and assign a score
-        const analyzer = new DakonBoardAnalyzer(board);
-        const scoredMoves = validMoves.map(pos => {
-            const score = this.evaluateMove(pos, player.id, analyzer, player.personality || 'balanced');
-            return { position: pos, score };
-        });
-
-        // Sort by score (highest first)
-        scoredMoves.sort((a, b) => b.score - a.score);
-
-        // Add randomness based on difficulty level
-        // Lower difficulty = more randomness
+        // Use BotEngine to get the move based on difficulty
         const difficulty = player.difficulty || 1;
-        const randomFactor = 1 - (difficulty / 5);
-        const topMovesCount = Math.max(1, Math.ceil(scoredMoves.length * randomFactor));
-
-        // Select randomly from top moves
-        const topMoves = scoredMoves.slice(0, topMovesCount);
-        const selectedMove = topMoves[Math.floor(Math.random() * topMoves.length)];
-
-        return selectedMove.position;
+        this.botEngine['difficulty'] = difficulty; // Assuming we can set difficulty
+        return await this.botEngine.makeMove(player.id);
     }
 
     /**

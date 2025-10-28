@@ -182,26 +182,26 @@ export class GameStateManager extends ObservableClass<GameStateEvents> {
     let players: Record<number, Player>;
     const colors = ["red", "blue", "green", "purple"];
 
-    // if (mode === 'vs-bot') {
-    //   players = {
-    //     "1": botAsFirst 
-    //       ? { id: 1, name: "Bot", color: colors[0], isBot: true }
-    //       : { id: 1, name: "Player 1", color: colors[0], isBot: false },
-    //     2: botAsFirst 
-    //       ? { id: 2, name: "Player 1", color: colors[1], isBot: false }
-    //       : { id: 2, name: "Bot", color: colors[1], isBot: true }
-    //   };
-    // } else {
-    players = {};
-    for (let i = 1; i <= playerCount; i++) {
-      players[i] = {
-        id: i,
-        name: `Player ${i}`,
-        color: colors[i - 1] as TailwindColor,
-        isBot: false
+    if (mode === 'vs-bot') {
+      players = {
+        1: botAsFirst
+          ? { id: 1, name: "Bot", color: colors[0] as TailwindColor, isBot: true }
+          : { id: 1, name: "Player 1", color: colors[0] as TailwindColor, isBot: false },
+        2: botAsFirst
+          ? { id: 2, name: "Player 1", color: colors[1] as TailwindColor, isBot: false }
+          : { id: 2, name: "Bot", color: colors[1] as TailwindColor, isBot: true }
       };
+    } else {
+      players = {};
+      for (let i = 1; i <= playerCount; i++) {
+        players[i] = {
+          id: i,
+          name: `Player ${i}`,
+          color: colors[i - 1] as TailwindColor,
+          isBot: false
+        };
+      }
     }
-    // }
 
     this.boardEngine.resetBoard(size);
     const stats = this.initializeStats();
