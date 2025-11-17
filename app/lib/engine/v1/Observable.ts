@@ -29,7 +29,12 @@ export class Observable<T extends EventMap> {
   public unsubscribe<K extends keyof T>(event: K, callback: EventHandler<T[K]>): void {
     const handlers = this.subscribers.get(event);
     if (handlers) {
-      this.subscribers.set(event, handlers.filter(sub => sub !== callback));
+      const filtered = handlers.filter(sub => sub !== callback);
+      if (filtered.length > 0) {
+        this.subscribers.set(event, filtered);
+      } else {
+        this.subscribers.delete(event as keyof T);
+      }
     }
   }
 
@@ -45,8 +50,17 @@ export class Observable<T extends EventMap> {
   private notifySubscribers<K extends keyof T>(event: K): void {
     const handlers = this.subscribers.get(event);
     const value = this.values[event];
-    if (handlers && value !== undefined) {
-      handlers.forEach(callback => callback(value));
+    if (handlers) {
+      handlers.forEach(callback => {
+        try {
+          callback(value as T[K]);
+        } catch (err) {
+          // Protect the publisher from subscriber errors
+          // Subscribers are independent and should not break notification flow
+          // eslint-disable-next-line no-console
+          console.error('Observable subscriber error', err);
+        }
+      });
     }
   }
 }
@@ -69,14 +83,26 @@ export class ObservableClass<T extends EventMap> {
   public unsubscribe<K extends keyof T>(event: K, callback: EventHandler<T[K]>): void {
     const handlers = this.subscribers.get(event);
     if (handlers) {
-      this.subscribers.set(event, handlers.filter(sub => sub !== callback));
+      const filtered = handlers.filter(sub => sub !== callback);
+      if (filtered.length > 0) {
+        this.subscribers.set(event, filtered);
+      } else {
+        this.subscribers.delete(event as keyof T);
+      }
     }
   }
 
   public notify<K extends keyof T>(event: K, value: T[K]): void {
     const handlers = this.subscribers.get(event);
     if (handlers) {
-      handlers.forEach(callback => callback(value));
+      handlers.forEach(callback => {
+        try {
+          callback(value);
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error('ObservableClass subscriber error', err);
+        }
+      });
     }
   }
 }

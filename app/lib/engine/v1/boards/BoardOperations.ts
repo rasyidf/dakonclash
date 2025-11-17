@@ -17,8 +17,9 @@ export class BoardOperations<T extends Board<Cell> = DakonBoard> {
 
   public updateCell(x: number, y: number, delta: number, owner: number): BoardOperations<T> {
     const newBoard = this.board.clone();
-    const cell = structuredClone(newBoard.ensureValidCell(x, y));
+    const cell = newBoard.getCellAt(x, y);
     newBoard.setCellAt(x, y, {
+      ...cell,
       value: cell.value + delta,
       owner
     });
@@ -59,6 +60,9 @@ export class BoardOperations<T extends Board<Cell> = DakonBoard> {
   }
 
   public calculateCriticalMass(x: number, y: number): number {
+    // Critical mass equals the number of orthogonal neighbours (corner=2, edge=3, center=4)
+    // return this.getAdjacentCells(x, y).length;
+    // but now keep at 4
     return 4;
   }
 
@@ -66,15 +70,15 @@ export class BoardOperations<T extends Board<Cell> = DakonBoard> {
     if (!this.isValidCell(x, y)) {
       return [];
     }
-    const DIRECTIONS = Object.freeze([[-1, 0], [1, 0], [0, -1], [0, 1]]);
-    return DIRECTIONS.reduce((adjacent: Cell[], [dx, dy]) => {
-      const newx = x + dx, newy = y + dy;
-      const cell = this.board.ensureValidCell(newx, newy);
-      if (cell) {
-        adjacent.push(cell);
-      }
-      return adjacent;
-    }, []);
+    const DIRECTIONS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    const adjacent: Cell[] = [];
+    for (const [dx, dy] of DIRECTIONS) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (!this.isValidCell(nx, ny)) continue;
+      adjacent.push(this.getCellAt(nx, ny));
+    }
+    return adjacent;
   }
 
 }

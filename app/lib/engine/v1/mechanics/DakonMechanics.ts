@@ -16,6 +16,7 @@ export class DakonMechanics extends GameMechanicsEngine {
   }
 
   public isValidMove(x: number, y: number, playerId: number): boolean {
+    if (!this.boardManager.boardOps.isValidCell(x, y)) return false;
     const cell = this.boardManager.boardOps.getCellAt(x, y);
 
     if (this.isFirstMove(playerId)) {

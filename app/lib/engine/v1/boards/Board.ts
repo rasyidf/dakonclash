@@ -19,7 +19,7 @@ export abstract class Board<T extends Cell> {
 
   public isValidCell(x: number, y: number): boolean {
     return x >= 0 && x < this.ownerMatrix.length &&
-      y >= 0 && y < this.ownerMatrix.length;
+      y >= 0 && y < this.ownerMatrix[x].length;
   }
 
   public getCellAt(x: number, y: number): T {

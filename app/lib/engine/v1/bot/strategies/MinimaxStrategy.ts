@@ -7,18 +7,13 @@ import type { BotStrategy } from "./BotStrategy";
 
 export class MinimaxStrategy implements BotStrategy {
   private readonly MAX_DEPTH = 3;
-  private analyzer: BoardAnalyzer;
-  private evaluator: MoveEvaluator;
 
   constructor(
     private boardManager: BoardStateManager,
     private gameEngine: GameMechanicsEngine,
     private weights: EvaluationWeights,
     private botId: number
-  ) {
-    this.analyzer = new BoardAnalyzer(boardManager);
-    this.evaluator = new MoveEvaluator(boardManager, weights, this.analyzer);
-  }
+  ) {}
 
   async makeMove(botId: number): Promise<{ row: number; col: number; }> {
     let bestScore = -Infinity;
@@ -27,24 +22,19 @@ export class MinimaxStrategy implements BotStrategy {
 
     for (let row = 0; row < size; row++) {
       for (let col = 0; col < size; col++) {
-        if (this.gameEngine.isValidMove(row, col, botId)) {
-          const boardCopy = this.boardManager.clone();
-          await this.gameEngine.makeMove(row, col, botId);
+        // Use snapshot-based simulation to avoid mutating live board
+        const tempManager = new (await this.getBoardStateManagerClass())(size);
+        const snapshot = this.boardManager.simulateMoveSnapshot(row, col, 1, botId);
+        tempManager.loadBoard(snapshot);
 
-          const score = this.minimax(
-            this.MAX_DEPTH,
-            false,
-            -Infinity,
-            Infinity,
-            botId
-          );
+        // Validate move on temp manager
+        if (!tempManager.boardOps.isValidMove(row, col, botId)) continue;
 
-          this.boardManager.loadBoard(boardCopy.boardOps.getBoard());
+        const score = this.minimaxSnapshot(snapshot, this.MAX_DEPTH - 1, false, -Infinity, Infinity, botId);
 
-          if (score > bestScore) {
-            bestScore = score;
-            bestMove = { row, col };
-          }
+        if (score > bestScore) {
+          bestScore = score;
+          bestMove = { row, col };
         }
       }
     }
@@ -52,35 +42,38 @@ export class MinimaxStrategy implements BotStrategy {
     return bestMove;
   }
 
-  private minimax(
+  private minimaxSnapshot(
+    boardSnapshot: any,
     depth: number,
     isMaximizing: boolean,
     alpha: number,
     beta: number,
     botId: number
   ): number {
+    const size = this.boardManager.boardOps.getSize();
+
+    // create a temporary manager for this snapshot
+    const tempManager = new (this.getBoardStateManagerClassSync())(size);
+    tempManager.loadBoard(boardSnapshot);
+    const analyzer = new BoardAnalyzer(tempManager);
+    const evaluator = new MoveEvaluator(tempManager, this.weights, analyzer);
+
     if (depth === 0) {
-      return this.evaluator.evaluateBoard(botId);
+      return evaluator.evaluateBoard(botId);
     }
 
-    const size = this.boardManager.boardOps.getSize();
     const currentPlayer = isMaximizing ? botId : (botId === 1 ? 2 : 1);
 
     if (isMaximizing) {
       let maxScore = -Infinity;
       for (let row = 0; row < size; row++) {
         for (let col = 0; col < size; col++) {
-          if (this.gameEngine.isValidMove(row, col, currentPlayer)) {
-            const boardCopy = this.boardManager.clone();
-            this.gameEngine.makeMove(row, col, currentPlayer);
-
-            const score = this.minimax(depth - 1, false, alpha, beta, botId);
-
-            this.boardManager.loadBoard(boardCopy.boardOps.getBoard());
-            maxScore = Math.max(maxScore, score);
-            alpha = Math.max(alpha, score);
-            if (beta <= alpha) break;
-          }
+          if (!tempManager.boardOps.isValidMove(row, col, currentPlayer)) continue;
+          const nextSnapshot = tempManager.simulateMoveSnapshot(row, col, 1, currentPlayer);
+          const score = this.minimaxSnapshot(nextSnapshot, depth - 1, false, alpha, beta, botId);
+          maxScore = Math.max(maxScore, score);
+          alpha = Math.max(alpha, score);
+          if (beta <= alpha) break;
         }
       }
       return maxScore;
@@ -88,20 +81,28 @@ export class MinimaxStrategy implements BotStrategy {
       let minScore = Infinity;
       for (let row = 0; row < size; row++) {
         for (let col = 0; col < size; col++) {
-          if (this.gameEngine.isValidMove(row, col, currentPlayer)) {
-            const boardCopy = this.boardManager.clone();
-            this.gameEngine.makeMove(row, col, currentPlayer);
-
-            const score = this.minimax(depth - 1, true, alpha, beta, botId);
-
-            this.boardManager.loadBoard(boardCopy.boardOps.getBoard());
-            minScore = Math.min(minScore, score);
-            beta = Math.min(beta, score);
-            if (beta <= alpha) break;
-          }
+          if (!tempManager.boardOps.isValidMove(row, col, currentPlayer)) continue;
+          const nextSnapshot = tempManager.simulateMoveSnapshot(row, col, 1, currentPlayer);
+          const score = this.minimaxSnapshot(nextSnapshot, depth - 1, true, alpha, beta, botId);
+          minScore = Math.min(minScore, score);
+          beta = Math.min(beta, score);
+          if (beta <= alpha) break;
         }
       }
       return minScore;
     }
+  }
+
+  // helpers to obtain BoardStateManager constructor to create temp instances
+  private async getBoardStateManagerClass(): Promise<any> {
+    const mod = await import('../../boards/BoardStateManager');
+    return mod.BoardStateManager || mod;
+  }
+
+  private getBoardStateManagerClassSync(): any {
+    // synchronous require for internal calls
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const mod = require('../../boards/BoardStateManager');
+    return mod.BoardStateManager || mod;
   }
 }

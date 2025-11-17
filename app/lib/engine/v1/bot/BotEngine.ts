@@ -35,7 +35,16 @@ export class BotEngine {
     const isPlayerMoved = this.hasPlayerMoved(board);
 
     if (!isPlayerMoved) {
-      return this.getStrategicFirstMove(size);
+      // Try strategic first moves, but validate they are legal; fallback to random valid move
+      try {
+        const strategic = this.getStrategicFirstMove(size);
+        if (this.gameEngine.isValidMove(strategic.row, strategic.col, botId)) {
+          return strategic;
+        }
+      } catch (err) {
+        // continue to fallbacks
+      }
+      return this.findRandomValidMove(botId);
     }
 
     return this.getSafeOpeningMove(board, size, botId);
@@ -52,8 +61,16 @@ export class BotEngine {
       { row: 1, col: size - 2 },
       { row: size - 2, col: 1 }
     ];
-
-    return strategic[Math.floor(Math.random() * strategic.length)];
+    // pick a strategic position that is valid; if none valid, throw to let caller fallback
+    const shuffled = strategic.sort(() => Math.random() - 0.5);
+    for (const pos of shuffled) {
+      if (this.boardManager.boardOps.isValidCell(pos.row, pos.col) && this.gameEngine.isValidMove(pos.row, pos.col, this.boardManager.boardOps.getCellAt(pos.row, pos.col).owner)) {
+        // ensure the strategic position is currently empty or valid for bot
+        return pos;
+      }
+    }
+    // no valid strategic move
+    throw new Error('No valid strategic opening move');
   }
 
   private getSafeOpeningMove(board: Cell[][], size: number, botId: number): { row: number; col: number; } {

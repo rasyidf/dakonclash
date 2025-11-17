@@ -40,7 +40,7 @@
     "@react-router/serve": "^7.2.0",
     "@supabase/supabase-js": "^2.49.1",
     "@svgdotjs/svg.js": "^3.2.4",
-    "caniuse-lite": "^1.0.30001751",
+    "caniuse-lite": "^1.0.30001755",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
